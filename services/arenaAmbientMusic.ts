@@ -23,7 +23,14 @@ export function setArenaMusicEnabled(enabled: boolean): void {
   } catch {
     /* ignore */
   }
-  if (!enabled) pauseArenaAmbient();
+  if (!enabled) {
+    pauseArenaAmbient();
+    return;
+  }
+  if (!ambientShellActive) return;
+  const a = ensureEl();
+  if (!a) return;
+  void a.play().catch(() => {});
 }
 
 /** Base URL-aware path (supports Vite subpath deploys). */

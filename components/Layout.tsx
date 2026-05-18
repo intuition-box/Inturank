@@ -14,6 +14,7 @@ import { setEmailFailureHandler, maybeSendDailyDigest } from '../services/emailN
 import { mergeFollowsFromServer } from '../services/follows';
 import ProfileBadgeWidget from './ProfileBadgeWidget';
 import ArenaBatchFab from './ArenaBatchFab';
+import { WalletMenuMusicToggle } from './WalletMenuMusicToggle';
 import { ARENA_BATCH_MODE } from '../constants';
 import { isNavPathActive } from '../services/navActive';
 import { useEffectiveChainId } from '../hooks/useEffectiveChainId';
@@ -701,6 +702,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     >
                       <Copy size={14} /> Copy address
                     </button>
+                    <WalletMenuMusicToggle variant="desktop-wallet" />
                     <button
                       onClick={handleDisconnect}
                       onMouseEnter={playHover}

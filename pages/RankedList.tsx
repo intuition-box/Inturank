@@ -2787,18 +2787,35 @@ const RankedList: React.FC = () => {
         <div className="h-1.5 w-full" style={{ background: ARENA_THEME.topAccentBar }} />
         <div className="pointer-events-none absolute inset-0 opacity-[0.55]" style={{ background: ARENA_THEME.heroGlow }} />
         <div className="w-full max-w-[min(1720px,calc(100vw-1.5rem))] sm:max-w-[min(1720px,calc(100vw-2rem))] mx-auto px-3 sm:px-6 lg:px-10 xl:px-12 pt-5 pb-4 md:pt-6 md:pb-5 relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.45em] mb-1.5" style={{ color: `${ARENA_THEME.cyan}cc` }}>
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 sm:gap-8 lg:gap-10">
+            <div className="relative min-w-0">
+              <p
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-[0.4em]"
+                style={{
+                  color: `${ARENA_THEME.cyan}ee`,
+                  borderColor: `${ARENA_THEME.cyan}33`,
+                  background: `linear-gradient(90deg, ${ARENA_THEME.cyan}10, transparent)`,
+                  boxShadow: `0 0 20px ${ARENA_THEME.cyan}12, inset 0 1px 0 rgba(255,255,255,0.06)`,
+                }}
+              >
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: ARENA_THEME.cyan }} />
                 IntuRank · Climb
               </p>
               <h1
-                className="text-3xl sm:text-4xl md:text-5xl font-black font-display tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_42px_rgba(0,243,255,0.09)]"
+                className="mt-3 text-3xl sm:text-4xl md:text-5xl font-black font-display tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_42px_rgba(0,243,255,0.12)] leading-[1.05]"
                 style={{ backgroundImage: ARENA_THEME.heroTitle }}
               >
                 THE ARENA
               </h1>
-              <p className="text-sm text-slate-400 mt-2 max-w-md leading-snug">
+              <div
+                className="mt-3 h-[3px] w-28 max-w-[40%] rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, ${ARENA_THEME.accentPink}, ${ARENA_THEME.cyan}, transparent)`,
+                  boxShadow: `0 0 18px ${ARENA_THEME.cyan}55`,
+                }}
+                aria-hidden
+              />
+              <p className="text-sm text-slate-400 mt-4 max-w-md leading-relaxed font-medium">
                 {climbViewMode === 'explorer' ? (
                   <>
                     Recent ranks through IntuRank. Switch to{' '}
@@ -2845,109 +2862,200 @@ const RankedList: React.FC = () => {
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-              <div
-                className="inline-flex flex-wrap gap-1 rounded-2xl border border-white/[0.1] bg-black/55 p-1.5 backdrop-blur-md self-end shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-                role="group"
-                aria-label="Arena view"
-              >
-                <button
-                  type="button"
-                  onClick={() => setClimbViewMode('arena')}
-                  aria-pressed={climbViewMode === 'arena'}
-                  className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 sm:px-3.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
-                    climbViewMode === 'arena'
-                      ? 'bg-cyan-500/20 text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-cyan-400/55'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Trophy size={13} strokeWidth={2.4} className={climbViewMode === 'arena' ? 'text-cyan-200' : 'text-slate-500'} />
-                  Arena
-                  {climbViewMode !== 'arena' ? (
-                    <span className="absolute -top-0.5 -right-0.5 inline-block px-1.5 py-0.5 rounded-md bg-intuition-secondary text-[8px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.45)]">
-                      NEW
-                    </span>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClimbViewMode('signal')}
-                  aria-pressed={climbViewMode === 'signal'}
-                  title="Stance feed · stake your conviction on circulating triples"
-                  className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 sm:px-3.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
-                    climbViewMode === 'signal'
-                      ? 'bg-cyan-500/20 text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-cyan-400/55'
-                      : 'text-slate-400 hover:text-cyan-200 hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Zap size={13} strokeWidth={2.5} className={climbViewMode === 'signal' ? 'text-cyan-200' : 'text-slate-500'} />
-                  Signal
-                  {climbViewMode !== 'signal' ? (
-                    <span className="absolute -top-0.5 -right-0.5 inline-block px-1.5 py-0.5 rounded-md bg-intuition-secondary text-[8px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.45)]">
-                      NEW
-                    </span>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClimbViewMode('explorer')}
-                  aria-pressed={climbViewMode === 'explorer'}
-                  className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 sm:px-3.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.12em] transition-all duration-200 ${
-                    climbViewMode === 'explorer'
-                      ? 'bg-cyan-500/20 text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-cyan-400/55'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <Sparkles size={13} strokeWidth={2.4} className={climbViewMode === 'explorer' ? 'text-cyan-200' : 'text-slate-500'} />
-                  Explorer
-                  {climbViewMode !== 'explorer' ? (
-                    <span className="absolute -top-0.5 -right-0.5 inline-block px-1.5 py-0.5 rounded-md bg-intuition-secondary text-[8px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.45)]">
-                      NEW
-                    </span>
-                  ) : null}
-                </button>
-              </div>
-              {address ? (
-                <IntuRankXpBadge
-                  arenaXp={arenaXpUi}
-                  activityXp={myProtocolXp}
-                  size="md"
-                  className="w-full sm:min-w-[260px] sm:max-w-[320px]"
-                  loading={!arenaGraphReady}
+            <div className="flex flex-col items-stretch w-full sm:w-auto sm:max-w-[min(410px,calc(100vw-2rem))] shrink-0 gap-0">
+              <div className="relative overflow-hidden rounded-[1.35rem] border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_64px_-24px_rgba(34,211,238,0.45),0_0_1px_rgba(236,72,153,0.28)] backdrop-blur-xl backdrop-saturate-150 pt-px">
+                {/* Panel chrome */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-4 top-0 h-px rounded-full opacity-80"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${ARENA_THEME.cyan}99, transparent)`,
+                  }}
                 />
-              ) : null}
-              {listId && climbViewMode === 'arena' ? (
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs rounded-xl border border-white/[0.1] px-3 py-2 backdrop-blur-md" style={{ background: 'rgba(8,8,10,0.75)', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05), 0 0 24px ${ARENA_THEME.goldDim}` }}>
-                  <span className="text-slate-500">Rounds <span className="text-white font-mono font-bold tabular-nums ml-1">{duels}</span></span>
-                  <span className="text-slate-700">•</span>
-                  <span className="text-slate-500">Streak <span className="font-mono font-bold tabular-nums ml-1 text-[#fcd34d]">{streak}</span></span>
-                  {address ? (
-                    <>
-                      <span className="text-slate-700">•</span>
-                      <span
-                        className="text-slate-500"
-                        title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} · this device picks ${arenaPickXp.toLocaleString()}) · Activity ${myProtocolXp.toLocaleString()} · Total`}
-                      >
-                        XP{' '}
-                        <AnimatedXpFigure
-                          ready={arenaGraphReady}
-                          value={xpDisplayTarget}
-                          className="text-intuition-primary font-mono font-bold ml-1 arena-xp-roll"
-                        />
-                      </span>
-                    </>
-                  ) : null}
-                  <div className="h-1 w-16 rounded-full bg-slate-800 overflow-hidden sm:ml-1 ring-1 ring-white/[0.06]">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 opacity-[0.035]"
+                  style={{
+                    backgroundImage: `linear-gradient(${ARENA_THEME.cyan}06 1px, transparent 1px)`, backgroundSize: '100% 3px'
+                  }}
+                />
+                <div aria-hidden className="pointer-events-none absolute top-2 left-2 h-6 w-6 border-l-2 border-t-2 border-cyan-400/45 rounded-tl-md" />
+                <div aria-hidden className="pointer-events-none absolute top-2 right-2 h-6 w-6 border-r-2 border-t-2 border-fuchsia-500/35 rounded-tr-md" />
+                <div aria-hidden className="pointer-events-none absolute bottom-2 left-2 h-6 w-6 border-l-2 border-b-2 border-fuchsia-500/30 rounded-bl-md" />
+                <div aria-hidden className="pointer-events-none absolute bottom-2 right-2 h-6 w-6 border-r-2 border-b-2 border-cyan-400/35 rounded-br-md" />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-24 -top-28 h-56 w-56 rounded-full opacity-25 blur-3xl"
+                  style={{ background: `radial-gradient(circle, ${ARENA_THEME.cyan}55, transparent 70%)` }}
+                />
+
+                <div
+                  className="relative px-3.5 sm:px-4 py-4 sm:py-5 space-y-3.5"
+                  style={{
+                    background: `linear-gradient(165deg, ${ARENA_THEME.cyan}0f 0%, rgba(10,12,22,0.88) 45%, rgba(4,6,12,0.94) 100%)`,
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[9px] font-mono font-black uppercase tracking-[0.42em] text-cyan-500/85 pl-0.5">
+                      Climb uplink
+                    </p>
                     <div
-                      className="h-full rounded-full transition-[width] duration-500 ease-out"
-                      style={{
-                        width: `${(progressToMilestone / 5) * 100}%`,
-                        background: `linear-gradient(90deg, ${ARENA_THEME.cyan}, ${ARENA_THEME.accentPink})`,
-                      }}
+                      className="inline-flex w-full flex-wrap gap-1.5 rounded-xl border border-white/[0.08] bg-black/58 p-1.5 shadow-[inset_0_2px_12px_rgba(0,0,0,0.45)]"
+                      role="group"
+                      aria-label="Arena view"
+                    >
+                      <motion.button
+                        type="button"
+                        onClick={() => setClimbViewMode('arena')}
+                        aria-pressed={climbViewMode === 'arena'}
+                        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                        className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
+                          climbViewMode === 'arena'
+                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
+                            : 'text-slate-500 hover:text-white hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Trophy size={14} strokeWidth={2.4} className={climbViewMode === 'arena' ? 'text-cyan-100' : 'text-slate-600'} />
+                        Arena
+                        {climbViewMode !== 'arena' ? (
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                            NEW
+                          </span>
+                        ) : null}
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => setClimbViewMode('signal')}
+                        aria-pressed={climbViewMode === 'signal'}
+                        title="Stance feed · stake your conviction on circulating triples"
+                        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                        className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
+                          climbViewMode === 'signal'
+                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
+                            : 'text-slate-500 hover:text-cyan-200 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Zap size={14} strokeWidth={2.5} className={climbViewMode === 'signal' ? 'text-cyan-100' : 'text-slate-600'} />
+                        Signal
+                        {climbViewMode !== 'signal' ? (
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                            NEW
+                          </span>
+                        ) : null}
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => setClimbViewMode('explorer')}
+                        aria-pressed={climbViewMode === 'explorer'}
+                        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                        className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
+                          climbViewMode === 'explorer'
+                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
+                            : 'text-slate-500 hover:text-white hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Sparkles size={14} strokeWidth={2.4} className={climbViewMode === 'explorer' ? 'text-cyan-100' : 'text-slate-600'} />
+                        Explorer
+                        {climbViewMode !== 'explorer' ? (
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                            NEW
+                          </span>
+                        ) : null}
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {address ? (
+                    <IntuRankXpBadge
+                      arenaXp={arenaXpUi}
+                      activityXp={myProtocolXp}
+                      size="md"
+                      presentation="arenaHud"
+                      className="w-full"
+                      loading={!arenaGraphReady}
                     />
+                  ) : (
+                    <div
+                      className="w-full min-h-[7.5rem] rounded-xl border border-dashed border-white/12 bg-black/30 flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-center"
+                      aria-hidden
+                    >
+                      <span className="text-[9px] font-mono font-black uppercase tracking-[0.32em] text-slate-600">
+                        XP uplink
+                      </span>
+                      <span className="text-[11px] text-slate-500 leading-snug max-w-[14rem]">
+                        Connect your wallet to show live XP in this rail.
+                      </span>
+                    </div>
+                  )}
+
+                  <div
+                    className="rounded-xl border border-white/[0.09] px-3 py-2.5 backdrop-blur-sm min-h-[3.75rem] flex items-center"
+                    style={{
+                      background:
+                        'linear-gradient(90deg, rgba(8,8,12,0.88) 0%, rgba(0,243,255,0.07) 100%)',
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 0 20px ${ARENA_THEME.goldDim}`,
+                    }}
+                  >
+                    {listId && climbViewMode === 'arena' ? (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] sm:text-[11px] w-full">
+                        <span className="font-mono font-black uppercase tracking-[0.2em] text-slate-600 w-full sm:w-auto">
+                          Session
+                        </span>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-slate-600 font-mono uppercase tracking-wider text-[9px]">Rounds</span>
+                            <span className="text-white font-mono font-bold tabular-nums text-sm">{duels}</span>
+                          </div>
+                          <span className="text-slate-700 hidden sm:inline">│</span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-slate-600 font-mono uppercase tracking-wider text-[9px]">Streak</span>
+                            <span className="font-mono font-bold tabular-nums text-sm text-[#fcd34d]">{streak}</span>
+                          </div>
+                          {address ? (
+                            <>
+                              <span className="text-slate-700 hidden sm:inline">│</span>
+                              <div className="flex items-baseline gap-1.5 min-w-0">
+                                <span className="text-slate-600 font-mono uppercase tracking-wider text-[9px] shrink-0">XP</span>
+                                <span
+                                  className="text-slate-500 min-w-0 truncate"
+                                  title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} · this device picks ${arenaPickXp.toLocaleString()}) · Activity ${myProtocolXp.toLocaleString()} · Total`}
+                                >
+                                  <AnimatedXpFigure
+                                    ready={arenaGraphReady}
+                                    value={xpDisplayTarget}
+                                    className="text-intuition-primary font-mono font-bold tabular-nums text-sm arena-xp-roll"
+                                  />
+                                </span>
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto sm:flex-1 sm:min-w-[120px] sm:max-w-[180px]">
+                          <div className="h-1.5 flex-1 rounded-full bg-slate-900/90 overflow-hidden ring-1 ring-inset ring-white/[0.08]">
+                            <div
+                              className="h-full rounded-full transition-[width] duration-500 ease-out"
+                              style={{
+                                width: `${(progressToMilestone / 5) * 100}%`,
+                                background: `linear-gradient(90deg, ${ARENA_THEME.cyan}, ${ARENA_THEME.accentPink})`,
+                                boxShadow: `0 0 12px ${ARENA_THEME.cyan}66`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="w-full text-[10px] sm:text-[11px] font-mono text-slate-500 leading-relaxed px-0.5">
+                        <span className="font-black uppercase tracking-[0.2em] text-slate-600 mr-2">Session</span>
+                        Open a contest from <span className="text-slate-400">Arena</span> to track rounds, streak, and
+                        lane XP here — Signal &amp; Explorer keep this rail parked.
+                      </p>
+                    )}
                   </div>
                 </div>
-              ) : null}
+              </div>
             </div>
           </div>
         </div>

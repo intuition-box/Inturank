@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type CSSProperties } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArenaXpToken } from './ArenaXpToken';
 import { AnimatedXpFigure } from './AnimatedXpFigure';
@@ -59,6 +59,9 @@ export interface IntuRankXpBadgeProps {
   loading?: boolean;
   /** Light card for blueprint / Climb contest shell. */
   surface?: 'dark' | 'light';
+  /** Arcade HUD frame for Climb header — bolder glass, glow, larger token. */
+  presentation?: 'default' | 'arenaHud';
+  style?: CSSProperties;
 }
 
 export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
@@ -70,6 +73,8 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
   className = '',
   loading = false,
   surface = 'dark',
+  presentation = 'default',
+  style,
 }) => {
   const preset = SIZE_PRESETS[size];
   const reduceMotion = useReducedMotion();
@@ -77,10 +82,52 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
   const showBreakdown =
     !compact && !loading && (arenaXp > 0 || activityXp > 0);
   const light = surface === 'light';
+  const hud = !light && presentation === 'arenaHud';
+  const tokenPx = hud ? Math.round(preset.token * 1.14) : preset.token;
+
+  const borderTone = light
+    ? 'border-slate-200/90'
+    : hud
+      ? 'border border-cyan-400/40 ring-1 ring-fuchsia-500/25'
+      : 'border border-intuition-primary/40';
+
+  const baseDarkStyle: CSSProperties = hud
+    ? {
+        background:
+          'linear-gradient(128deg, rgba(0,243,255,0.13) 0%, rgba(10,14,26,0.9) 45%, rgba(4,7,13,0.96) 100%)',
+        boxShadow:
+          'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(236,72,153,0.09), 0 0 44px rgba(34,211,238,0.22)',
+      }
+    : {
+        background:
+          'linear-gradient(135deg, rgba(0,243,255,0.08) 0%, rgba(8,15,28,0.85) 55%, rgba(2,6,12,0.95) 100%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 28px rgba(0,243,255,0.12)',
+      };
+
+  const mergedSurfaceStyle: CSSProperties = light
+    ? {
+        background:
+          'linear-gradient(135deg, #ffffff 0%, rgb(248 250 252) 50%, rgb(240 249 255 / 0.85) 100%)',
+        boxShadow:
+          'inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 28px rgba(15,23,42,0.08)',
+      }
+    : { ...baseDarkStyle, ...(style ?? {}) };
+
+  const overlayStyle =
+    light
+      ? {
+          background:
+            'radial-gradient(circle at 18% 30%, rgba(14,165,233,0.08), transparent 55%), radial-gradient(circle at 80% 80%, rgba(232,197,71,0.06), transparent 65%)',
+        }
+      : {
+          background: hud
+            ? 'radial-gradient(circle at 15% 25%, rgba(34,211,238,0.22), transparent 52%), radial-gradient(circle at 88% 70%, rgba(236,72,153,0.12), transparent 58%)'
+            : 'radial-gradient(circle at 18% 30%, rgba(34,211,238,0.16), transparent 55%), radial-gradient(circle at 80% 80%, rgba(232,197,71,0.06), transparent 65%)',
+        };
 
   return (
     <motion.div
-      className={`relative flex items-center overflow-hidden ${light ? 'border-slate-200/90' : 'border border-intuition-primary/40'} ${preset.container} ${className}`}
+      className={`relative flex items-center overflow-hidden ${borderTone} ${preset.container} ${className}`}
       initial={reduceMotion ? false : { opacity: 0.88, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={
@@ -88,41 +135,20 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
           ? { duration: 0 }
           : { duration: 0.42, ease: [0.22, 1, 0.36, 1] }
       }
-      style={
-        light
-          ? {
-              background:
-                'linear-gradient(135deg, #ffffff 0%, rgb(248 250 252) 50%, rgb(240 249 255 / 0.85) 100%)',
-              boxShadow:
-                'inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 28px rgba(15,23,42,0.08)',
-            }
-          : {
-              background:
-                'linear-gradient(135deg, rgba(0,243,255,0.08) 0%, rgba(8,15,28,0.85) 55%, rgba(2,6,12,0.95) 100%)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 28px rgba(0,243,255,0.12)',
-            }
-      }
+      style={{
+        ...(light ? { ...mergedSurfaceStyle, ...(style ?? {}) } : mergedSurfaceStyle),
+      }}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-60"
-        style={
-          light
-            ? {
-                background:
-                  'radial-gradient(circle at 18% 30%, rgba(14,165,233,0.08), transparent 55%), radial-gradient(circle at 80% 80%, rgba(232,197,71,0.06), transparent 65%)',
-              }
-            : {
-                background:
-                  'radial-gradient(circle at 18% 30%, rgba(34,211,238,0.16), transparent 55%), radial-gradient(circle at 80% 80%, rgba(232,197,71,0.06), transparent 65%)',
-              }
-        }
+        style={overlayStyle}
         aria-hidden
       />
-      <ArenaXpToken size={preset.token} className="relative z-10 shrink-0" />
+      <ArenaXpToken size={tokenPx} className="relative z-10 shrink-0" />
       <div className="relative z-10 min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p
-            className={`font-mono font-black uppercase ${light ? 'text-sky-800/90' : 'text-intuition-primary/90'} ${preset.label}`}
+            className={`font-mono font-black uppercase ${light ? 'text-sky-800/90' : hud ? 'text-cyan-100/95' : 'text-intuition-primary/90'} ${preset.label}`}
             style={{ letterSpacing: '0.18em' }}
           >
             IntuRank XP
@@ -140,7 +166,7 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
           ) : null}
         </div>
         <p
-          className={`font-display font-black tabular-nums tracking-tight leading-none mt-1 ${light ? 'text-slate-900' : 'text-white'} ${preset.total}`}
+          className={`font-display font-black tabular-nums tracking-tight leading-none mt-1 ${light ? 'text-slate-900' : hud ? 'text-white drop-shadow-[0_0_20px_rgba(34,211,238,0.45)]' : 'text-white'} ${preset.total}`}
         >
           <AnimatedXpFigure ready={!loading} value={total} />
         </p>

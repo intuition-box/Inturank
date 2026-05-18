@@ -22,6 +22,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { playClick, playHover } from '../services/audio';
+import { WalletMenuMusicToggle } from './WalletMenuMusicToggle';
 
 const TRUST_SWAP_URL = 'https://aero.drome.eth.limo/swap?from=0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=0x6cd905df2ed214b22e0d48ff17cd4200c1c6d8a3&chain0=8453&chain1=8453';
 
@@ -304,7 +305,8 @@ const MobileNavSheet: React.FC<Props> = ({ open, onClose, onCreate, onConnect, o
                 </motion.div>
               ))}
 
-              <motion.div variants={sheetRowVariants} className="pt-2">
+              <motion.div variants={sheetRowVariants} className="pt-2 space-y-2">
+                <WalletMenuMusicToggle variant="sheet" />
                 {walletAddress ? (
                   <button
                     type="button"

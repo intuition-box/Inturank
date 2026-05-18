@@ -386,6 +386,19 @@
         animation: neon-flicker 4s ease-in-out infinite;
       }
 
+      /* Home hero — cheap translateY cue (GPU-friendly); disabled with reduced-motion below */
+      @keyframes hero-scroll-nudge {
+        0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.78; }
+        50% { transform: translate3d(0, 7px, 0); opacity: 1; }
+      }
+      .hero-scroll-nudge {
+        animation: hero-scroll-nudge 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        will-change: transform;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-scroll-nudge { animation: none !important; will-change: auto; opacity: 1 !important; }
+      }
+
       /* IntuRank card — premium holographic/foil gamification (Pokémon-style) */
       @keyframes holo-rainbow {
         0%, 100% { background-position: 0% 50%; }
@@ -704,6 +717,7 @@
         .animate-spin-reverse-slow, .animate-spin-fast, .animate-spin-reverse-fast,
         .animate-scanline, .animate-glitch,
         .animate-arena-pulse, .animate-badge-bounce, .animate-slot-shimmer, .animate-neon-flicker,
+        .hero-scroll-nudge,
         .atom-card-artwork, .atom-card-artwork-image, .atom-card-front {
           animation: none !important;
         }

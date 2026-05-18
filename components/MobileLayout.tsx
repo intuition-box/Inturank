@@ -35,6 +35,7 @@ import { mergeFollowsFromServer } from '../services/follows';
 import { useEffectiveChainId } from '../hooks/useEffectiveChainId';
 import MobileNavSheet from './MobileNavSheet';
 import ArenaBatchFab from './ArenaBatchFab';
+import { WalletMenuMusicToggle } from './WalletMenuMusicToggle';
 import { useWalletDisplayMeta } from '../hooks/useWalletDisplayMeta';
 import { formatWalletHeadlineForUi } from '../services/analytics';
 import { isNavPathActive } from '../services/navActive';
@@ -291,6 +292,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
                       >
                         Profile
                       </Link>
+                      <WalletMenuMusicToggle variant="mobile-wallet" />
                       <button
                         type="button"
                         onClick={() => {

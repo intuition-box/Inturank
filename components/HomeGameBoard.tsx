@@ -60,8 +60,9 @@ export const HomeGameBoard: React.FC<HomeGameBoardProps> = ({ compact }) => {
 
   return (
     <section
+      id="arena-home-contests"
       aria-label="Ranking games"
-      className={`relative mx-auto w-full max-w-[1600px] min-w-0 ${compact ? 'px-3 pb-8' : 'px-4 sm:px-6 lg:px-10 py-16 sm:py-20'}`}
+      className={`scroll-mt-20 relative mx-auto w-full max-w-[1600px] min-w-0 ${compact ? 'px-3 pb-8' : 'px-4 sm:px-6 lg:px-10 py-16 sm:py-20'}`}
     >
       <div
         ref={headRef}

@@ -20,7 +20,7 @@ export const HomeArenaEntryEffects: React.FC = () => {
     }
     if (st.scrollArenaContests) {
       requestAnimationFrame(() => {
-        document.getElementById('arena-contest-floor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('arena-home-contests')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
     navigate('.', { replace: true, state: {} });

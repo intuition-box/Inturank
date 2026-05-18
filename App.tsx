@@ -78,6 +78,7 @@ import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
 import { PageLoadingSpinner } from './components/PageLoading';
+import ArenaTapOptic from './components/ArenaTapOptic';
 
 const RankedList = lazy(() => import('./pages/RankedList'));
 const ArenaPlaceholder = lazy(() => import('./pages/ArenaPlaceholder'));
@@ -169,12 +170,15 @@ const AppRoutes: React.FC = () => {
   );
 
   return (
-    <Shell>
+    <>
+      <ArenaTapOptic />
+      <Shell>
       <ToastContainer />
       <RouteTransition routeKey={routeKey} variant={isMobile ? 'mobile-slide' : 'desktop-fade'}>
         {routeTree}
       </RouteTransition>
     </Shell>
+    </>
   );
 };
 

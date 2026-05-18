@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Star } from 'lucide-react';
-import { playArenaUiClick, playArenaUiHover } from '../services/audio';
+import { playArenaUiHover } from '../services/audio';
+import { pulseArenaTapOptic } from '../services/arenaTapOptic';
 import type { RankItem } from '../pages/RankedList';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
@@ -115,7 +116,7 @@ const ArenaListCard: React.FC<Props> = ({
       <motion.button
         type="button"
         onClick={() => {
-          playArenaUiClick();
+          pulseArenaTapOptic();
           onSelect();
         }}
         onMouseEnter={playArenaUiHover}
