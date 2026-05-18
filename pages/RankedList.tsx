@@ -1786,13 +1786,7 @@ const RankedList: React.FC = () => {
         return next;
       });
       setDuels((d) => d + 1);
-      setStreak((s) => {
-        const next = s + 1;
-        if (next >= 3 && next % 3 === 0) {
-          toast.success(`${next} in a row. You're on fire.`);
-        }
-        return next;
-      });
+      setStreak((s) => s + 1);
 
       setRound((prev) => {
         if (ARENA_CONTEST_FLOW_V2) return prev;

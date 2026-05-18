@@ -3,10 +3,10 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect, useConnect, useConfig } from 'wagmi';
 import { getWalletClient } from '@wagmi/core';
-import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Volume2, VolumeX, Cpu } from 'lucide-react';
+import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
 import { switchNetwork, disconnectWallet, setWagmiConnection, setOpenConnectModalRef } from '../services/web3';
 import { APP_VERSION_DISPLAY, CHAIN_ID } from '../constants';
-import { playHover, playClick, getSoundEnabled, setSoundEnabled } from '../services/audio';
+import { playHover, playClick } from '../services/audio';
 import Logo from './Logo';
 import NotificationBar from './NotificationBar';
 import { toast } from './Toast';
@@ -210,7 +210,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
-  const [soundEnabled, setSoundEnabledState] = useState(() => getSoundEnabled());
 
   const { openConnectModal } = useConnectModal();
   const wagmiConfig = useConfig();
@@ -606,45 +605,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Plus size={18} /> New atom or claim
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !soundEnabled;
-                      setSoundEnabled(next);
-                      setSoundEnabledState(next);
-                      if (next) playClick();
-                    }}
-                    style={{
-                      animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
-                    }}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-4 border-2 border-slate-700 text-slate-300 font-sans font-medium text-sm normal-case rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
-                  >
-                    <span className="flex items-center gap-3">
-                      {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                      Sound effects
-                    </span>
-                    <span
-                      className={`inline-flex h-5 w-9 shrink-0 items-center rounded-sm border-2 transition-colors ${
-                        soundEnabled
-                          ? 'border-intuition-primary bg-intuition-primary/30'
-                          : 'border-slate-600 bg-slate-800'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 translate-x-0.5 rounded-sm bg-white transition-transform ${
-                          soundEnabled ? 'translate-x-4' : ''
-                        }`}
-                      />
-                    </span>
-                  </button>
-
                   {walletAddress ? (
                     <button
+                      type="button"
                       onClick={handleDisconnect}
-style={{
-                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 3) * 45}ms`,
+                      style={{
+                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
                       }}
-                    className="w-full py-4 border-2 border-intuition-danger text-intuition-danger font-sans font-semibold text-sm normal-case bg-intuition-danger/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
+                      className="w-full py-4 border-2 border-intuition-danger text-intuition-danger font-sans font-semibold text-sm normal-case bg-intuition-danger/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                     >
                       Disconnect wallet
                     </button>
@@ -656,7 +624,7 @@ style={{
                         openModal();
                       }}
                       style={{
-                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 3) * 45}ms`,
+                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
                       }}
                       className="w-full py-4 border-2 border-intuition-primary text-intuition-primary font-sans font-semibold text-sm normal-case bg-intuition-primary/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                     >
@@ -732,35 +700,6 @@ style={{
                       className="w-full flex items-center gap-4 px-4 py-4 text-left text-sm font-medium font-sans text-slate-300 hover:bg-white/5 hover:text-intuition-primary transition-colors"
                     >
                       <Copy size={14} /> Copy address
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = !soundEnabled;
-                        setSoundEnabled(next);
-                        setSoundEnabledState(next);
-                        if (next) playClick();
-                      }}
-                      onMouseEnter={playHover}
-                      className="w-full flex items-center justify-between gap-4 px-4 py-4 text-left text-sm font-medium font-sans text-slate-300 hover:bg-white/5 hover:text-intuition-primary transition-colors border-t border-white/5"
-                    >
-                      <span className="flex items-center gap-4">
-                        {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                        Sound effects
-                      </span>
-                      <span
-                        className={`inline-flex h-5 w-9 shrink-0 items-center rounded-sm border-2 transition-colors ${
-                          soundEnabled
-                            ? 'border-intuition-primary bg-intuition-primary/30'
-                            : 'border-slate-600 bg-slate-800'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 translate-x-0.5 rounded-sm bg-white transition-transform ${
-                            soundEnabled ? 'translate-x-4' : ''
-                          }`}
-                        />
-                      </span>
                     </button>
                     <button
                       onClick={handleDisconnect}

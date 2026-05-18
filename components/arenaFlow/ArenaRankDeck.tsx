@@ -17,7 +17,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaRankSlide, playClick, playHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -435,17 +435,26 @@ export const ArenaRankDeck: React.FC<Props> = ({
   const totalUnits = useMemo(() => stakePerItem.reduce((s, r) => s + r.units, 0), [stakePerItem]);
   const totalTrustLabel = useMemo(() => formatTrust(base, totalUnits), [base, totalUnits]);
 
+  const notifyReorder = useCallback(
+    (next: RankItem[]) => {
+      const a = items.map((i) => i.id).join();
+      const b = next.map((i) => i.id).join();
+      if (a !== b) playArenaRankSlide();
+      onReorder(next);
+    },
+    [items, onReorder],
+  );
+
   const handleMove = useCallback(
     (idx: number, dir: -1 | 1) => {
       const j = idx + dir;
       if (j < 0 || j >= items.length) return;
-      playClick();
       const next = [...items];
       const [row] = next.splice(idx, 1);
       next.splice(j, 0, row!);
-      onReorder(next);
+      notifyReorder(next);
     },
-    [items, onReorder],
+    [items, notifyReorder],
   );
 
   return (
@@ -487,7 +496,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
             <Reorder.Group
               axis="y"
               values={items}
-              onReorder={onReorder}
+              onReorder={notifyReorder}
               className="flex flex-col gap-3"
               as="ul"
             >

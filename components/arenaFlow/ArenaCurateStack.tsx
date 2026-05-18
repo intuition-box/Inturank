@@ -8,7 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaSwipeAgree, playArenaSwipePass, playClick, playHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -91,6 +91,8 @@ export const ArenaCurateStack: React.FC<Props> = ({
     (dir: 'left' | 'right') => {
       if (commitLock.current || stakingTx || !top) return;
       commitLock.current = true;
+      if (dir === 'right') playArenaSwipeAgree();
+      else playArenaSwipePass();
       setExitDir(dir === 'right' ? 1 : -1);
       onDecide(top, dir === 'right');
       // Release lock on next tick — long enough for AnimatePresence to swap.
@@ -195,7 +197,12 @@ export const ArenaCurateStack: React.FC<Props> = ({
       <div className="mt-8 flex w-full flex-col items-stretch gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12 xl:gap-16">
         {/* Card + actions — grows with viewport */}
         <div className="flex min-w-0 flex-1 flex-col items-center">
-          <div className="relative h-[540px] w-full max-w-[min(520px,94vw)] sm:h-[560px] sm:max-w-[540px]">
+          <div className="relative w-full max-w-[min(520px,94vw)] sm:max-w-[540px] pb-8">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-cyan-400/[0.07] via-slate-950/40 to-fuchsia-500/[0.06] shadow-[inset_0_0_120px_rgba(0,0,0,0.55)] sm:rounded-[2.1rem]"
+            />
+            <div className="relative h-[540px] w-full sm:h-[560px]">
             {/* Back-deck cards */}
             {peek.slice(0, 3).map((p, i) => {
               const drift = (i + 1) * 1.05 * (i % 2 === 0 ? -1 : 1);
@@ -230,6 +237,15 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 onCommit={commit}
               />
             </AnimatePresence>
+            <div className="pointer-events-none absolute inset-x-1 bottom-0 z-[4] flex justify-between px-2 pb-0.5 sm:inset-x-2">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-rose-400/80 drop-shadow-[0_0_12px_rgba(251,113,133,0.35)]">
+                ← Pass
+              </span>
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-400/80 drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+                Agree →
+              </span>
+            </div>
+          </div>
           </div>
 
           <div className="mt-10 flex w-full max-w-md flex-col items-center gap-6">
@@ -239,7 +255,6 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 label="Pass"
                 disabled={stakingTx}
                 onClick={() => {
-                  playClick();
                   commit('left');
                 }}
               >
@@ -263,7 +278,6 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 label="Agree"
                 disabled={stakingTx}
                 onClick={() => {
-                  playClick();
                   commit('right');
                 }}
               >
@@ -403,6 +417,8 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
   const yesStampScale = useTransform(x, [36, 120], [0.94, 1.03]);
   const noStampOpacity = useTransform(x, [-110, -36], [1, 0]);
   const noStampScale = useTransform(x, [-120, -36], [1.03, 0.94]);
+  const leftGlowOpacity = useTransform(x, [-160, -48, 0], [0.55, 0.1, 0]);
+  const rightGlowOpacity = useTransform(x, [0, 48, 160], [0, 0.1, 0.55]);
 
   const endSwipe = (_: unknown, info: PanInfo) => {
     const dx = info.offset.x + info.velocity.x * 0.22;
@@ -411,7 +427,7 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
     // Elastic snap handled by drag — `dragMomentum` off keeps frames cheap.
   };
 
-  const flySpring = { type: 'spring' as const, stiffness: 380, damping: 34, mass: 0.78 };
+  const flySpring = { type: 'spring' as const, stiffness: 330, damping: 28, mass: 0.72 };
 
   return (
     <motion.article
@@ -447,10 +463,32 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
         border: `1px solid ${deck.line}`,
         boxShadow: ARENA_SHADOWS.cardLifted,
       }}
-      className={`absolute inset-x-0 top-0 mx-auto w-full max-w-[min(500px,93vw)] cursor-grab select-none overflow-hidden rounded-[1.35rem] active:cursor-grabbing sm:max-w-[520px] ${
+      className={`absolute inset-x-0 top-0 mx-auto w-full max-w-[min(500px,93vw)] cursor-grab select-none overflow-hidden rounded-[1.35rem] ring-1 ring-white/[0.04] transition-shadow duration-150 active:cursor-grabbing sm:max-w-[520px] ${
         reduceMotion ? 'touch-manipulation' : 'touch-none'
       }`}
     >
+      {!reduceMotion ? (
+        <>
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0 rounded-[inherit]"
+            style={{
+              opacity: leftGlowOpacity,
+              background:
+                'radial-gradient(ellipse 95% 85% at 6% 50%, rgba(251,113,133,0.55), transparent 64%)',
+            }}
+          />
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0 rounded-[inherit]"
+            style={{
+              opacity: rightGlowOpacity,
+              background:
+                'radial-gradient(ellipse 95% 85% at 94% 50%, rgba(52,211,153,0.52), transparent 64%)',
+            }}
+          />
+        </>
+      ) : null}
       {/* Stamps — compact outlined badges (subtle vs hero art) */}
       <motion.div
         aria-hidden
