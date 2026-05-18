@@ -45,7 +45,7 @@ function arenaCtx(): AudioContext | null {
   }
 }
 
-/** Wake the graph from a user gesture (tap navigation, button, etc.). Also nudges BGM (separate mute pref). */
+/** Wake procedural Web Audio; BGM primer is gated inside `arenaAmbientMusic` (Climb shell only). */
 export function resumeArenaAudio(): void {
   if (getArenaSoundEnabled()) {
     const ctx = arenaCtx();
@@ -56,22 +56,29 @@ export function resumeArenaAudio(): void {
   tryPlayArenaAmbientFromUserGesture();
 }
 
-function outlet(): GainNode | null {
-  if (!getArenaSoundEnabled()) return null;
+/**
+ * Web Audio `resume()` is promise-based — a sync `state` check right after calling
+ * `resume()` still sees `suspended`, so the first taps were silent. Run the graph
+ * only once the context is actually running.
+ */
+function runArenaAudio(fn: (master: GainNode, ctx: AudioContext) => void): void {
+  if (!getArenaSoundEnabled()) return;
   const ctx = arenaCtx();
-  if (!arenaMaster || !ctx) return null;
-  if (ctx.state !== 'running') {
-    void ctx.resume().catch(() => {});
-    if (ctx.state !== 'running') return null;
-  }
-  return arenaMaster;
+  if (!arenaMaster || !ctx) return;
+  const exec = () => {
+    if (!getArenaSoundEnabled()) return;
+    if (ctx.state !== 'running') return;
+    const m = arenaMaster;
+    if (!m) return;
+    fn(m, ctx);
+  };
+  if (ctx.state === 'running') exec();
+  else void ctx.resume().then(exec).catch(() => {});
 }
 
 /** “Floor rush” — short bright stack + sparkle when entering a contest run. */
 export function playArenaFloorEnter(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
 
   /* --- Air / riser noise (filtered) --- */
@@ -164,14 +171,16 @@ export function playArenaFloorEnter(): void {
   bg.connect(master);
   bell.start(bt);
   bell.stop(bt + 0.4);
+  });
 }
 
-/** Default UI tap — chip / token hit. */
+/** Default UI tap — chip / token hit; loud via `clickLvl` (other Arena SFX keep the same master trim). */
 export function playArenaUiClick(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
+  /** Extra loudness routed only here — avoids bloating swipe / floor SFX via `arenaMaster`. */
+  const clickLvl = ctx.createGain();
+  clickLvl.gain.value = 2.95;
 
   const tone = ctx.createOscillator();
   const tg = ctx.createGain();
@@ -179,10 +188,10 @@ export function playArenaUiClick(): void {
   tone.frequency.setValueAtTime(1888, t);
   tone.frequency.exponentialRampToValueAtTime(420, t + 0.04);
   tg.gain.setValueAtTime(0, t);
-  tg.gain.linearRampToValueAtTime(0.11, t + 0.002);
+  tg.gain.linearRampToValueAtTime(0.34, t + 0.002);
   tg.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
   tone.connect(tg);
-  tg.connect(master);
+  tg.connect(clickLvl);
   tone.start(t);
   tone.stop(t + 0.07);
 
@@ -196,20 +205,20 @@ export function playArenaUiClick(): void {
   nf.type = 'highpass';
   nf.frequency.value = 1200;
   const ng = ctx.createGain();
-  ng.gain.setValueAtTime(0.035, t);
+  ng.gain.setValueAtTime(0.11, t);
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.028);
   ns.connect(nf);
   nf.connect(ng);
-  ng.connect(master);
+  ng.connect(clickLvl);
+  clickLvl.connect(master);
   ns.start(t);
   ns.stop(t + 0.032);
+  });
 }
 
 /** Nav / card hover shimmer — quieter than clicks. */
 export function playArenaUiHover(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
@@ -223,13 +232,12 @@ export function playArenaUiHover(): void {
   g.connect(master);
   osc.start(t);
   osc.stop(t + 0.08);
+  });
 }
 
 /** Agree / right swipe — short “winner lane” ding. */
 export function playArenaSwipeAgree(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
   const cents = [0, 4, 7].map((s) => 523.25 * Math.pow(2, s / 12));
   cents.forEach((freq, i) => {
@@ -246,13 +254,12 @@ export function playArenaSwipeAgree(): void {
     osc.start(start);
     osc.stop(start + 0.25);
   });
+  });
 }
 
 /** Pass / left — mute fold. */
 export function playArenaSwipePass(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
@@ -266,13 +273,12 @@ export function playArenaSwipePass(): void {
   g.connect(master);
   osc.start(t);
   osc.stop(t + 0.22);
+  });
 }
 
 /** Rank list row slide. */
 export function playArenaRankSlide(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
@@ -290,13 +296,12 @@ export function playArenaRankSlide(): void {
   g.connect(master);
   osc.start(t);
   osc.stop(t + 0.09);
+  });
 }
 
 /** Streak / stance win — fuller than swipe agree. */
 export function playArenaCelebrateMini(): void {
-  const master = outlet();
-  const ctx = ctxRef;
-  if (!master || !ctx) return;
+  runArenaAudio((master, ctx) => {
   const t = ctx.currentTime;
   const chord = [392, 493.88, 587.33, 783.99];
   chord.forEach((freq, i) => {
@@ -312,5 +317,6 @@ export function playArenaCelebrateMini(): void {
     g.connect(master);
     osc.start(start);
     osc.stop(start + 0.5);
+  });
   });
 }

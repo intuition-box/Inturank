@@ -1,8 +1,11 @@
 /**
- * Looping arcade BGM for the Arena tab on `/climb`.
+ * Looping arcade BGM for `/climb` (Arena hub, Signal, Explorer tabs).
  * Separate from procedural SFX — uses HTMLAudioElement (MP3).
- * Autoplay limits: `resumeArenaAudio()` triggers `tryPlayArenaAmbientFromUserGesture()`.
+ * Autoplay limits: `resumeArenaAudio()` invokes `tryPlayArenaAmbientFromUserGesture()`,
+ * which only runs MP3 playback while `syncArenaAmbientForClimb(true)` is in effect (`RankedList` on `/climb`).
  */
+
+let ambientShellActive = false;
 
 const ARENA_MUSIC_PREF_KEY = 'inturank_arena_music';
 
@@ -48,24 +51,26 @@ export function pauseArenaAmbient(): void {
   el?.pause();
 }
 
-/** After first user gesture anywhere we wire `resumeArenaAudio`, try starting BGM. */
+/** After a user gesture, start BGM only if we're still inside the Climb Arena shell (`/climb` + RankedList). */
 export function tryPlayArenaAmbientFromUserGesture(): void {
-  if (!getArenaMusicEnabled()) return;
+  if (!ambientShellActive || !getArenaMusicEnabled()) return;
   const a = ensureEl();
   if (!a) return;
   void a.play().catch(() => {});
 }
 
 /**
- * Toggle BGM against Climb routing: playing only while Arena tab (`view` default) is active.
+ * `RankedList` sets this on mount/off on unmount. Gates MP3 playback so global
+ * `playClick()` / other routes never summon the Arcade track outside `/climb`.
  */
-export function syncArenaAmbientForClimb(arenaTabActive: boolean): void {
+export function syncArenaAmbientForClimb(climbActive: boolean): void {
   if (typeof window === 'undefined') return;
+  ambientShellActive = climbActive;
   if (!getArenaMusicEnabled()) {
     pauseArenaAmbient();
     return;
   }
-  if (!arenaTabActive) {
+  if (!climbActive) {
     pauseArenaAmbient();
     return;
   }

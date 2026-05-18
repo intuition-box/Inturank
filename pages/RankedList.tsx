@@ -1638,13 +1638,13 @@ const RankedList: React.FC = () => {
     playArenaFloorEnter();
   }, [listId, loading, pool.length, climbViewMode]);
 
-  /** Retro arcade BGM — only while Arena view tab is active on Climb. */
+  /** Retro arcade BGM while RankedList (Arena / Signal / Explorer) is mounted. */
   useEffect(() => {
-    syncArenaAmbientForClimb(climbViewMode === 'arena');
+    syncArenaAmbientForClimb(true);
     return () => {
       syncArenaAmbientForClimb(false);
     };
-  }, [climbViewMode]);
+  }, []);
 
   /** After hard refresh during rank/compare: restore deck once pool loads. */
   useEffect(() => {

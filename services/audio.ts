@@ -1,5 +1,11 @@
-// Global UI audio (non-Arena) remains off — most of the app uses these no-ops.
-// Arena / Climb uses `playArena*` from the re-exports below (real Web Audio).
+// Arena / Climb procedural SFX + shared UI aliases (`playClick` routes here so Signal, etc. hear taps).
+
+import {
+  resumeArenaAudio,
+  playArenaUiClick,
+  playArenaUiHover,
+  playArenaCelebrateMini,
+} from './arenaAudio';
 
 export {
   resumeArenaAudio,
@@ -22,6 +28,24 @@ export {
   setArenaMusicEnabled,
 } from './arenaAmbientMusic';
 
+/** Maps legacy/global UI hooks to Arena Web Audio (Signal tab, Explorer, etc.). */
+export function playClick(): void {
+  resumeArenaAudio();
+  playArenaUiClick();
+}
+
+/** @deprecated Non-Arena pages; shimmer uses Arena hover patch. */
+export function playHover(): void {
+  resumeArenaAudio();
+  playArenaUiHover();
+}
+
+/** @deprecated Success moments — mini celebration chord. */
+export function playSuccess(): void {
+  resumeArenaAudio();
+  playArenaCelebrateMini();
+}
+
 /** @deprecated Non-Arena; always false. */
 export function getSoundEnabled(): boolean {
   return false;
@@ -29,11 +53,5 @@ export function getSoundEnabled(): boolean {
 
 /** @deprecated Non-Arena; no-op. */
 export function setSoundEnabled(_enabled: boolean): void {}
-
-export const playHover = () => {};
-
-export const playClick = () => {};
-
-export const playSuccess = () => {};
 
 export const playXpChime = () => {};
