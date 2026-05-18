@@ -14,6 +14,14 @@ export {
   playArenaCelebrateMini,
 } from './arenaAudio';
 
+export {
+  pauseArenaAmbient,
+  syncArenaAmbientForClimb,
+  tryPlayArenaAmbientFromUserGesture,
+  getArenaMusicEnabled,
+  setArenaMusicEnabled,
+} from './arenaAmbientMusic';
+
 /** @deprecated Non-Arena; always false. */
 export function getSoundEnabled(): boolean {
   return false;

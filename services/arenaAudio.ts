@@ -4,6 +4,8 @@
  * before relying on queued sounds.
  */
 
+import { tryPlayArenaAmbientFromUserGesture } from './arenaAmbientMusic';
+
 const ARENA_SOUND_PREF = 'inturank_arena_sound';
 
 export function getArenaSoundEnabled(): boolean {
@@ -43,13 +45,15 @@ function arenaCtx(): AudioContext | null {
   }
 }
 
-/** Wake the graph from a user gesture (tap navigation, button, etc.). */
+/** Wake the graph from a user gesture (tap navigation, button, etc.). Also nudges BGM (separate mute pref). */
 export function resumeArenaAudio(): void {
-  if (!getArenaSoundEnabled()) return;
-  const ctx = arenaCtx();
-  if (ctx?.state === 'suspended') {
-    void ctx.resume().catch(() => {});
+  if (getArenaSoundEnabled()) {
+    const ctx = arenaCtx();
+    if (ctx?.state === 'suspended') {
+      void ctx.resume().catch(() => {});
+    }
   }
+  tryPlayArenaAmbientFromUserGesture();
 }
 
 function outlet(): GainNode | null {

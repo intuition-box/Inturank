@@ -260,6 +260,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 label="Pass"
                 disabled={stakingTx}
                 onClick={() => {
+                  playArenaUiClick();
                   commit('left');
                 }}
               >
@@ -283,6 +284,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 label="Agree"
                 disabled={stakingTx}
                 onClick={() => {
+                  playArenaUiClick();
                   commit('right');
                 }}
               >

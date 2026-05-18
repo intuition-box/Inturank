@@ -62,6 +62,7 @@ import {
   playArenaUiClick,
   playArenaUiHover,
   playArenaCelebrateMini,
+  syncArenaAmbientForClimb,
 } from '../services/audio';
 import { toast } from '../components/Toast';
 import {
@@ -1637,6 +1638,14 @@ const RankedList: React.FC = () => {
     playArenaFloorEnter();
   }, [listId, loading, pool.length, climbViewMode]);
 
+  /** Retro arcade BGM — only while Arena view tab is active on Climb. */
+  useEffect(() => {
+    syncArenaAmbientForClimb(climbViewMode === 'arena');
+    return () => {
+      syncArenaAmbientForClimb(false);
+    };
+  }, [climbViewMode]);
+
   /** After hard refresh during rank/compare: restore deck once pool loads. */
   useEffect(() => {
     if (!ARENA_CONTEST_FLOW_V2 || !listId || loading || pool.length < 1) return;
@@ -2447,6 +2456,7 @@ const RankedList: React.FC = () => {
   }, []);
 
   const onNextToRankFromCurate = useCallback(() => {
+    playArenaUiClick();
     const yesItems = pool
       .filter((it) => (scores[it.id] ?? SCORE_START) > SCORE_START)
       .sort((a, b) => (scores[b.id] ?? SCORE_START) - (scores[a.id] ?? SCORE_START));
@@ -2748,6 +2758,7 @@ const RankedList: React.FC = () => {
   }, [quickStartList, startListRun]);
 
   const onRandomContestFromGate = useCallback(() => {
+    playArenaUiClick();
     const pool = allArenaListsFlat;
     if (pool.length < 1) {
       toast.info('No contests available.');
@@ -2758,6 +2769,7 @@ const RankedList: React.FC = () => {
   }, [allArenaListsFlat, startListRun]);
 
   const onResumeLastFromGate = useCallback(() => {
+    playArenaUiClick();
     try {
       const id = sessionStorage.getItem('inturank-arena-last-list')?.trim();
       if (id && getArenaListById(id)) startListRun(id);
