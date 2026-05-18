@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Hexagon, ListTree, Trophy, Zap, LayoutGrid } from 'lucide-react';
 import { AnimatedXpFigure } from './AnimatedXpFigure';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
 /** Lane summary when browsing — rounded shell only (no slants). */
@@ -87,8 +87,8 @@ export const ArenaSidebarSessionStrip: React.FC<SessionStripProps> = ({
         </div>
         <Link
           to="/documentation#activity-xp"
-          onClick={playClick}
-          onMouseEnter={playHover}
+          onClick={playArenaUiClick}
+          onMouseEnter={playArenaUiHover}
           className="mt-2 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-intuition-primary transition-colors"
         >
           How XP works →
@@ -117,8 +117,8 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
     <div className="grid grid-cols-2 gap-3">
       <Link
         to="/markets/atoms"
-        onClick={playClick}
-        onMouseEnter={playHover}
+        onClick={playArenaUiClick}
+        onMouseEnter={playArenaUiHover}
         className={deckInner}
       >
         <Hexagon className="w-4 h-4 text-[#38e8ff]/90 shrink-0" strokeWidth={2.2} aria-hidden />
@@ -131,8 +131,8 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
       </Link>
       <Link
         to="/markets/lists"
-        onClick={playClick}
-        onMouseEnter={playHover}
+        onClick={playArenaUiClick}
+        onMouseEnter={playArenaUiHover}
         className={deckInner}
       >
         <ListTree className="w-4 h-4 text-[#38e8ff]/90 shrink-0" strokeWidth={2.2} aria-hidden />
@@ -145,8 +145,8 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
       </Link>
       <Link
         to="/stats?tab=rankers"
-        onClick={playClick}
-        onMouseEnter={playHover}
+        onClick={playArenaUiClick}
+        onMouseEnter={playArenaUiHover}
         className={deckInner}
       >
         <Trophy className="w-4 h-4 text-amber-300/90 shrink-0" strokeWidth={2.2} aria-hidden />
@@ -159,8 +159,8 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
       </Link>
       <Link
         to={`/climb?list=${flagshipListId}`}
-        onClick={playClick}
-        onMouseEnter={playHover}
+        onClick={playArenaUiClick}
+        onMouseEnter={playArenaUiHover}
         className={`${deckInner} ring-1 ring-amber-400/20`}
       >
         <Zap className="w-4 h-4 text-amber-300 shrink-0" strokeWidth={2.2} aria-hidden />

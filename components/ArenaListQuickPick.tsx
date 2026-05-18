@@ -2,7 +2,7 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'reac
 import { createPortal } from 'react-dom';
 import { ChevronDown, Star } from 'lucide-react';
 import type { ArenaListEntry } from '../services/arenaListsRegistry';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 
 type Props = {
   activeListId: string;
@@ -97,7 +97,7 @@ const ArenaListQuickPick: React.FC<Props> = ({ activeListId, favorites, others, 
   }, [open, listboxId]);
 
   const pick = (id: string) => {
-    playClick();
+    playArenaUiClick();
     if (id !== activeListId) onSelectList(id);
     setOpen(false);
   };
@@ -110,7 +110,7 @@ const ArenaListQuickPick: React.FC<Props> = ({ activeListId, favorites, others, 
         type="button"
         role="option"
         aria-selected={selected}
-        onMouseEnter={playHover}
+        onMouseEnter={playArenaUiHover}
         onClick={() => pick(L.id)}
         className={`w-full text-left px-3 py-2.5 rounded-xl border transition-colors flex items-start gap-2 min-w-0 ${
           selected
@@ -176,10 +176,10 @@ const ArenaListQuickPick: React.FC<Props> = ({ activeListId, favorites, others, 
             aria-expanded={open}
             aria-controls={open ? `${listboxId}-panel` : undefined}
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               setOpen((o) => !o);
             }}
-            onMouseEnter={playHover}
+            onMouseEnter={playArenaUiHover}
             className="w-full rounded-[0.9rem] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(6,10,22,0.98),rgba(3,6,14,0.99))] px-4 py-2.5 sm:py-3 text-left backdrop-blur-xl flex items-center gap-3 min-h-[48px]"
             style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
           >

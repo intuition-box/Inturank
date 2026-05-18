@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Loader2, Radio, RefreshCw, Users, Layers } from 'lucide-react';
 import { getAddress, isAddress } from 'viem';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 import { fetchRecentArenaPortalRankingFeed, type ArenaPortalRankingFeedItem } from '../services/graphql';
 import { ARENA_XP_PER_RANK_PICK, EXPLORER_URL } from '../constants';
 import { subscribeVisibilityAwareInterval } from '../services/visibility';
@@ -257,7 +257,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
             <button
               type="button"
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 setShowAllRankers((v) => !v);
               }}
               aria-pressed={showAllRankers}
@@ -275,8 +275,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
           {variant === 'explorer' && viewerAddress?.trim() ? (
             <Link
               to="/portfolio#arena-rankings"
-              onClick={() => playClick()}
-              onMouseEnter={playHover}
+              onClick={() => playArenaUiClick()}
+              onMouseEnter={playArenaUiHover}
               title="Signed rankings grouped by list"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-700/90 bg-black/50 px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400 hover:text-emerald-200 hover:border-emerald-500/35 transition-colors"
             >
@@ -288,7 +288,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
             type="button"
             disabled={loading}
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               void load();
             }}
             className="shrink-0 p-1.5 rounded-lg border border-slate-700/90 bg-black/50 text-slate-500 hover:text-emerald-300 hover:border-emerald-500/35 disabled:opacity-40 transition-colors"
@@ -354,8 +354,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                     {isAddress(row.creatorId as `0x${string}`) ? (
                       <Link
                         to={`/profile/${encodeURIComponent(row.creatorId)}`}
-                        onClick={playClick}
-                        onMouseEnter={playHover}
+                        onClick={playArenaUiClick}
+                        onMouseEnter={playArenaUiHover}
                         className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300 hover:from-white hover:to-emerald-200 underline-offset-2 hover:underline"
                       >
                         {row.creatorLabel}
@@ -393,8 +393,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                     </span>{' '}
                     <Link
                       to={climbHrefForListTerm(row.listTermId)}
-                      onClick={playClick}
-                      onMouseEnter={playHover}
+                      onClick={playArenaUiClick}
+                      onMouseEnter={playArenaUiHover}
                       className="text-intuition-primary font-bold hover:text-white underline-offset-2 hover:underline"
                     >
                       {row.listLabel}
@@ -440,7 +440,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                         }
                         target="_blank"
                         rel="noreferrer"
-                        onClick={playClick}
+                        onClick={playArenaUiClick}
                         className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide transition-colors shrink-0 ${
                           variant === 'explorer'
                             ? 'text-cyan-400 hover:text-cyan-200'

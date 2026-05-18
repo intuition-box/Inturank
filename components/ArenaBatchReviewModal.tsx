@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X, Loader2, Minus, Plus, FileText, Coins, Flame, Layers, Trash2 } from 'lucide-react';
-import { playClick } from '../services/audio';
+import { playArenaUiClick } from '../services/audio';
 import type { ArenaPendingRow } from '../services/arenaPendingBatch';
 
 export type ArenaBatchModalRow = ArenaPendingRow & {
@@ -100,7 +100,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        playClick();
+        playArenaUiClick();
         if (confirmClearAll) setConfirmClearAll(false);
         else requestClose();
       }
@@ -193,7 +193,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playClick();
+                  playArenaUiClick();
                   requestClose();
                 }}
                 className="shrink-0 p-2 rounded-xl border border-slate-700 bg-black/40 text-slate-400 hover:text-white hover:border-intuition-primary/35 hover:bg-white/[0.04] transition-colors z-20"
@@ -216,7 +216,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                         disabled={submitting}
                         onClick={(e) => {
                           e.stopPropagation();
-                          playClick();
+                          playArenaUiClick();
                           setConfirmClearAll(false);
                         }}
                         className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-300 border border-white/15 hover:bg-white/[0.06] disabled:opacity-40"
@@ -227,7 +227,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          playClick();
+                          playArenaUiClick();
                           setConfirmClearAll(false);
                           onClearAll();
                         }}
@@ -245,7 +245,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                       disabled={submitting}
                       onClick={(e) => {
                         e.stopPropagation();
-                        playClick();
+                        playArenaUiClick();
                         setConfirmClearAll(true);
                       }}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-rose-300 border border-transparent hover:border-rose-500/35 hover:bg-rose-500/10 disabled:opacity-40 disabled:pointer-events-none transition-colors"
@@ -305,7 +305,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              playClick();
+                              playArenaUiClick();
                               onToggleSupport(row.sourceListId, row.key);
                             }}
                             className={`rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-wide border ${
@@ -319,7 +319,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                           <button
                             type="button"
                             onClick={() => {
-                              playClick();
+                              playArenaUiClick();
                               onRemove(row.sourceListId, row.key);
                             }}
                             className="p-1 rounded-lg text-slate-500 hover:text-rose-300 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/25"
@@ -335,7 +335,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                           type="button"
                           disabled={row.units <= 1}
                           onClick={() => {
-                            playClick();
+                            playArenaUiClick();
                             onUpdateUnits(row.sourceListId, row.key, Math.max(1, row.units - 1));
                           }}
                           className="h-8 w-8 rounded-lg border border-slate-600 bg-black/55 text-slate-200 disabled:opacity-35 hover:border-intuition-primary/30 flex items-center justify-center transition-colors"
@@ -349,7 +349,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                           type="button"
                           disabled={row.units >= 99}
                           onClick={() => {
-                            playClick();
+                            playArenaUiClick();
                             onUpdateUnits(row.sourceListId, row.key, Math.min(99, row.units + 1));
                           }}
                           className="h-8 w-8 rounded-lg border border-slate-600 bg-black/55 text-slate-200 disabled:opacity-35 hover:border-intuition-primary/30 flex items-center justify-center transition-colors"
@@ -377,7 +377,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                 type="button"
                 disabled={rows.length === 0 || submitting || rowsNeedAttention}
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onSubmit();
                 }}
                 className="w-full rounded-2xl py-3.5 px-3 text-center text-sm font-black disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.99] flex items-center justify-center gap-2 border-2 border-intuition-primary/50 bg-gradient-to-b from-intuition-primary/32 to-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_0_24px_rgba(34,211,238,0.12)] hover:border-intuition-primary/65 hover:from-intuition-primary/40 disabled:hover:from-intuition-primary/32"

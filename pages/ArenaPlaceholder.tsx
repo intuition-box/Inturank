@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, ArrowLeft, Sparkles, Swords } from 'lucide-react';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 
 /**
  * Shown at `/climb` when the full Arena is not displayed:
@@ -51,8 +51,8 @@ const ArenaPlaceholder: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-950/80 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:border-slate-500 hover:text-white transition-colors"
             >
               <ArrowLeft size={16} />
@@ -60,16 +60,16 @@ const ArenaPlaceholder: React.FC = () => {
             </Link>
             <Link
               to="/markets"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-cyan-500/50 bg-cyan-500/15 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100 hover:bg-cyan-500/25 transition-colors shadow-[0_0_24px_rgba(34,211,238,0.15)]"
             >
               Markets
             </Link>
             <Link
               to="/skill-playground"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-fuchsia-500/35 bg-fuchsia-950/30 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200/90 hover:border-fuchsia-400/50 transition-colors"
             >
               Intuition Skill

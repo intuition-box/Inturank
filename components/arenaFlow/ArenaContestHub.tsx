@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Dices, Plus, Play, Sparkles, Flame, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getArenaListConstituents, getArenaPreviewItems } from '../../services/arenaListsRegistry';
 import type { RankItem } from '../../pages/RankedList';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import type { ContestHubSection as ArenaContestHubSection } from '../../services/arenaHubGroups';
 import { pluralizeArenaListCount } from '../../services/arenaHubGroups';
 import { ARENA_HUB_LANE_PAGE_SIZE } from '../../services/arenaHubPagination';
@@ -144,10 +144,10 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
               key={L.id}
               type="button"
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 onSelectList(L.id);
               }}
-              onMouseEnter={() => playHover()}
+              onMouseEnter={() => playArenaUiHover()}
               className={`group relative flex min-h-0 flex-col overflow-hidden rounded-xl border bg-[#0a0d15] text-left shadow-[0_8px_24px_-14px_rgba(0,0,0,0.65)] ${cardInteract} ${
                 isHot
                   ? 'border-amber-400/35 hover:border-amber-300/70'
@@ -289,10 +289,10 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
               type="button"
               disabled={page <= 0}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 setPage((p) => Math.max(0, p - 1));
               }}
-              onMouseEnter={() => page > 0 && playHover()}
+              onMouseEnter={() => page > 0 && playArenaUiHover()}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] ${
                 page <= 0
                   ? 'cursor-not-allowed border-white/[0.05] bg-transparent text-slate-600 transition-colors duration-150'
@@ -309,10 +309,10 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
               type="button"
               disabled={page >= pageCount - 1}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 setPage((p) => Math.min(pageCount - 1, p + 1));
               }}
-              onMouseEnter={() => page < pageCount - 1 && playHover()}
+              onMouseEnter={() => page < pageCount - 1 && playArenaUiHover()}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] ${
                 page >= pageCount - 1
                   ? 'cursor-not-allowed border-white/[0.05] bg-transparent text-slate-600 transition-colors duration-150'
@@ -400,8 +400,8 @@ export const ArenaContestHub: React.FC<Props> = ({
             <Link
               to="/"
               state={{ scrollArenaContests: true, showArenaCreateGameToast: true }}
-              onClick={() => playClick()}
-              onMouseEnter={() => playHover()}
+              onClick={() => playArenaUiClick()}
+              onMouseEnter={() => playArenaUiHover()}
               className={`group inline-flex items-center gap-2 rounded-lg border border-[#ff1e6d]/55 bg-gradient-to-br from-[#ff1e6d]/20 to-[#ff1e6d]/8 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white hover:from-[#ff1e6d]/30 hover:to-[#ff1e6d]/12 ${heroInteract} ${
                 rm ? '' : 'motion-safe:hover:shadow-[0_0_26px_-4px_rgba(255,30,109,0.35)]'
               }`}
@@ -418,10 +418,10 @@ export const ArenaContestHub: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onRandomContest();
                 }}
-                onMouseEnter={() => playHover()}
+                onMouseEnter={() => playArenaUiHover()}
                 className={`group inline-flex items-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/18 ${heroInteract} ${
                   rm ? '' : 'motion-safe:hover:shadow-[0_0_22px_-6px_rgba(0,243,255,0.28)]'
                 }`}
@@ -439,10 +439,10 @@ export const ArenaContestHub: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onResumeLast();
                 }}
-                onMouseEnter={() => playHover()}
+                onMouseEnter={() => playArenaUiHover()}
                 title={`Resume “${resumeListTitle}”`}
                 className={`group inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-200 hover:border-cyan-400/35 hover:bg-white/[0.08] ${heroInteract}`}
               >
@@ -460,8 +460,8 @@ export const ArenaContestHub: React.FC<Props> = ({
 
             <Link
               to="/climb?view=explorer"
-              onClick={() => playClick()}
-              onMouseEnter={() => playHover()}
+              onClick={() => playArenaUiClick()}
+              onMouseEnter={() => playArenaUiHover()}
               className={`group inline-flex items-center gap-2 rounded-lg border border-white/[0.08] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400 hover:border-slate-500/40 hover:text-slate-200 ${heroInteract}`}
             >
               <Sparkles

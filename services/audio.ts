@@ -1,11 +1,25 @@
-// UI audio is disabled — play* exports remain as no-op stubs so call sites stay simple.
+// Global UI audio (non-Arena) remains off — most of the app uses these no-ops.
+// Arena / Climb uses `playArena*` from the re-exports below (real Web Audio).
 
-/** @deprecated Kept for API compatibility; always false while audio is disabled. */
+export {
+  resumeArenaAudio,
+  getArenaSoundEnabled,
+  setArenaSoundEnabled,
+  playArenaFloorEnter,
+  playArenaUiClick,
+  playArenaUiHover,
+  playArenaSwipeAgree,
+  playArenaSwipePass,
+  playArenaRankSlide,
+  playArenaCelebrateMini,
+} from './arenaAudio';
+
+/** @deprecated Non-Arena; always false. */
 export function getSoundEnabled(): boolean {
   return false;
 }
 
-/** @deprecated No-op while audio is disabled. */
+/** @deprecated Non-Arena; no-op. */
 export function setSoundEnabled(_enabled: boolean): void {}
 
 export const playHover = () => {};
@@ -15,9 +29,3 @@ export const playClick = () => {};
 export const playSuccess = () => {};
 
 export const playXpChime = () => {};
-
-export const playArenaSwipeAgree = () => {};
-
-export const playArenaSwipePass = () => {};
-
-export const playArenaRankSlide = () => {};

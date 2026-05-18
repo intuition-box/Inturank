@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Trophy, Crown, ArrowUpRight, Award, Sparkles, Loader2 } from 'lucide-react';
 import { inturankLeaderboardTotalXp, type ArenaPlayerRow } from '../services/arenaLeaderboard';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
 const CY = ARENA_THEME.cyan;
@@ -90,8 +90,8 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
   return (
     <Link
       to="/stats?tab=rankers"
-      onClick={playClick}
-      onMouseEnter={playHover}
+      onClick={playArenaUiClick}
+      onMouseEnter={playArenaUiHover}
       className={`group block rounded-3xl border overflow-hidden transition-all duration-300 ${
         isLight
           ? 'border-slate-200/90 bg-white shadow-sm hover:border-sky-300/80 hover:shadow-md hover:-translate-y-0.5'

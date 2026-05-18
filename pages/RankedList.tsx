@@ -56,7 +56,13 @@ import {
   parseProtocolError,
   sendNativeTransfer,
 } from '../services/web3';
-import { playClick, playHover, playSuccess } from '../services/audio';
+import {
+  resumeArenaAudio,
+  playArenaFloorEnter,
+  playArenaUiClick,
+  playArenaUiHover,
+  playArenaCelebrateMini,
+} from '../services/audio';
 import { toast } from '../components/Toast';
 import {
   recordArenaRankingPicks,
@@ -798,7 +804,7 @@ function ArenaLaneCard({
               type="button"
               onClick={() => onYesNo(true)}
               disabled={stakingTx}
-              onMouseEnter={playHover}
+              onMouseEnter={playArenaUiHover}
               className="rounded-xl border border-cyan-400/45 bg-cyan-500/[0.14] py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform duration-150 hover:border-cyan-300/55 hover:bg-cyan-500/[0.2] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
             >
               <span className="inline-flex items-center justify-center gap-1.5">
@@ -810,7 +816,7 @@ function ArenaLaneCard({
               type="button"
               onClick={() => onYesNo(false)}
               disabled={stakingTx}
-              onMouseEnter={playHover}
+              onMouseEnter={playArenaUiHover}
               className="rounded-xl border border-red-400/45 bg-red-500/[0.12] py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-150 hover:border-red-300/55 hover:bg-red-500/[0.18] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
             >
               <span className="inline-flex items-center justify-center gap-1.5">
@@ -825,7 +831,7 @@ function ArenaLaneCard({
           <div className="mt-3 border-t border-white/[0.06] pt-3">
             <Link
               to={marketHref}
-              onClick={() => playClick()}
+              onClick={() => playArenaUiClick()}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:text-cyan-200"
             >
               <ExternalLink size={13} strokeWidth={2.2} />
@@ -921,6 +927,8 @@ const RankedList: React.FC = () => {
   const curateInitForListRef = useRef<string | null>(null);
   const prevListIdForFlowRef = useRef<string | null>(null);
   const guestCurateNudgeRef = useRef(false);
+  /** Deeplink vs hub: avoid double-playing the floor-enter stinger for the same list. */
+  const arenaFloorStingerPlayedForListRef = useRef<string | null>(null);
   /** Starred rail starts collapsed — expands from the right column. */
   const [starredRailCollapsed, setStarredRailCollapsed] = useState(false);
   const [favoriteListIds, setFavoriteListIds] = useState<string[]>(() => loadArenaFavoriteListIds());
@@ -936,7 +944,7 @@ const RankedList: React.FC = () => {
 
   const setClimbViewMode = useCallback(
     (mode: 'arena' | 'explorer' | 'signal') => {
-      playClick();
+      playArenaUiClick();
       setSearchParams(
         (p) => {
           const next = new URLSearchParams(p);
@@ -1436,7 +1444,7 @@ const RankedList: React.FC = () => {
   const toggleListFavorite = useCallback((fid: string) => {
     const k = fid.trim();
     if (!k || !getArenaListById(k)) return;
-    playClick();
+    playArenaUiClick();
     setFavoriteListIds((prev) => {
       const i = prev.findIndex((x) => x === k);
       const next = i >= 0 ? prev.filter((_, j) => j !== i) : [...prev, k];
@@ -1612,6 +1620,22 @@ const RankedList: React.FC = () => {
       prevListIdForFlowRef.current = listId;
     }
   }, [listId]);
+
+  useEffect(() => {
+    if (!listId) {
+      arenaFloorStingerPlayedForListRef.current = null;
+    }
+  }, [listId]);
+
+  /** Floor stinger when landing in a contest via URL (hub path calls `startListRun` which primes audio). */
+  useEffect(() => {
+    if (!ARENA_CONTEST_FLOW_V2 || climbViewMode !== 'arena') return;
+    if (!listId || loading || pool.length < 1) return;
+    if (arenaFloorStingerPlayedForListRef.current === listId) return;
+    arenaFloorStingerPlayedForListRef.current = listId;
+    resumeArenaAudio();
+    playArenaFloorEnter();
+  }, [listId, loading, pool.length, climbViewMode]);
 
   /** After hard refresh during rank/compare: restore deck once pool loads. */
   useEffect(() => {
@@ -2206,7 +2230,7 @@ const RankedList: React.FC = () => {
         /* ignore */
       }
       try {
-        playSuccess();
+        playArenaCelebrateMini();
       } catch {
         /* ignore */
       }
@@ -2321,8 +2345,8 @@ const RankedList: React.FC = () => {
 
   const resolveYesNo = useCallback(
     async (item: RankItem, support: boolean): Promise<boolean> => {
-      if (support) playSuccess();
-      else playClick();
+      if (support) playArenaCelebrateMini();
+      else playArenaUiClick();
 
       if (!isConnected || !address) {
         toast.error('Connect your wallet to pick.');
@@ -2418,7 +2442,7 @@ const RankedList: React.FC = () => {
   );
 
   const onCurateSkip = useCallback(() => {
-    playClick();
+    playArenaUiClick();
     setCurateQueue((q) => q.slice(1));
   }, []);
 
@@ -2460,7 +2484,7 @@ const RankedList: React.FC = () => {
 
   const onRankRemoveItem = useCallback(
     (itemId: string) => {
-      playClick();
+      playArenaUiClick();
 
       const rowsForItem = pendingRows.filter((r) => r.item.id === itemId);
       const nRows = rowsForItem.length;
@@ -2502,7 +2526,7 @@ const RankedList: React.FC = () => {
 
   const onRankTrustUnitsChange = useCallback((itemId: string, units: number) => {
     const u = Math.max(1, Math.min(RANK_TRUST_UNITS_MAX, units));
-    playClick();
+    playArenaUiClick();
     setRankTrustUnits((prev) => ({ ...prev, [itemId]: u }));
     setPendingRows((prev) => prev.map((row) => (row.item.id === itemId ? { ...row, units: u } : row)));
   }, []);
@@ -2513,7 +2537,7 @@ const RankedList: React.FC = () => {
   );
 
   const onOpenRankBatchSign = useCallback(() => {
-    playClick();
+    playArenaUiClick();
     if (!isConnected || !address) {
       toast.error('Connect your wallet to sign and submit.');
       return;
@@ -2530,7 +2554,7 @@ const RankedList: React.FC = () => {
   }, [isConnected, address, rankFlowCartCount]);
 
   const onCompareFromRank = useCallback(() => {
-    playClick();
+    playArenaUiClick();
     setArenaFlowPhase('compare');
   }, []);
 
@@ -2540,7 +2564,7 @@ const RankedList: React.FC = () => {
   };
 
   const onSkip = () => {
-    playClick();
+    playArenaUiClick();
     setStreak(0);
     const items = pickYesNoGridItems(pool, ARENA_CARDS_PER_ROUND);
     if (items.length > 0) {
@@ -2551,7 +2575,7 @@ const RankedList: React.FC = () => {
   };
 
   const resetSession = () => {
-    playClick();
+    playArenaUiClick();
     const next: Record<string, number> = {};
     for (const it of pool) next[it.id] = SCORE_START;
     setScores(next);
@@ -2611,6 +2635,9 @@ const RankedList: React.FC = () => {
 
   const startListRun = useCallback(
     (id: string) => {
+      resumeArenaAudio();
+      arenaFloorStingerPlayedForListRef.current = id;
+      playArenaFloorEnter();
       setListId(id);
       if (ARENA_CONTEST_FLOW_V2) {
         clearPersistedContestFlow(id);
@@ -2636,7 +2663,7 @@ const RankedList: React.FC = () => {
   );
 
   const exitToArenaBrowse = useCallback(() => {
-    playClick();
+    playArenaUiClick();
     if (ARENA_CONTEST_FLOW_V2) {
       clearPersistedContestFlow(listId);
       setArenaFlowPhase('hub');
@@ -2657,7 +2684,7 @@ const RankedList: React.FC = () => {
   }, [navigate, listId]);
 
   const onCompareRandomGame = useCallback(() => {
-    playClick();
+    playArenaUiClick();
     const others = allArenaListsFlat.filter((l) => l.id !== listId);
     if (others.length < 1) {
       toast.info('No other lists to jump to.');
@@ -2685,7 +2712,7 @@ const RankedList: React.FC = () => {
    *   3. Else → nothing to sign; exit to hub (Compare only calls this when (1) or (2) applies).
    */
   const beginArenaCommit = useCallback(() => {
-    playClick();
+    playArenaUiClick();
 
     if (!isConnected || !address) {
       void connectWallet();
@@ -2716,7 +2743,7 @@ const RankedList: React.FC = () => {
 
   const onQuickStart = useCallback(() => {
     if (!quickStartList) return;
-    playClick();
+    playArenaUiClick();
     startListRun(quickStartList.id);
   }, [quickStartList, startListRun]);
 
@@ -2796,7 +2823,7 @@ const RankedList: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      playClick();
+                      playArenaUiClick();
                       dismissOnboardTip();
                     }}
                     className="shrink-0 rounded-md bg-cyan-500/15 border border-cyan-400/30 px-2 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-500/25"
@@ -2959,7 +2986,7 @@ const RankedList: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            playClick();
+                            playArenaUiClick();
                             clearProtocolXpLedger();
                             clearArenaPickCreditLedger();
                             setPickCreditTick((n) => n + 1);
@@ -3177,10 +3204,10 @@ const RankedList: React.FC = () => {
                     key={c.id}
                     type="button"
                     onClick={() => {
-                      playClick();
+                      playArenaUiClick();
                       setArenaCategoryId(c.id);
                     }}
-                    onMouseEnter={playHover}
+                    onMouseEnter={playArenaUiHover}
                     className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[11px] font-bold transition-all duration-200 ${
                       arenaCategoryId === c.id
                         ? 'text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_18px_rgba(56,232,255,0.12)] ring-1 ring-cyan-400/55'
@@ -3244,7 +3271,7 @@ const RankedList: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      playClick();
+                      playArenaUiClick();
                       setShowAllLists((v) => !v);
                     }}
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-700/80 bg-slate-900/60 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:border-cyan-500/35 hover:text-cyan-100 transition-colors"
@@ -3300,7 +3327,7 @@ const RankedList: React.FC = () => {
               <button
                 type="button"
                 onClick={exitToArenaBrowse}
-                onMouseEnter={playHover}
+                onMouseEnter={playArenaUiHover}
                 aria-label="Back to Arena lists"
                 title="Back"
                 className={
@@ -3320,7 +3347,7 @@ const RankedList: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    playClick();
+                    playArenaUiClick();
                     setBatchModalOpen(true);
                   }}
                   className={
@@ -3350,7 +3377,7 @@ const RankedList: React.FC = () => {
               <button
                 type="button"
                 onClick={exitToArenaBrowse}
-                onMouseEnter={playHover}
+                onMouseEnter={playArenaUiHover}
                 aria-label="Back to Arena lists"
                 title="Back"
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.14] bg-black/45 text-slate-200 transition-all hover:border-intuition-primary/45 hover:text-white hover:bg-black/55 self-start"
@@ -3448,7 +3475,7 @@ const RankedList: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   setBatchModalOpen(true);
                 }}
                 className="mt-3 w-full text-center rounded-xl py-2.5 px-3 border transition-colors hover:border-intuition-primary/45 hover:bg-intuition-primary/[0.08]"
@@ -3527,7 +3554,7 @@ const RankedList: React.FC = () => {
                   signDisabled={stakingTx}
                   queuedStanceCount={rankFlowCartCount}
                   onCreateCard={() => {
-                    playClick();
+                    playArenaUiClick();
                     setCreateCardOpen(true);
                   }}
                 />
@@ -3550,11 +3577,11 @@ const RankedList: React.FC = () => {
                   onRandomGame={onCompareRandomGame}
                   onPickNextGame={exitToArenaBrowse}
                   onOpenConvictionCart={() => {
-                    playClick();
+                    playArenaUiClick();
                     setBatchModalOpen(true);
                   }}
                   onOpenSignal={() => {
-                    playClick();
+                    playArenaUiClick();
                     setClimbViewMode('signal');
                   }}
                 />
@@ -3646,7 +3673,7 @@ const RankedList: React.FC = () => {
             onReviewBatch={
               ARENA_BATCH_MODE
                 ? () => {
-                    playClick();
+                    playArenaUiClick();
                     setBatchModalOpen(true);
                   }
                 : undefined

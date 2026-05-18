@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Star } from 'lucide-react';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 import type { RankItem } from '../pages/RankedList';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
@@ -88,7 +88,7 @@ const ArenaListCard: React.FC<Props> = ({
             e.stopPropagation();
             onFavoriteToggle?.();
           }}
-          onMouseEnter={playHover}
+          onMouseEnter={playArenaUiHover}
           className={`absolute top-2 right-2 z-30 flex h-8 w-8 items-center justify-center rounded-lg border backdrop-blur-sm transition-colors ${
             isFavorite
               ? 'border-rose-400/55 bg-black/75 text-rose-300 hover:bg-rose-500/15'
@@ -115,10 +115,10 @@ const ArenaListCard: React.FC<Props> = ({
       <motion.button
         type="button"
         onClick={() => {
-          playClick();
+          playArenaUiClick();
           onSelect();
         }}
-        onMouseEnter={playHover}
+        onMouseEnter={playArenaUiHover}
         whileHover={reduceMotion ? undefined : { x: 2 }}
         whileTap={reduceMotion ? undefined : { scale: 0.992 }}
         transition={{ type: 'spring', stiffness: 460, damping: 36 }}

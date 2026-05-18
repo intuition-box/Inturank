@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, Layers, Sparkles, Terminal, X, Zap } from 'lucide-react';
-import { playClick } from '../services/audio';
+import { playArenaUiClick } from '../services/audio';
 
 export type ArenaBatchSuccessPayload = {
   itemCount: number;
@@ -45,7 +45,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        playClick();
+        playArenaUiClick();
         requestClose();
       }
     };
@@ -104,7 +104,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               requestClose();
             }}
           />
@@ -189,7 +189,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playClick();
+                  playArenaUiClick();
                   requestClose();
                 }}
                 className="shrink-0 p-2 rounded-xl border border-slate-700 bg-black/45 text-slate-400 hover:text-white hover:border-emerald-500/40 hover:bg-white/[0.05] transition-colors"
@@ -276,7 +276,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playClick();
+                  playArenaUiClick();
                   requestClose();
                 }}
                 className="arena-batch-ack-btn relative w-full overflow-hidden rounded-2xl py-3.5 text-sm font-black uppercase tracking-wide bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-400/35 shadow-[0_0_28px_rgba(16,185,129,0.35)] hover:from-emerald-500 hover:to-teal-500 transition-colors"

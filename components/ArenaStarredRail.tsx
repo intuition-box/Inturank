@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, Star, ChevronRight, X } from 'lucide-react';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 
 export type ArenaStarredRow = {
   id: string;
@@ -39,10 +39,10 @@ const ArenaStarredRail: React.FC<Props> = ({
       <button
         type="button"
         onClick={() => {
-          playClick();
+          playArenaUiClick();
           onToggleCollapsed();
         }}
-        onMouseEnter={playHover}
+        onMouseEnter={playArenaUiHover}
         className={`w-full flex items-center gap-2 px-3 text-left hover:bg-white/[0.03] transition-colors border-b border-white/[0.05] ${compact ? 'py-2' : 'py-2.5'}`}
         aria-expanded={!collapsed}
       >
@@ -75,10 +75,10 @@ const ArenaStarredRail: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      playClick();
+                      playArenaUiClick();
                       onOpen(row.id);
                     }}
-                    onMouseEnter={playHover}
+                    onMouseEnter={playArenaUiHover}
                     className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 text-left hover:bg-cyan-500/[0.06] transition-colors"
                   >
                     <span className="w-7 h-7 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[11px] font-black text-cyan-200/90 shrink-0">
@@ -97,7 +97,7 @@ const ArenaStarredRail: React.FC<Props> = ({
                     aria-label={`Unstar ${row.title}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      playClick();
+                      playArenaUiClick();
                       onUnstar(row.id);
                     }}
                     className="shrink-0 px-2.5 text-slate-600 hover:text-rose-300 hover:bg-rose-500/10 transition-colors border-l border-white/[0.04]"

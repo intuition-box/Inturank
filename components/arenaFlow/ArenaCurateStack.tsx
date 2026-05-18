@@ -8,7 +8,12 @@ import {
   X,
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
-import { playArenaSwipeAgree, playArenaSwipePass, playClick, playHover } from '../../services/audio';
+import {
+  playArenaSwipeAgree,
+  playArenaSwipePass,
+  playArenaUiClick,
+  playArenaUiHover,
+} from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -172,7 +177,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
           <SolidButton
             disabled={agreedYesCount < 1}
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               onNextToRank();
             }}
             deck={deck}
@@ -265,7 +270,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 type="button"
                 disabled={stakingTx}
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   skipLocally();
                 }}
                 className="rounded-full border border-white/10 bg-black/25 px-8 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:border-white/18 hover:text-slate-200 disabled:opacity-40"
@@ -341,7 +346,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
             <SolidButton
               disabled={agreedYesCount < 1}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 onNextToRank();
               }}
               deck={deck}
@@ -598,7 +603,7 @@ const CircleAction: React.FC<{
       disabled={disabled}
       aria-label={label}
       onClick={onClick}
-      onMouseEnter={() => playHover()}
+      onMouseEnter={() => playArenaUiHover()}
       whileTap={{ scale: 0.9 }}
       whileHover={disabled ? undefined : { scale: 1.06 }}
       transition={{ type: 'spring', stiffness: 520, damping: 24 }}
@@ -622,7 +627,7 @@ const SolidButton: React.FC<{
     type="button"
     disabled={disabled}
     onClick={onClick}
-    onMouseEnter={() => playHover()}
+    onMouseEnter={() => playArenaUiHover()}
     className={`group inline-flex items-center justify-center gap-2 rounded-xl font-black uppercase tracking-[0.14em] shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] disabled:opacity-40 ${
       size === 'sm' ? 'px-4 py-3 text-[10px]' : 'px-6 py-3.5 text-xs'
     } ${className ?? ''}`}

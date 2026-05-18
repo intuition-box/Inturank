@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, ChevronDown, ChevronRight, Layers, Loader2, RefreshCw } from 'lucide-react';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 import {
   clearArenaPortalListIndexingExtras,
   fetchPortfolioArenaRankingClaims,
@@ -164,7 +164,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
               type="button"
               disabled={!wallet || loading}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 clearArenaPortalListIndexingExtras();
                 void load();
               }}
@@ -177,7 +177,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
               type="button"
               disabled={!wallet || loading}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 void load();
               }}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-700/90 bg-black/60 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:border-intuition-primary/40 disabled:opacity-40 transition-colors"
@@ -187,8 +187,8 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
             </button>
             <Link
               to="/climb"
-              onClick={() => playClick()}
-              onMouseEnter={playHover}
+              onClick={() => playArenaUiClick()}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center gap-2 rounded-xl border border-intuition-primary/35 bg-black/70 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-intuition-primary hover:border-intuition-primary/60 hover:bg-intuition-primary/10 transition-colors"
             >
               <Activity className="w-4 h-4 shrink-0" />
@@ -230,7 +230,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
               </p>
               <Link
                 to="/climb"
-                onClick={() => playClick()}
+                onClick={() => playArenaUiClick()}
                 className="inline-flex items-center gap-2 text-[11px] font-bold text-intuition-primary hover:text-white transition-colors"
               >
                 Go to Arena
@@ -245,7 +245,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
                   group={g}
                   expanded={openId === g.listTermId}
                   onToggle={() => {
-                    playClick();
+                    playArenaUiClick();
                     setOpenId((id) => (id === g.listTermId ? null : g.listTermId));
                   }}
                 />
@@ -275,7 +275,7 @@ function ArenaListOnchainCard({
       <button
         type="button"
         onClick={onToggle}
-        onMouseEnter={playHover}
+        onMouseEnter={playArenaUiHover}
         className="relative z-10 w-full px-4 py-4 text-left hover:bg-white/[0.02] transition-colors"
       >
         <div className="flex items-start gap-3">
@@ -327,7 +327,7 @@ function ArenaListOnchainCard({
             to={climbQueryForListTermId(group.listTermId)}
             onClick={(e) => {
               e.stopPropagation();
-              playClick();
+              playArenaUiClick();
             }}
             className="relative z-10 shrink-0 rounded-xl border border-slate-600/85 bg-black/55 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:border-intuition-primary/45 hover:text-intuition-primary"
           >

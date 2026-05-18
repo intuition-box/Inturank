@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
-import { playClick } from '../services/audio';
+import { playArenaUiClick } from '../services/audio';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
 export type ArenaClimbTerraceProps = {
@@ -46,7 +46,7 @@ const ArenaClimbTerrace: React.FC<ArenaClimbTerraceProps> = ({
         <button
           type="button"
           onClick={() => {
-            playClick();
+            playArenaUiClick();
             onReviewBatch();
           }}
           className={`inline-flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${

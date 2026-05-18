@@ -18,7 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import type { ArenaComparePeer, RankItem } from '../../pages/RankedList';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -453,11 +453,11 @@ export const ArenaCompareView: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 if (hasPendingWrites) onSubmitAndContinue();
                 else onPickNextGame();
               }}
-              onMouseEnter={() => playHover()}
+              onMouseEnter={() => playArenaUiHover()}
               className="group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[11px] font-black uppercase tracking-[0.14em] shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99]"
               style={{ background: palette.hex, color: palette.contrastText }}
             >
@@ -484,7 +484,7 @@ export const ArenaCompareView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onPickNextGame();
                 }}
                 className="w-full py-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
@@ -497,10 +497,10 @@ export const ArenaCompareView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onOpenConvictionCart();
                 }}
-                onMouseEnter={() => playHover()}
+                onMouseEnter={() => playArenaUiHover()}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors hover:brightness-110 active:scale-[0.99]"
                 style={{
                   borderColor: palette.line,
@@ -517,10 +517,10 @@ export const ArenaCompareView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onRandomGame();
                 }}
-                onMouseEnter={() => playHover()}
+                onMouseEnter={() => playArenaUiHover()}
                 className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-white/12 bg-black/30 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors hover:bg-white/[0.04] hover:text-white ${onOpenSignal ? 'flex-1' : 'w-full'}`}
               >
                 <Shuffle className="h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={2.2} aria-hidden />
@@ -530,10 +530,10 @@ export const ArenaCompareView: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    playClick();
+                    playArenaUiClick();
                     onOpenSignal();
                   }}
-                  onMouseEnter={() => playHover()}
+                  onMouseEnter={() => playArenaUiHover()}
                   className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                   style={{ background: palette.soft }}
                 >

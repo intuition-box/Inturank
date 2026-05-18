@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { formatEther } from 'viem';
 import { CURRENCY_SYMBOL, EXPLORER_URL, CURVE_OFFSET } from '../../constants';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   connectWallet,
   getMinClaimDeposit,
@@ -241,7 +241,7 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
                 aria-label="Close"
                 disabled={inFlight}
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onClose();
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-[background] disabled:opacity-40"
@@ -266,11 +266,11 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
                 insufficientFunds={insufficientFunds}
                 txError={txStatus === 'ERROR' ? txError : null}
                 onCancel={() => {
-                  playClick();
+                  playArenaUiClick();
                   onClose();
                 }}
                 onPromote={() => {
-                  playHover();
+                  playArenaUiHover();
                   handlePromote();
                 }}
               />

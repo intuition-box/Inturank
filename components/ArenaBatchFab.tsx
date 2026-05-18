@@ -7,7 +7,7 @@ import {
   getFirstListIdWithPending,
   getTotalPendingCount,
 } from '../services/arenaPendingBatch';
-import { playClick } from '../services/audio';
+import { playArenaUiClick } from '../services/audio';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 /**
@@ -58,7 +58,7 @@ const ArenaBatchFab: React.FC = () => {
 
   const onOpen = () => {
     const lid = getFirstListIdWithPending();
-    playClick();
+    playArenaUiClick();
     if (loc.pathname === '/climb') {
       window.dispatchEvent(new CustomEvent('arena-batch-fab-toggle'));
       return;

@@ -17,7 +17,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
-import { playArenaRankSlide, playClick, playHover } from '../../services/audio';
+import { playArenaRankSlide, playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -525,10 +525,10 @@ export const ArenaRankDeck: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 onCreateCard();
               }}
-              onMouseEnter={() => playHover()}
+              onMouseEnter={() => playArenaUiHover()}
               className="mt-3 flex w-full items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed py-5 text-slate-400 transition-colors hover:text-white"
               style={{ borderColor: deck.line, background: deck.soft }}
             >
@@ -649,10 +649,10 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 type="button"
                 disabled={Boolean(signDisabled) || items.length < 1 || queuedStanceCount < 1}
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onSignSubmit();
                 }}
-                onMouseEnter={() => playHover()}
+                onMouseEnter={() => playArenaUiHover()}
                 className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[11px] font-black uppercase tracking-[0.14em] text-white shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
                 style={{ background: SWIPE_COLORS.no }}
               >
@@ -665,10 +665,10 @@ export const ArenaRankDeck: React.FC<Props> = ({
               type="button"
               disabled={items.length < 1}
               onClick={() => {
-                playClick();
+                playArenaUiClick();
                 onCompare();
               }}
-              onMouseEnter={() => playHover()}
+              onMouseEnter={() => playArenaUiHover()}
               className="group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[11px] font-black uppercase tracking-[0.14em] shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
               style={{ background: deck.hex, color: deck.contrastText }}
             >

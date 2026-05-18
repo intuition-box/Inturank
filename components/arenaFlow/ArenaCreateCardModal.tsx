@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ImageIcon, Plus, ShieldCheck, X } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
-import { playClick, playHover } from '../../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,
   ARENA_SHADOWS,
@@ -92,7 +92,7 @@ export const ArenaCreateCardModal: React.FC<Props> = ({
       setTouched(true);
       return;
     }
-    playClick();
+    playArenaUiClick();
     const item: RankItem = {
       id: makePendingCardId(),
       kind: 'atom',
@@ -158,7 +158,7 @@ export const ArenaCreateCardModal: React.FC<Props> = ({
                 type="button"
                 aria-label="Close"
                 onClick={() => {
-                  playClick();
+                  playArenaUiClick();
                   onClose();
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-[background]"
@@ -183,11 +183,11 @@ export const ArenaCreateCardModal: React.FC<Props> = ({
               labelInputRef={labelInputRef}
               onBlur={() => setTouched(true)}
               onCancel={() => {
-                playClick();
+                playArenaUiClick();
                 onClose();
               }}
               onSubmit={() => {
-                playHover();
+                playArenaUiHover();
                 handleSubmit();
               }}
             />
