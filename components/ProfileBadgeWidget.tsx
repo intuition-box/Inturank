@@ -1,13 +1,15 @@
 /**
  * Gamified profile widget for header — avatar, badge, link to full profile
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, Medal, Award, User, ChevronDown, Trophy, Wallet } from 'lucide-react';
+import { Crown, Medal, Award, ChevronDown } from 'lucide-react';
 import { useUserBadges } from '../hooks/useUserBadges';
 import { BADGE_NAMES, type BadgeTier } from '../services/badges';
 import { playClick, playHover } from '../services/audio';
-import { reverseResolveENS } from '../services/web3';
+import { useWalletDisplayMeta } from '../hooks/useWalletDisplayMeta';
+import { DEFAULT_PROFILE_AVATAR_URL } from '../constants';
+import { formatWalletHeadlineForUi } from '../services/analytics';
 
 interface ProfileBadgeWidgetProps {
   address: string;
@@ -40,14 +42,9 @@ const ProfileBadgeWidget: React.FC<ProfileBadgeWidgetProps> = ({
   children,
 }) => {
   const { badges } = useUserBadges(address);
-  const [ensName, setEnsName] = useState<string | null>(null);
+  const head = useWalletDisplayMeta(address);
+  const displayName = formatWalletHeadlineForUi(head, address);
 
-  useEffect(() => {
-    if (address) reverseResolveENS(address).then(setEnsName);
-  }, [address]);
-
-  const displayName = ensName || `${address.slice(0, 6)}…${address.slice(-4)}`;
-  const avatarUrl = `https://effigy.im/a/${address}.png`;
   const tier = badges?.bestTier ?? 'scout';
 
   return (
@@ -70,7 +67,11 @@ const ProfileBadgeWidget: React.FC<ProfileBadgeWidgetProps> = ({
                     : 'ring-intuition-primary/25'
             }`}
           >
-            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            <img
+              src={DEFAULT_PROFILE_AVATAR_URL}
+              alt=""
+              className="w-full h-full object-cover"
+            />
           </div>
           <div
             className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border border-black/40 flex items-center justify-center bg-gradient-to-br shadow-md ${BADGE_STYLES[tier]}`}

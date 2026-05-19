@@ -70,7 +70,7 @@ const ComingSoon: React.FC = () => {
             <div className="w-px h-6 bg-white/10"></div>
             <div className="flex flex-col items-center">
               <span className="text-[7px] text-slate-600 uppercase font-black tracking-widest mb-1">Handshake</span>
-              <span className="text-[9px] font-black text-intuition-secondary uppercase tracking-widest">PENDING_SYNC</span>
+              <span className="text-[9px] font-semibold text-intuition-secondary tracking-wide">Coming soon</span>
             </div>
           </div>
         </div>

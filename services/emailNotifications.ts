@@ -8,6 +8,7 @@ import type { PositionActivityNotification } from './graphql';
 import { formatEther } from 'viem';
 import { formatMarketValue, formatDisplayedShares } from './analytics';
 import type { TransactionReceiptData, TransferReceiptData } from './emailTemplates';
+import { getInturankApiOrigin } from '../constants';
 
 const STORAGE_KEY = 'inturank_email_subscriptions';
 const NOTIFIED_IDS_KEY_PREFIX = 'inturank_notified_activity_';
@@ -421,10 +422,8 @@ export async function maybeSendDailyDigest(walletAddress: string): Promise<void>
   saveDigestLastSent(walletAddress, Date.now());
 }
 
-const EMAIL_API_BASE = import.meta.env.VITE_EMAIL_API_URL || '';
-
 function getEmailApiBase(): string {
-  return EMAIL_API_BASE ? EMAIL_API_BASE.replace(/\/$/, '') : '';
+  return getInturankApiOrigin();
 }
 
 function getEmailApiUrl(): string {

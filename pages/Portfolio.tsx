@@ -39,21 +39,22 @@ import { PageLoadingSpinner } from '../components/PageLoading';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import logo from '../logo.png';
+import ArenaMyRankingsPanel from '../components/ArenaMyRankingsPanel';
 
 const COLORS = ['#00f3ff', '#00ff9d', '#a855f7', '#facc15', '#ff1e6d', '#ff8c00', '#00ced1'];
 
 const StatCard: React.FC<{ label: string; value: string; unit: string | React.ReactNode; icon: any; trendColor?: string; isLoading?: boolean }> = ({ label, value, unit, icon: Icon, trendColor, isLoading }) => (
-  <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 p-4 sm:p-5 md:p-6 xl:p-6 shadow-[0_18px_45px_rgba(0,0,0,0.7)] hover:border-intuition-primary/40 transition-all flex flex-col justify-between min-h-[116px] sm:min-h-[128px] xl:min-h-[140px] 2xl:min-h-[152px] min-w-0">
+  <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 p-3 sm:p-5 md:p-6 xl:p-6 shadow-[0_18px_45px_rgba(0,0,0,0.7)] hover:border-intuition-primary/40 transition-all flex flex-col justify-between min-h-[92px] sm:min-h-[128px] xl:min-h-[140px] 2xl:min-h-[152px] min-w-0">
     <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_top_left,rgba(0,243,255,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.18),transparent_55%)]" />
-    <div className="absolute top-4 right-4 xl:top-5 xl:right-5 text-slate-700 group-hover:text-slate-300 transition-colors z-10 shrink-0">
-      <Icon className="w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 2xl:w-8 2xl:h-8" strokeWidth={1.5} />
+    <div className="absolute top-3 right-3 sm:top-4 sm:right-4 xl:top-5 xl:right-5 text-slate-700 group-hover:text-slate-300 transition-colors z-10 shrink-0">
+      <Icon className="w-4 h-4 sm:w-6 sm:h-6 xl:w-7 xl:h-7 2xl:w-8 2xl:h-8" strokeWidth={1.5} />
     </div>
     <div className="space-y-1 relative z-10 pr-8 sm:pr-10 min-w-0 overflow-hidden">
       <div className="flex items-center gap-2 mb-1 sm:mb-2 min-w-0">
         <div className="w-1.5 h-1.5 bg-current rounded-full opacity-60 shrink-0"></div>
-        <span className="text-[10px] xl:text-xs 2xl:text-sm font-black text-slate-500 uppercase tracking-[0.2em] truncate block min-w-0">{label}</span>
+        <span className="text-[9px] xl:text-xs 2xl:text-sm font-black text-slate-500 uppercase tracking-[0.2em] truncate block min-w-0">{label}</span>
       </div>
-      <div className={`text-2xl sm:text-3xl md:text-4xl xl:text-4xl 2xl:text-5xl font-black font-display tracking-tight group-hover:text-intuition-primary transition-colors leading-none flex items-baseline gap-1 min-w-0 overflow-hidden ${trendColor || 'text-white'}`}>
+      <div className={`text-lg sm:text-3xl md:text-4xl xl:text-4xl 2xl:text-5xl font-black font-display tracking-tight group-hover:text-intuition-primary transition-colors leading-none flex items-baseline gap-1 min-w-0 overflow-hidden ${trendColor || 'text-white'}`}>
         {isLoading ? (
           <div className="flex items-center gap-2">
             <div className="h-8 sm:h-9 md:h-10 w-24 sm:w-28 bg-slate-800/80 rounded-lg animate-pulse" />
@@ -61,7 +62,7 @@ const StatCard: React.FC<{ label: string; value: string; unit: string | React.Re
           </div>
         ) : (
           <>
-            {typeof unit === 'string' ? <span className="text-2xl sm:text-3xl md:text-4xl xl:text-4xl 2xl:text-5xl font-bold text-intuition-primary/90 mr-1 sm:mr-2 align-baseline shrink-0">{unit}</span> : unit}
+            {typeof unit === 'string' ? <span className="text-lg sm:text-3xl md:text-4xl xl:text-4xl 2xl:text-5xl font-bold text-intuition-primary/90 mr-1 sm:mr-2 align-baseline shrink-0">{unit}</span> : unit}
             <span className="tabular-nums truncate block min-w-0" title={value}>{value}</span>
           </>
         )}
@@ -642,23 +643,23 @@ const Portfolio: React.FC = () => {
   );
 
   return (
-    <div className="w-full min-w-0 max-w-full px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 pt-8 sm:pt-10 pb-16 sm:pb-20 font-mono overflow-x-hidden">
+    <div className="w-full min-w-0 max-w-full px-3 pt-6 pb-28 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 sm:pt-10 sm:pb-20 font-mono overflow-x-hidden">
       <div className="w-full max-w-full mx-auto mb-6 sm:mb-8 space-y-2 font-sans">
         <p className={PAGE_HERO_EYEBROW}>Your positions</p>
-        <h1 className={PAGE_HERO_TITLE}>Portfolio</h1>
+        <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Portfolio</h1>
         <p className={`${PAGE_HERO_BODY} max-w-2xl`}>
           Balances, PnL, and activity across the markets you trade.
         </p>
       </div>
       <div className="w-full max-w-full mx-auto mb-8 sm:mb-10 rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-[#020818] to-black shadow-[0_20px_60px_rgba(0,0,0,0.9)] border border-slate-900/60 px-4 sm:px-6 md:px-8 xl:px-10 py-6 sm:py-8 md:py-10 min-w-0">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 xl:gap-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6 xl:gap-8">
         <StatCard label="Wallet Balance" value={balance} unit={<CurrencySymbol size="2xl" leading />} icon={Wallet} isLoading={loading && !balanceLoaded} />
         <StatCard label="Total Equity" value={portfolioValue} unit={<CurrencySymbol size="2xl" leading />} icon={Coins} isLoading={loading && !equityLoaded} />
         <StatCard label="Net PnL" value={`${netPnL > 0 ? '+' : ''}${netPnL.toFixed(4)}`} unit={<CurrencySymbol size="2xl" leading />} icon={TrendingUp} trendColor={netPnL >= 0 ? 'text-intuition-success' : 'text-intuition-danger'} isLoading={loading && !pnlLoaded} />
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 p-4 sm:p-5 md:p-6 flex flex-col justify-between min-h-[116px] sm:min-h-[128px] xl:min-h-[140px] group hover:border-intuition-primary/40 transition-all min-w-0">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 p-3 sm:p-5 md:p-6 flex flex-col justify-between min-h-[92px] sm:min-h-[128px] xl:min-h-[140px] group hover:border-intuition-primary/40 transition-all min-w-0">
           <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.16),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(248,113,113,0.18),transparent_55%)]" />
           <div className="flex items-center justify-between relative z-10 min-w-0 gap-2">
-            <span className="text-[10px] xl:text-xs 2xl:text-sm font-black text-slate-500 uppercase tracking-[0.2em] truncate min-w-0" title="SENTIMENT_BIAS">SENTIMENT_BIAS</span>
+            <span className="text-[9px] xl:text-xs font-semibold text-slate-400 truncate min-w-0 font-sans tracking-tight md:font-black md:text-slate-500 md:uppercase md:tracking-[0.2em]" title="Sentiment bias">Sentiment bias</span>
             <PulseIcon className="w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 text-slate-700 group-hover:text-intuition-primary transition-colors animate-pulse" />
           </div>
           <div className="flex items-center gap-1.5 h-2 w-full px-1 relative z-10">
@@ -672,13 +673,13 @@ const Portfolio: React.FC = () => {
                 <div style={{ width: `${sentimentBias.distrust}%` }} className="absolute inset-0 bg-intuition-danger/40 blur-[8px] animate-pulse pointer-events-none"></div>
             </div>
           </div>
-          <div className="flex justify-between items-end text-[9px] font-black font-mono relative z-10">
+          <div className="flex justify-between items-end text-[9px] font-bold font-sans relative z-10 md:font-black md:font-mono">
             <div className="flex flex-col">
-                <span className="text-intuition-success uppercase tracking-widest leading-none text-glow-success">BULLISH</span>
+                <span className="text-intuition-success leading-none text-glow-success md:uppercase md:tracking-widest">Bullish</span>
                 <span className="text-white text-xs mt-0.5">{sentimentBias.trust.toFixed(0)}%</span>
             </div>
             <div className="flex flex-col items-end">
-                <span className="text-intuition-danger uppercase tracking-widest leading-none text-glow-red">BEARISH</span>
+                <span className="text-intuition-danger leading-none text-glow-red md:uppercase md:tracking-widest">Bearish</span>
                 <span className="text-white text-xs mt-0.5">{sentimentBias.distrust.toFixed(0)}%</span>
             </div>
           </div>
@@ -827,31 +828,33 @@ const Portfolio: React.FC = () => {
 
       <div className="w-full max-w-full mx-auto grid grid-cols-1 gap-6 sm:gap-8 lg:gap-10 min-w-0">
         {/* Row 1: Ledger + Transmission History (left) beside Equity Vol + Asset Exposure (right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 min-w-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 min-w-0">
         {/* Left column: Active Holdings + Transmission History stacked */}
-        <div className="lg:col-span-7 xl:col-span-8 w-full min-w-0 space-y-6 sm:space-y-8 flex flex-col">
+        <div className="md:col-span-1 lg:col-span-7 xl:col-span-8 w-full min-w-0 space-y-6 sm:space-y-8 flex flex-col">
         {/* Active Holdings Ledger */}
         <div className="w-full min-w-0 overflow-hidden">
           <div className="bg-black border border-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
-            <div className="px-4 sm:px-5 md:px-6 xl:px-8 py-4 sm:py-5 md:py-6 border-b border-slate-900 bg-white/[0.03] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0 shrink">
+            <div className="px-4 sm:px-5 md:px-6 xl:px-8 py-4 sm:py-5 md:py-6 border-b border-slate-900 bg-white/[0.03] flex flex-row flex-nowrap items-center justify-between gap-2 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink flex-1">
                 <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-intuition-primary/10 border border-intuition-primary/20 shrink-0">
                   <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-intuition-primary" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-bold text-white font-display uppercase tracking-[0.2em] whitespace-nowrap overflow-hidden text-ellipsis">Active Holdings Ledger</h3>
+                  <h3 className="font-sans text-sm font-semibold text-white sm:text-base md:font-display md:uppercase md:tracking-[0.2em] truncate pr-2">
+                    Active holdings
+                  </h3>
                   <p className="text-[10px] sm:text-xs text-slate-500 font-medium tracking-wider mt-0.5 hidden sm:block">Verified on Intuition Mainnet</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-2" ref={sortRef}>
-                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Sort</span>
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 min-w-0" ref={sortRef}>
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0 hidden sm:inline">Sort</span>
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => { setSortOpen(!sortOpen); playClick(); }}
                       onMouseEnter={playHover}
-                      className="flex items-center justify-between gap-3 bg-slate-900/80 border border-slate-700/80 text-slate-200 font-mono text-[11px] sm:text-xs font-semibold uppercase tracking-wider pl-3 pr-8 py-2 rounded-lg hover:border-slate-600 focus:border-intuition-primary/50 focus:ring-1 focus:ring-intuition-primary/30 outline-none cursor-pointer transition-colors min-w-[180px] sm:min-w-[200px] text-left"
+                      className="flex items-center justify-between gap-2 bg-slate-900/80 border border-slate-700/80 text-slate-200 font-mono text-[10px] sm:text-xs font-semibold uppercase tracking-wider pl-2 sm:pl-3 pr-7 sm:pr-8 py-2 rounded-lg hover:border-slate-600 focus:border-intuition-primary/50 focus:ring-1 focus:ring-intuition-primary/30 outline-none cursor-pointer transition-colors min-w-[7.5rem] max-w-[42vw] sm:min-w-[200px] sm:max-w-none text-left"
                     >
                       <span className="truncate">{getSortLabel(sortBy)}</span>
                       <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
@@ -882,7 +885,85 @@ const Portfolio: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto overflow-y-hidden min-h-[280px] sm:min-h-[320px] -mx-px">
+            <div className="grid grid-cols-2 gap-2 px-3 py-3 md:hidden sm:gap-3">
+              {sortedPositions.length > 0
+                ? paginatedPositions.map((pos) => {
+                    const isOpposition = (pos.atom?.label || '').includes('OPPOSING');
+                    return (
+                      <div
+                        key={`m-${pos.id}-${pos.curveId ?? 1}`}
+                        className="rounded-2xl border border-slate-800 bg-white/[0.03] p-3 shadow-lg min-w-0"
+                        onMouseEnter={() => setSelectedPosition(pos)}
+                      >
+                        <Link to={`/markets/${pos.id}`} className="flex gap-3 min-w-0">
+                          <div className="h-11 w-11 shrink-0 rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+                            {pos.atom?.image ? (
+                              <img src={pos.atom.image} className="h-full w-full object-cover" alt="" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <User className="h-5 w-5 text-slate-600" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`font-semibold text-sm leading-snug line-clamp-2 ${isOpposition ? 'text-intuition-danger' : 'text-white'}`}
+                              title={pos.atom?.label}
+                            >
+                              {pos.atom?.label || 'Unknown'}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[10px] text-slate-500 truncate">UID · {pos.id.slice(0, 10)}…</p>
+                          </div>
+                          <div className={`shrink-0 text-right text-sm font-bold tabular-nums ${pos.pnl >= 0 ? 'text-intuition-success' : 'text-intuition-danger'}`}>
+                            {pos.pnl >= 0 ? '+' : ''}
+                            {pos.pnl.toFixed(1)}%
+                          </div>
+                        </Link>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="rounded-xl border border-white/10 bg-black/40 px-2.5 py-2">
+                            <p className="text-slate-500 font-medium">Value</p>
+                            <p className="mt-0.5 font-mono font-bold text-white inline-flex items-baseline gap-1 truncate">
+                              <CurrencySymbol size="sm" leading className="text-intuition-primary/90 shrink-0" />
+                              <span className="truncate">{formatMarketValue(pos.value)}</span>
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-white/10 bg-black/40 px-2.5 py-2">
+                            <p className="text-slate-500 font-medium">Size</p>
+                            <p className="mt-0.5 font-mono font-bold text-white tabular-nums truncate">{formatDisplayedShares(pos.shares)}</p>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[10px] text-slate-500 truncate" title={getCurveLabel(pos.curveId ?? 1)}>
+                          Curve · {getCurveLabel(pos.curveId ?? 1)}
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <Link
+                            to={`/markets/${pos.id}`}
+                            onClick={() => { playClick(); }}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-intuition-danger/50 py-2 text-intuition-danger font-semibold text-[11px] hover:bg-intuition-danger/10 transition-all"
+                          >
+                            <LogOut size={12} /> Exit
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => { playClick(); setSharePosition(pos); }}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-intuition-primary/50 py-2 text-intuition-primary font-semibold text-[11px] hover:bg-intuition-primary/10 transition-all"
+                          >
+                            <Sparkles size={12} /> Share
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                : !loading ? (
+                    <div className="py-16 text-center font-sans text-sm text-slate-500 col-span-2">No open positions yet.</div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4 py-16 col-span-2">
+                      <PageLoadingSpinner size="md" />
+                      <span className="text-xs text-slate-500 font-sans">Loading positions…</span>
+                    </div>
+                  )}
+            </div>
+            <div className="hidden md:block overflow-x-auto overflow-y-hidden min-h-[280px] sm:min-h-[320px] -mx-px">
               <table className="w-full text-left font-mono text-xs sm:text-sm xl:text-base table-fixed min-w-[600px]" style={{ tableLayout: 'fixed' }}>
                 <colgroup>
                   <col style={{ width: '24%', minWidth: 0 }} />
@@ -906,7 +987,7 @@ const Portfolio: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {sortedPositions.length > 0 ? paginatedPositions.map((pos) => {
-                    const isOpposition = pos.atom.label.includes('OPPOSING');
+                    const isOpposition = (pos.atom?.label || '').includes('OPPOSING');
                     return (
                       <tr
                         key={`${pos.id}-${pos.curveId ?? 1}`}
@@ -1012,23 +1093,23 @@ const Portfolio: React.FC = () => {
 
         {/* Transmission History (directly under Active Holdings) */}
         <div className="w-full min-w-0 space-y-3 sm:space-y-4">
-          <h3 className="text-xs sm:text-sm md:text-base font-black text-white uppercase tracking-[0.35em] mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-intuition-secondary shrink-0" /> Transmission_History
+          <h3 className="text-sm font-semibold text-white font-sans mb-3 flex items-center gap-2 sm:mb-6 sm:text-base md:font-black md:uppercase md:tracking-[0.35em]">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-intuition-secondary shrink-0" /> Transmission history
           </h3>
-          <div className="space-y-2 sm:space-y-3 max-h-[360px] sm:max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-1 max-h-[480px] sm:max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
             {history.map((tx, idx) => (
-              <div key={tx.id + idx} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-4 sm:p-5 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl group hover:border-white/10 transition-all min-w-0">
-                <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
+              <div key={tx.id + idx} className="flex flex-col gap-2 p-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between sm:gap-3 sm:p-5 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl group hover:border-white/10 transition-all min-w-0">
+                <div className="flex items-center gap-2 min-w-0 sm:gap-5 sm:flex-1">
                   <div className={`w-1 sm:w-1.5 h-8 sm:h-10 shrink-0 ${tx.type === 'DEPOSIT' ? 'bg-intuition-success shadow-glow-success' : 'bg-intuition-danger shadow-glow-red'} rounded-full`}></div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] sm:text-xs font-black uppercase ${tx.type === 'DEPOSIT' ? 'text-intuition-success' : 'text-intuition-danger'}`}>{tx.type === 'DEPOSIT' ? 'ACQUIRE' : 'LIQUIDATE'}</span>
-                      <span className="text-white font-black text-xs sm:text-sm uppercase truncate max-w-[140px] sm:max-w-none" title={tx.assetLabel}>{tx.assetLabel || 'UNIDENTIFIED_NODE'}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`text-[10px] sm:text-xs font-black uppercase shrink-0 ${tx.type === 'DEPOSIT' ? 'text-intuition-success' : 'text-intuition-danger'}`}>{tx.type === 'DEPOSIT' ? 'ACQUIRE' : 'LIQUIDATE'}</span>
+                      <span className="text-white font-black text-xs sm:text-sm uppercase truncate min-w-0" title={tx.assetLabel}>{tx.assetLabel || 'UNIDENTIFIED_NODE'}</span>
                     </div>
                     <div className="text-[10px] sm:text-xs text-slate-600 font-mono mt-0.5 truncate">TX: {tx.id.slice(0, 20)}...</div>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="flex w-full flex-col gap-2 text-right sm:ml-auto sm:w-auto sm:shrink-0">
                   <div className="text-white font-black text-sm sm:text-base">{(() => {
                     try {
                       return safeParseUnits(tx.assets).toFixed(4);
@@ -1039,7 +1120,7 @@ const Portfolio: React.FC = () => {
               </div>
             ))}
             {history.length === 0 && (
-              <div className="text-center py-20 text-slate-600 uppercase font-black tracking-widest text-xs sm:text-sm">
+              <div className="col-span-2 py-12 text-center text-slate-600 uppercase font-black tracking-widest text-[10px] sm:text-sm">
                 AWAITING_INGRESS_SIGNALS...
               </div>
             )}
@@ -1048,29 +1129,29 @@ const Portfolio: React.FC = () => {
         </div>
 
         {/* Sidebar: Equity Vol + Asset Exposure (beside ledger) */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-6 sm:space-y-8 min-w-0">
-            <div className="bg-[#02040a] border border-slate-900 p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl shadow-2xl relative overflow-hidden group hover:border-intuition-primary/20 transition-all min-h-[360px] sm:min-h-[400px] xl:min-h-[440px] 2xl:min-h-[480px] flex flex-col">
+        <div className="md:col-span-1 lg:col-span-5 xl:col-span-4 min-w-0 grid grid-cols-2 md:grid-cols-1 gap-3 sm:gap-4 lg:gap-8">
+            <div className="bg-[#02040a] border border-slate-900 p-3 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl shadow-2xl relative overflow-hidden group hover:border-intuition-primary/20 transition-all min-h-[280px] sm:min-h-[400px] xl:min-h-[440px] 2xl:min-h-[480px] flex flex-col min-w-0">
                 <div className="flex justify-between items-start mb-4 sm:mb-6 relative z-10 gap-4 min-w-0">
                     <div className="flex items-center gap-3 min-w-0 shrink">
                         <div className="flex flex-col items-center mr-1 shrink-0">
                             <span className="text-[10px] font-black text-intuition-primary leading-none">01</span>
                             <span className="text-[10px] font-black text-intuition-primary leading-none">10</span>
                         </div>
-                        <h4 className="text-[10px] sm:text-xs xl:text-sm font-black font-display text-white uppercase tracking-[0.35em] flex items-center gap-2 truncate">
-                            EQUITY_VOLUME_TEMPORAL
+                        <h4 className="text-xs sm:text-sm font-semibold font-sans text-white tracking-tight flex items-center gap-2 truncate md:font-display md:font-black md:uppercase md:tracking-[0.35em]">
+                            Equity over time
                         </h4>
                     </div>
                     <div className="text-right shrink-0 pr-1 min-w-0">
                         <div className="text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl font-black text-intuition-primary font-mono text-glow-blue leading-none inline-flex items-baseline gap-2 min-w-0">
                             <CurrencySymbol size="xl" leading className="text-intuition-primary/90 shrink-0" />
-                            <span className="tabular-nums truncate max-w-[100px] sm:max-w-[140px] xl:max-w-[180px]" title={portfolioValue}>{portfolioValue}</span>
+                            <span className="tabular-nums truncate max-w-[min(36vw,100px)] max-md:text-lg sm:max-w-[140px] xl:max-w-[180px]" title={portfolioValue}>{portfolioValue}</span>
                         </div>
-                        <div className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mt-1 sm:mt-1.5">CURRENT_EST_VALUE</div>
+                        <div className="text-[10px] sm:text-xs text-slate-500 font-semibold font-sans mt-1 sm:mt-1.5 md:font-black md:uppercase md:tracking-widest">Current estimate</div>
                     </div>
                 </div>
 
-                <div className="w-full h-[260px] min-h-[220px] relative z-10 rounded-xl overflow-hidden bg-black/60 border border-slate-800/80" style={{ boxShadow: 'inset 0 0 80px rgba(0,243,255,0.04), 0 0 40px rgba(0,0,0,0.4)' }}>
-                    <ResponsiveContainer width="100%" height={260} debounce={50}>
+                <div className="relative z-10 h-[200px] min-h-[180px] w-full rounded-xl overflow-hidden bg-black/60 border border-slate-800/80 sm:h-[260px] sm:min-h-[220px]" style={{ boxShadow: 'inset 0 0 80px rgba(0,243,255,0.04), 0 0 40px rgba(0,0,0,0.4)' }}>
+                    <ResponsiveContainer width="100%" height="100%" debounce={50}>
                         <ComposedChart
                             data={(() => {
                                 const raw = chartData.length >= 2 ? chartData : [
@@ -1126,26 +1207,26 @@ const Portfolio: React.FC = () => {
 
                 <div className="mt-4 pt-6 border-t border-white/5 flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-3">
-                        <div className="text-xs font-black font-mono text-slate-600 uppercase tracking-[0.25em]">MAINNET_NEURAL_TELEMETRY_SYNCHRONIZED</div>
+                        <div className="text-xs font-medium font-sans text-slate-600 tracking-wide">Live mainnet data</div>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-black border border-slate-900 p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl min-h-[320px] sm:min-h-[360px] xl:min-h-[400px] 2xl:min-h-[420px] flex flex-col relative overflow-hidden group hover:border-white/10 transition-all shadow-2xl">
+            <div className="bg-black border border-slate-900 p-3 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl min-h-[260px] sm:min-h-[360px] xl:min-h-[400px] 2xl:min-h-[420px] flex flex-col relative overflow-hidden group hover:border-white/10 transition-all shadow-2xl min-w-0">
                 <div className="absolute top-0 right-0 p-4 sm:p-6 opacity-[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000 text-intuition-primary">
                     <PulseIcon className="w-40 h-40 sm:w-48 sm:h-48 xl:w-56 xl:h-56" />
                 </div>
                 
-                <h4 className="text-[10px] sm:text-xs xl:text-sm font-black text-slate-500 uppercase tracking-[0.35em] mb-4 sm:mb-6 relative z-10">Asset_Exposure_Index</h4>
+                <h4 className="text-[10px] sm:text-xs xl:text-sm font-semibold text-slate-500 tracking-wide mb-4 sm:mb-6 relative z-10">Asset exposure</h4>
                 
                 <div className="flex-1 flex flex-col items-center justify-center relative z-10 min-h-0">
-                    <div className="w-full h-[160px] sm:h-[200px] xl:h-[240px] 2xl:h-[260px] mb-6 sm:mb-8">
+                    <div className="w-full h-[120px] sm:h-[200px] xl:h-[240px] 2xl:h-[260px] mb-4 sm:mb-8">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie 
                                     data={exposureData.length > 0 ? exposureData : [{ name: 'AWAITING_SIGNAL', value: 1 }]} 
-                                    innerRadius={65} 
-                                    outerRadius={92} 
+                                    innerRadius="42%"
+                                    outerRadius="72%"
                                     paddingAngle={8} 
                                     dataKey="value"
                                     nameKey="name"
@@ -1165,7 +1246,7 @@ const Portfolio: React.FC = () => {
                         </ResponsiveContainer>
                     </div>
 
-                    <div className="w-full space-y-3 overflow-y-auto max-h-[200px] custom-scrollbar pr-2">
+                    <div className="w-full grid grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto max-h-[200px] custom-scrollbar pr-2">
                         {exposureData.length > 0 ? exposureData.map((entry, index) => (
                             <div key={index} className="flex items-center justify-between group/item py-1">
                                 <div className="flex items-center gap-3">
@@ -1185,23 +1266,23 @@ const Portfolio: React.FC = () => {
             </div>
 
             {/* My Created: identities and claims created by the user (sidebar) */}
-            <div className="bg-black border border-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col relative overflow-hidden group hover:border-intuition-primary/20 transition-all shadow-2xl min-h-0">
-              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                <h4 className="text-[10px] sm:text-xs font-black text-white uppercase tracking-[0.35em] flex items-center gap-2 shrink-0">
-                  <Sparkles className="w-4 h-4 text-intuition-primary" /> My_Created
+            <div className="col-span-2 md:col-span-1 bg-black border border-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl flex flex-col relative overflow-hidden group hover:border-intuition-primary/20 transition-all shadow-2xl min-h-0">
+              <div className="flex flex-nowrap items-center justify-between gap-2 mb-3 sm:mb-4 min-w-0">
+                <h4 className="text-xs font-semibold text-white font-sans tracking-tight flex items-center gap-2 min-w-0 shrink md:font-black md:uppercase md:tracking-[0.35em]">
+                  <Sparkles className="w-4 h-4 text-intuition-primary shrink-0" /> <span className="truncate">My created</span>
                 </h4>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1 sm:gap-1.5 shrink-0">
                   <button
                     onClick={() => { playClick(); setMyCreatedTab('identities'); }}
                     onMouseEnter={playHover}
-                    className={`px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-wider transition-all ${myCreatedTab === 'identities' ? 'bg-intuition-primary text-black' : 'bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:border-intuition-primary/40'}`}
+                    className={`px-2 sm:px-3 py-1.5 rounded-full font-black text-[9px] sm:text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${myCreatedTab === 'identities' ? 'bg-intuition-primary text-black' : 'bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:border-intuition-primary/40'}`}
                   >
                     Identities
                   </button>
                   <button
                     onClick={() => { playClick(); setMyCreatedTab('claims'); }}
                     onMouseEnter={playHover}
-                    className={`px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-wider transition-all ${myCreatedTab === 'claims' ? 'bg-intuition-primary text-black' : 'bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:border-intuition-primary/40'}`}
+                    className={`px-2 sm:px-3 py-1.5 rounded-full font-black text-[9px] sm:text-[10px] uppercase tracking-wider transition-all whitespace-nowrap ${myCreatedTab === 'claims' ? 'bg-intuition-primary text-black' : 'bg-white/5 border border-white/10 text-slate-500 hover:text-white hover:border-intuition-primary/40'}`}
                   >
                     Claims
                   </button>
@@ -1276,6 +1357,8 @@ const Portfolio: React.FC = () => {
             </div>
         </div>
         </div>
+        {/* Single Portfolio surface for Arena: indexed portal-list stakes from your wallet (subgraph). */}
+        <ArenaMyRankingsPanel wallet={account ?? null} />
       </div>
     </div>
   );

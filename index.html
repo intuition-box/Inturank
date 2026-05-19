@@ -122,9 +122,9 @@
       }
       @media (max-width: 768px) {
         :root {
-          --anim-duration-fast: 0.16s;
-          --anim-duration-normal: 0.22s;
-          --anim-duration-slow: 0.28s;
+        --anim-duration-fast: 0.2s;
+        --anim-duration-normal: 0.28s;
+        --anim-duration-slow: 0.36s;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -386,6 +386,19 @@
         animation: neon-flicker 4s ease-in-out infinite;
       }
 
+      /* Home hero — cheap translateY cue (GPU-friendly); disabled with reduced-motion below */
+      @keyframes hero-scroll-nudge {
+        0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.78; }
+        50% { transform: translate3d(0, 7px, 0); opacity: 1; }
+      }
+      .hero-scroll-nudge {
+        animation: hero-scroll-nudge 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        will-change: transform;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-scroll-nudge { animation: none !important; will-change: auto; opacity: 1 !important; }
+      }
+
       /* IntuRank card — premium holographic/foil gamification (Pokémon-style) */
       @keyframes holo-rainbow {
         0%, 100% { background-position: 0% 50%; }
@@ -572,6 +585,24 @@
         opacity: 0.5;
         mix-blend-mode: overlay;
       }
+      /* Trending wheel: skip infinite keyframes + glitter (large paint win while dragging) */
+      .trending-atom-deck .atom-card-glitter {
+        display: none !important;
+      }
+      .trending-atom-deck .atom-card-front {
+        animation: none !important;
+      }
+      .trending-atom-deck .atom-card-front::before {
+        animation: none !important;
+        background-position: 42% 38%;
+      }
+      .trending-atom-deck .atom-card-artwork,
+      .trending-atom-deck .atom-card-artwork::before,
+      .trending-atom-deck .atom-card-artwork::after,
+      .trending-atom-deck .atom-card-artwork-image::after,
+      .trending-atom-deck .atom-card-holo-strip {
+        animation: none !important;
+      }
 
       /* Execution deck — gamified buy panel */
       @keyframes execution-pulse {
@@ -632,6 +663,10 @@
         from { opacity: 0; transform: translateY(4px) scale(0.995); }
         to { opacity: 1; transform: translateY(0) scale(1); }
       }
+      @keyframes page-enter-slide-x {
+        from { opacity: 0; transform: translateX(22px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
       .animate-page-enter {
         animation: page-enter var(--anim-duration-normal) var(--anim-ease-out) forwards;
       }
@@ -641,6 +676,13 @@
 
       /* Mobile: slightly shorter but still fluid */
       @media (max-width: 768px) {
+        .mobile-app-shell .animate-page-enter {
+          animation-name: page-enter-slide-x;
+        }
+        .mobile-app-shell main a:active,
+        .mobile-app-shell main button:active {
+          transition: transform var(--anim-duration-fast) var(--anim-ease-out), opacity var(--anim-duration-fast) var(--anim-ease-out);
+        }
         [class*="duration-200"] { animation-duration: 0.24s !important; }
         [class*="duration-300"] { animation-duration: var(--anim-duration-fast) !important; }
         [class*="duration-500"] { animation-duration: 0.35s !important; }
@@ -675,6 +717,7 @@
         .animate-spin-reverse-slow, .animate-spin-fast, .animate-spin-reverse-fast,
         .animate-scanline, .animate-glitch,
         .animate-arena-pulse, .animate-badge-bounce, .animate-slot-shimmer, .animate-neon-flicker,
+        .hero-scroll-nudge,
         .atom-card-artwork, .atom-card-artwork-image, .atom-card-front {
           animation: none !important;
         }

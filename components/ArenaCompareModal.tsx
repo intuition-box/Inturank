@@ -5,7 +5,7 @@ import { X, Loader2, BarChart3, Activity, Shield, TrendingUp, Users, Swords, Spa
 import { formatEther } from 'viem';
 import { getAccountsByTermIds, getRedemptionCountForVault } from '../services/graphql';
 import { calculateTrustScore, calculateVolatility, calculateMarketCap } from '../services/analytics';
-import { playClick } from '../services/audio';
+import { playArenaUiClick } from '../services/audio';
 import { ComparisonRow, RivalryAnalysis } from '../pages/Compare';
 import { CurrencySymbol } from './CurrencySymbol';
 import type { Account } from '../types';
@@ -98,7 +98,7 @@ const ArenaCompareModal: React.FC<Props> = ({ open, onClose, left, right }) => {
       aria-modal="true"
       aria-labelledby="arena-compare-title"
       onClick={() => {
-        playClick();
+        playArenaUiClick();
         onClose();
       }}
     >
@@ -132,7 +132,7 @@ const ArenaCompareModal: React.FC<Props> = ({ open, onClose, left, right }) => {
           <button
             type="button"
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               onClose();
             }}
             className="relative z-10 p-2 rounded-xl border border-slate-600/90 bg-slate-950/80 text-slate-400 hover:text-white hover:border-cyan-500/40 transition-colors shrink-0"
@@ -161,7 +161,7 @@ const ArenaCompareModal: React.FC<Props> = ({ open, onClose, left, right }) => {
                   {left.kind !== 'token' && (
                     <Link
                       to={`/markets/${left.id}`}
-                      onClick={playClick}
+                      onClick={playArenaUiClick}
                       className="inline-flex items-center gap-1 mt-3 text-[10px] font-black uppercase tracking-wider text-cyan-400 hover:text-cyan-300"
                     >
                       Open market <span aria-hidden>→</span>
@@ -178,7 +178,7 @@ const ArenaCompareModal: React.FC<Props> = ({ open, onClose, left, right }) => {
                   {right.kind !== 'token' && (
                     <Link
                       to={`/markets/${right.id}`}
-                      onClick={playClick}
+                      onClick={playArenaUiClick}
                       className="inline-flex items-center gap-1 mt-3 text-[10px] font-black uppercase tracking-wider text-fuchsia-400 hover:text-fuchsia-300"
                     >
                       Open market <span aria-hidden>→</span>
@@ -264,7 +264,7 @@ const ArenaCompareModal: React.FC<Props> = ({ open, onClose, left, right }) => {
           <button
             type="button"
             onClick={() => {
-              playClick();
+              playArenaUiClick();
               onClose();
             }}
             className="rounded-xl border border-cyan-400/45 bg-gradient-to-r from-cyan-500/15 to-cyan-600/5 px-6 py-2.5 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)] hover:from-cyan-500/25 hover:to-cyan-500/10 hover:border-cyan-300/60 transition-all"

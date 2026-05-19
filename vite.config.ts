@@ -1,32 +1,48 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function graphqlProxyOrigin(env: Record<string, string>): string {
+  const isTestnet = String(env.VITE_INTUITION_NETWORK ?? '').trim().toLowerCase() === 'testnet';
+  const custom = String(
+    isTestnet ? env.VITE_INTUITION_TESTNET_GRAPHQL_URL : env.VITE_INTUITION_MAINNET_GRAPHQL_URL
+  ).trim();
+  if (custom) {
+    try {
+      return new URL(custom).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return isTestnet ? 'https://testnet.intuition.sh' : 'https://mainnet.intuition.sh';
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-      // Dev-only proxy for the Intuition GraphQL endpoint so the browser
-      // talks to localhost (no CORS), and Vite forwards to mainnet.
-      // /v1/graphql on localhost -> https://mainnet.intuition.sh/v1/graphql
-      '/v1/graphql': {
-        target: 'https://mainnet.intuition.sh',
-        changeOrigin: true,
-        secure: false,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const graphqlTarget = graphqlProxyOrigin(env);
+
+  return {
+    plugins: [react()],
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        // Dev: browser calls /v1/graphql → Vite forwards to active network (see VITE_INTUITION_NETWORK).
+        '/v1/graphql': {
+          target: graphqlTarget,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
-  },
-  build: {
-    outDir: 'dist',
-    target: 'esnext',
-  },
-  // This maps the system environment variable API_KEY 
-  // to process.env.API_KEY in your code during build time.
-  define: {
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
-  },
+    build: {
+      outDir: 'dist',
+      target: 'esnext',
+    },
+    define: {
+      'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
+    },
+  };
 });

@@ -16,6 +16,7 @@ import SkillChat from '../components/SkillChat';
 import { SkillErrorBoundary } from '../components/SkillErrorBoundary';
 import { playClick, playHover } from '../services/audio';
 import { CURRENCY_SYMBOL, PAGE_HERO_TITLE } from '../constants';
+import { XpEarnHint } from '../components/XpEarnHint';
 
 const useInView = (options: { once?: boolean; threshold?: number } = {}) => {
     const [isInView, setIsInView] = useState(false);
@@ -80,6 +81,7 @@ const CHAT_SHELL =
     'flex flex-col min-h-0 rounded-3xl sm:rounded-[1.75rem] ' +
     'border-2 border-intuition-primary/30 bg-[#05070d]/[0.97] backdrop-blur-xl backdrop-saturate-150 p-1.5 sm:p-2 shadow-[0_0_72px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-black/30 ' +
     'overflow-hidden ' +
+    'max-md:h-[min(70dvh,calc(100dvh-12rem))] max-md:max-h-[min(70dvh,calc(100dvh-12rem))] ' +
     'h-[min(88dvh,calc(100dvh-7.5rem))] max-h-[min(88dvh,calc(100dvh-7.5rem))] ' +
     'sm:h-[min(86dvh,calc(100dvh-8.5rem))] sm:max-h-[min(86dvh,calc(100dvh-8.5rem))] ' +
     'xl:h-[min(82dvh,calc(100dvh-9rem))] xl:max-h-[min(82dvh,calc(100dvh-9rem))]';
@@ -88,14 +90,14 @@ const SkillPlayground: React.FC = () => {
     const [skillChatKey, setSkillChatKey] = useState(0);
 
     return (
-        <div className="min-h-[calc(100dvh-4rem)] flex flex-col bg-[#020308] pt-6 sm:pt-8 pb-8 sm:pb-12 px-3 sm:px-5 lg:px-8 xl:px-10 2xl:px-14 relative overflow-x-hidden">
+        <div className="min-h-[calc(100dvh-4rem)] flex flex-col bg-[#020308] pt-5 pb-28 sm:pt-8 sm:pb-12 px-3 sm:px-5 lg:px-8 xl:px-10 2xl:px-14 relative overflow-x-hidden">
             <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
             <div className="absolute inset-0 pointer-events-none opacity-[0.05] retro-grid" aria-hidden />
             <div className="absolute top-0 right-0 w-[min(80vw,720px)] h-[min(80vw,720px)] bg-intuition-primary/5 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[min(60vw,520px)] h-[min(60vw,520px)] bg-[#ff1e6d]/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="w-full max-w-[min(1800px,100%)] mx-auto relative z-10 flex flex-col flex-1 min-h-0">
-                <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between shrink-0 mb-5 sm:mb-6 lg:mb-7">
+                <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between shrink-0 mb-4 sm:mb-6 sm:gap-4 lg:mb-7">
                     <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                         <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-black border-2 border-intuition-primary/80 flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-[0_0_32px_rgba(0,243,255,0.25),inset_0_1px_0_rgba(255,255,255,0.08)]">
                             <Cpu size={26} className="text-intuition-primary" />
@@ -112,11 +114,11 @@ const SkillPlayground: React.FC = () => {
                                     IntuRank
                                 </Link>
                             </p>
-                            <h1 className={PAGE_HERO_TITLE}>Intuition Skill Playground</h1>
+                            <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Intuition Skill Playground</h1>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
+                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible lg:justify-end [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <Link
                             to="/create"
                             onClick={playClick}
@@ -169,25 +171,25 @@ const SkillPlayground: React.FC = () => {
                                             'radial-gradient(ellipse 90% 70% at 100% 0%, rgba(0,243,255,0.12), transparent 55%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(255,30,109,0.08), transparent 50%)',
                                     }}
                                 />
-                                <div className="absolute -right-2 top-3 opacity-[0.12] transition-opacity group-hover:opacity-20">
-                                    <ChevronRight
-                                        strokeWidth={1.25}
-                                        className="h-20 w-20 text-intuition-primary"
-                                        aria-hidden
-                                    />
-                                </div>
                                 <div className="relative">
                                     <p className="mb-2 font-mono text-[9px] font-black uppercase tracking-[0.35em] text-slate-500">
                                         Playbook
                                     </p>
-                                    <h2 className="mb-3 flex items-center gap-2 font-sans text-sm font-semibold text-white">
-                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/30 bg-intuition-primary/10 shadow-[0_0_20px_rgba(0,243,255,0.15)]">
-                                            <Info size={15} className="text-intuition-primary" />
-                                        </span>
-                                        Quick reference
-                                    </h2>
+                                    <div className="mb-3 flex items-center justify-between gap-2 min-w-0">
+                                        <h2 className="flex min-w-0 flex-1 items-center gap-2 font-sans text-sm font-semibold text-white">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/30 bg-intuition-primary/10 shadow-[0_0_20px_rgba(0,243,255,0.15)]">
+                                                <Info size={15} className="text-intuition-primary" />
+                                            </span>
+                                            <span className="truncate">Quick reference</span>
+                                        </h2>
+                                        <ChevronRight
+                                            strokeWidth={2}
+                                            className="h-4 w-4 shrink-0 text-intuition-primary/35 transition-opacity group-hover:text-intuition-primary/55"
+                                            aria-hidden
+                                        />
+                                    </div>
 
-                                    <p className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+                                    <p className="mb-4 flex flex-nowrap items-center gap-x-1.5 overflow-x-auto text-sm text-slate-400 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                         <span>Natural language in.</span>
                                         <span className="inline-flex items-center gap-0.5 text-slate-300">
                                             Chain
@@ -202,8 +204,8 @@ const SkillPlayground: React.FC = () => {
                                     <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                                         Typical costs
                                     </p>
-                                    <div className="mb-1 grid grid-cols-2 gap-2">
-                                        <div className="rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5">
+                                    <div className="mb-1 grid grid-cols-2 gap-2 min-w-0">
+                                        <div className="min-w-0 rounded-xl border border-white/[0.08] bg-black/30 px-2.5 py-2.5 sm:px-3">
                                             <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                                                 Atom
                                             </div>
@@ -212,7 +214,7 @@ const SkillPlayground: React.FC = () => {
                                                 <span className="text-slate-500"> + dep.</span>
                                             </div>
                                         </div>
-                                        <div className="rounded-xl border border-white/[0.08] bg-black/30 px-3 py-2.5">
+                                        <div className="min-w-0 rounded-xl border border-white/[0.08] bg-black/30 px-2.5 py-2.5 sm:px-3">
                                             <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                                                 Triple
                                             </div>
@@ -222,10 +224,12 @@ const SkillPlayground: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-slate-400">
-                                        <span className="text-slate-500">Vault deposit</span>
-                                        <span className="font-medium text-slate-300">Varies</span>
+                                    <div className="flex flex-nowrap items-center justify-between gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-2 text-xs text-slate-400 min-w-0">
+                                        <span className="shrink-0 text-slate-500">Vault deposit</span>
+                                        <span className="truncate text-right font-medium text-slate-300">Varies</span>
                                     </div>
+
+                                    <XpEarnHint variant="skill" className="mt-3" />
 
                                     <div className="mt-4 border-t border-white/10 pt-4">
                                         <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-400/90">
@@ -241,55 +245,65 @@ const SkillPlayground: React.FC = () => {
                             </div>
                         </Reveal>
 
-                        <Reveal delay={90}>
-                            <div
-                                className={`${TIP_CARD} p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/40 hover:shadow-[0_0_32px_rgba(0,243,255,0.1),inset_0_1px_0_rgba(255,255,255,0.07)]`}
-                            >
+                        <div className="grid grid-cols-2 gap-3 min-w-0 xl:grid-cols-1 xl:gap-4">
+                            <Reveal delay={90}>
                                 <div
-                                    className="pointer-events-none absolute inset-0 opacity-40"
-                                    style={{
-                                        background:
-                                            'radial-gradient(ellipse 80% 60% at 0% 0%, rgba(0,243,255,0.15), transparent 50%)',
-                                    }}
-                                />
-                                <div className="relative">
-                                    <div className="mb-2.5 flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/20 to-intuition-primary/5 shadow-[0_0_24px_rgba(0,243,255,0.2)]">
-                                            <Zap size={18} className="text-intuition-primary" />
+                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/40 hover:shadow-[0_0_32px_rgba(0,243,255,0.1),inset_0_1px_0_rgba(255,255,255,0.07)]`}
+                                >
+                                    <div
+                                        className="pointer-events-none absolute inset-0 opacity-40"
+                                        style={{
+                                            background:
+                                                'radial-gradient(ellipse 80% 60% at 0% 0%, rgba(0,243,255,0.15), transparent 50%)',
+                                        }}
+                                    />
+                                    <div className="relative min-w-0">
+                                        <div className="mb-2.5 flex items-start gap-2">
+                                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/20 to-intuition-primary/5 shadow-[0_0_24px_rgba(0,243,255,0.2)]">
+                                                    <Zap size={18} className="text-intuition-primary" />
+                                                </div>
+                                                <h3 className="min-w-0 font-sans text-xs font-semibold leading-snug text-white sm:text-sm">
+                                                    Autonomous creation
+                                                </h3>
+                                            </div>
                                         </div>
-                                        <h3 className="font-sans text-sm font-semibold text-white">Autonomous creation</h3>
+                                        <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">
+                                            Agent assembles calldata and fees. You sign in your wallet.
+                                        </p>
                                     </div>
-                                    <p className="text-sm leading-relaxed text-slate-400">
-                                        Agent assembles calldata and fees. You sign in your wallet.
-                                    </p>
                                 </div>
-                            </div>
-                        </Reveal>
+                            </Reveal>
 
-                        <Reveal delay={180}>
-                            <div
-                                className={`${TIP_CARD} p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-[#ff3d7a]/40 hover:shadow-[0_0_32px_rgba(255,30,109,0.12),inset_0_1px_0_rgba(255,255,255,0.07)]`}
-                            >
+                            <Reveal delay={180}>
                                 <div
-                                    className="pointer-events-none absolute inset-0 opacity-50"
-                                    style={{
-                                        background:
-                                            'radial-gradient(ellipse 90% 70% at 100% 100%, rgba(255,30,109,0.12), transparent 55%)',
-                                    }}
-                                />
-                                <div className="relative">
-                                    <div className="mb-2.5 flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ff1e6d]/30 bg-gradient-to-br from-[#ff1e6d]/20 to-[#3d0a18]/40 shadow-[0_0_20px_rgba(255,30,109,0.15)]">
-                                            <ShieldCheck size={18} className="text-[#ff6b9d]" />
+                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-[#ff3d7a]/40 hover:shadow-[0_0_32px_rgba(255,30,109,0.12),inset_0_1px_0_rgba(255,255,255,0.07)]`}
+                                >
+                                    <div
+                                        className="pointer-events-none absolute inset-0 opacity-50"
+                                        style={{
+                                            background:
+                                                'radial-gradient(ellipse 90% 70% at 100% 100%, rgba(255,30,109,0.12), transparent 55%)',
+                                        }}
+                                    />
+                                    <div className="relative min-w-0">
+                                        <div className="mb-2.5 flex items-start gap-2">
+                                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#ff1e6d]/30 bg-gradient-to-br from-[#ff1e6d]/20 to-[#3d0a18]/40 shadow-[0_0_20px_rgba(255,30,109,0.15)]">
+                                                    <ShieldCheck size={18} className="text-[#ff6b9d]" />
+                                                </div>
+                                                <h3 className="min-w-0 font-sans text-xs font-semibold leading-snug text-white sm:text-sm">
+                                                    You stay in control
+                                                </h3>
+                                            </div>
                                         </div>
-                                        <h3 className="font-sans text-sm font-semibold text-white">You stay in control</h3>
+                                        <p className="text-xs leading-relaxed text-slate-400 sm:text-sm">
+                                            Read every summary before signing. Your keys, your transactions.
+                                        </p>
                                     </div>
-                                    <p className="text-sm leading-relaxed text-slate-400">
-                                        Read every summary before signing. Your keys, your transactions.
-                                    </p>
                                 </div>
-                            </div>
-                        </Reveal>
+                            </Reveal>
+                        </div>
                     </aside>
                 </div>
             </div>

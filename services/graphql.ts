@@ -3,20 +3,30 @@ import {
   GRAPHQL_URL,
   IS_PREDICATE_ID,
   DISTRUST_ATOM_ID,
+  LIST_PREDICATE_ID,
   FEE_PROXY_ADDRESS,
   MULTI_VAULT_ADDRESS,
   LINEAR_CURVE_ID,
   OFFSET_PROGRESSIVE_CURVE_ID,
+  ARENA_ATTRIBUTION_MIN_BLOCK,
+  ARENA_XP_PER_RANK_PICK,
+  ARENA_PORTAL_LISTS_FETCH_LIMIT,
+  SIGNAL_PULSE_HERO_ATOM_LABELS,
 } from '../constants';
 import { Account, Transaction, Claim, Triple } from '../types';
 import { hexToString, formatEther, parseEther, getAddress, isAddress } from 'viem';
 import { safeWeiToEther, safeParseUnits } from './analytics';
+import { normalizeWebMediaUrl } from './mediaUrl';
 import { publicClient } from './web3';
+
+function graphCachedImageUrl(ci: { url?: string; safe?: boolean } | null | undefined): string | undefined {
+  if (!ci?.url) return undefined;
+  if (ci.safe === false) return undefined;
+  return ci.url;
+}
 
 // Request guard to prevent parallel overlapping global claims fetches
 let isGlobalClaimsFetching = false;
-
-const LIST_PREDICATE_ID = "0x7ec36d201c842dc787b45cb5bb753bea4cf849be3908fb1b0a7d067c3c3cc1f5";
 
 /** In-flight dedupe + optional TTL cache to cut duplicate requests (React strict mode, LB panels, navigation). */
 const gqlInflight = new Map<string, Promise<any>>();
@@ -139,6 +149,17 @@ function resolveProxyActivityAccount(dep: {
   return (sender ?? receiver) ?? null;
 }
 
+/** Graph `account.id` variants for contracts that route IntuRank traffic in the indexer. */
+function feeProxyRoutedSenderGraphIds(): string[] {
+  const s = new Set<string>();
+  for (const addr of [FEE_PROXY_ADDRESS, MULTI_VAULT_ADDRESS]) {
+    for (const id of prepareQueryIds(addr)) {
+      if (id) s.add(id);
+    }
+  }
+  return Array.from(s);
+}
+
 export const prepareQueryIds = (id: string) => {
     if (!id) return [];
     const base = id.trim();
@@ -169,7 +190,7 @@ export const resolveMetadata = (atom: any) => {
     
     let label = atom.label;
     let description = '';
-    let image = atom.image;
+    let image: string | undefined = atom.image || graphCachedImageUrl(atom.cached_image);
     let links = [];
 
     // Attempt to decode primary hex data payload for enriched metadata
@@ -195,7 +216,7 @@ export const resolveMetadata = (atom: any) => {
         if (meta) {
             if (!label || label.startsWith('0x')) label = meta.name || meta.label;
             if (!description) description = meta.description || '';
-            if (!image) image = meta.image;
+            if (!image) image = (meta.image || graphCachedImageUrl(meta.cached_image)) as string | undefined;
             // Some indexers expose url/links on the parsed value
             if (links.length === 0 && meta.links && Array.isArray(meta.links)) links = meta.links;
             if (links.length === 0 && meta.url && typeof meta.url === 'string') links = [{ label: 'Link', url: meta.url }];
@@ -204,11 +225,12 @@ export const resolveMetadata = (atom: any) => {
 
     if (atom.triple && atom.triple.object_id?.toLowerCase().includes(DISTRUST_ATOM_ID.toLowerCase().slice(26))) {
         const subjectLabel = atom.triple.subject?.label || atom.triple.subject_id?.slice(0, 8);
+        const subMeta = atom.triple.subject ? resolveMetadata(atom.triple.subject) : { image: undefined };
         return {
             label: `OPPOSING_${subjectLabel}`.toUpperCase(),
             description: `A directional signal of distrust against ${subjectLabel} on the Intuition Network.`,
             type: 'CLAIM',
-            image: atom.triple.subject?.image,
+            image: subMeta.image,
             links: []
         };
     }
@@ -217,7 +239,7 @@ export const resolveMetadata = (atom: any) => {
         label: (label && label !== '0x' && !label.startsWith('0x00')) ? label : `${atom.term_id?.slice(0, 8)}...`, 
         description,
         type: atom.type || 'ATOM',
-        image,
+        image: normalizeWebMediaUrl(image),
         links
     };
 };
@@ -647,6 +669,101 @@ export async function getAccountsByIds(addresses: string[]): Promise<Map<string,
   }
 }
 
+/** Prefer indexer rows whose label ends with `.trust` for this wallet (badges when reverse / addr records are unset). */
+export async function getAccountTrustNameLabelForWallet(walletAddress: string): Promise<string | null> {
+  const ids = accountVariantsForGraph(walletAddress).slice(0, 24);
+  if (!ids.length) return null;
+  const q = `query AccountTrustLabel($ids: [String!]!) {
+    accounts(where: { id: { _in: $ids }, label: { _ilike: "%.trust" } }, limit: 6) {
+      label
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { ids });
+    const rows = (res?.accounts || []) as { label?: string | null }[];
+    const labels = rows.map((r) => String(r.label ?? '').trim()).filter(Boolean);
+    if (!labels.length) return null;
+    labels.sort((a, b) => a.length - b.length);
+    return labels[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * When `accounts` is slow or the row shape differs, active positions still nest `account.label`
+ * — some indexers populate `.trust` there first.
+ */
+export async function getAccountTrustNameLabelFromPositions(walletAddress: string): Promise<string | null> {
+  const addrs = accountVariantsForGraph(walletAddress).slice(0, 24);
+  if (!addrs.length) return null;
+  const want = new Set(addrs.map((a) => a.toLowerCase()));
+  const q = `query AccountTrustViaPositions($addrs: [String!]!) {
+    positions(
+      where: {
+        shares: { _gt: "0" },
+        _or: [
+          { account_id: { _in: $addrs } },
+          { account: { id: { _in: $addrs } } }
+        ]
+      },
+      limit: 120,
+      order_by: [{ shares: desc }]
+    ) {
+      account { id label }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { addrs }, 2, 14_000);
+    const rows = (res?.positions || []) as { account?: { id?: string; label?: string | null } | null }[];
+    const labels: string[] = [];
+    for (const p of rows) {
+      const acc = p?.account;
+      if (!acc) continue;
+      const aid = String(acc.id || '').toLowerCase();
+      if (!want.has(aid)) continue;
+      const lab = String(acc.label ?? '').trim();
+      if (lab.toLowerCase().endsWith('.trust')) labels.push(lab);
+    }
+    if (!labels.length) return null;
+    labels.sort((a, b) => a.length - b.length);
+    return labels[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Account-type `.trust` atoms the wallet created (indexer often links display name here before `accounts` updates). */
+export async function getAccountTrustNameFromCreatorAtoms(walletAddress: string): Promise<string | null> {
+  const addrs = accountVariantsForGraph(walletAddress).slice(0, 20);
+  if (!addrs.length) return null;
+  const q = `query TrustAtomsByCreator($addrs: [String!]!) {
+    atoms(
+      where: {
+        _and: [
+          { label: { _ilike: "%.trust" } },
+          { creator: { id: { _in: $addrs } } }
+        ]
+      },
+      limit: 24
+    ) {
+      label
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { addrs }, 2, 12_000);
+    const rows = (res?.atoms || []) as { label?: string | null }[];
+    const labels = rows
+      .map((r) => String(r.label ?? '').trim())
+      .filter((l) => l.toLowerCase().endsWith('.trust'));
+    if (!labels.length) return null;
+    labels.sort((a, b) => a.length - b.length);
+    return labels[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Wallet is tied to Intuition when `accounts` returns a row for an id variant; label falls back to short address. */
 export function resolveIntuitionAccountForWallet(
   walletAddress: string,
@@ -999,6 +1116,198 @@ export const getGlobalActivity = async (limit: number = 40, offset: number = 0) 
         hasMore: events.length === limit
     };
   } catch (e) { return { items: [], hasMore: false }; }
+};
+
+/**
+ * Global activity where deposits/redemptions were initiated through the IntuRank
+ * routing layer (FeeProxy / MultiVault as `sender` in the subgraph). Same row
+ * shape as {@link getGlobalActivity} so `ActivityRow` keeps working.
+ */
+export const getIntuRankNetworkActivity = async (limit: number = 40, offset: number = 0) => {
+  const proxyIds = feeProxyRoutedSenderGraphIds();
+  const q = `query GetIntuRankActivity($limit: Int!, $offset: Int!, $proxyIds: [String!]!) {
+    events(limit: $limit, offset: $offset, order_by: {created_at: desc}, where: {
+      _and: [
+        { type: { _in: ["Deposited", "Redeemed"] } },
+        { _not: { deposit: { assets_after_fees: { _eq: "0" } } } },
+        { _or: [
+          { deposit: { sender_id: { _in: $proxyIds } } },
+          { redemption: { sender_id: { _in: $proxyIds } } }
+        ] }
+      ]
+    }) {
+      id created_at type transaction_hash
+      atom { term_id label data image type creator { id label image } }
+      triple { term_id counter_term_id subject { label term_id data image type } predicate { label } object { label term_id data image type } creator { id label image } }
+      deposit { assets_after_fees shares sender { id label image } receiver { id label image } vault { curve_id } }
+      redemption { assets shares sender { id label image } receiver { id label image } vault { curve_id } }
+    }
+  }`;
+  try {
+    const data = await fetchGraphQL(q, { limit, offset, proxyIds });
+    const events = data?.events ?? [];
+    return {
+      items: events.map((ev: any) => {
+        let label = 'Unknown Node',
+          vaultId = '0x',
+          shares = '0',
+          assets = '0',
+          curveId = '0',
+          sender = null,
+          target = null;
+
+        if (ev.type === 'Deposited' && ev.deposit) {
+          assets = ev.deposit.assets_after_fees || '0';
+          shares = ev.deposit.shares || '0';
+          curveId = ev.deposit.vault?.curve_id;
+          sender = resolveProxyActivityAccount(ev.deposit);
+          if (ev.atom) {
+            const meta = resolveMetadata(ev.atom);
+            label = meta.label;
+            vaultId = ev.atom.term_id;
+            target = { ...meta, id: ev.atom.term_id };
+          } else if (ev.triple) {
+            const sMeta = resolveMetadata(ev.triple.subject);
+            const oMeta = resolveMetadata(ev.triple.object);
+            label = `${sMeta.label} ${ev.triple.predicate?.label || 'LINK'} ${oMeta.label}`;
+            vaultId = ev.triple.term_id;
+            target = {
+              label,
+              id: ev.triple.term_id,
+              type: 'CLAIM',
+              subject: sMeta,
+              predicate: ev.triple.predicate?.label,
+              object: oMeta,
+            };
+          }
+        } else if (ev.type === 'Redeemed' && ev.redemption) {
+          assets = ev.redemption.assets || '0';
+          shares = ev.redemption.shares || '0';
+          curveId = ev.redemption.vault?.curve_id;
+          sender = resolveProxyActivityAccount(ev.redemption);
+          if (ev.atom) {
+            const meta = resolveMetadata(ev.atom);
+            label = meta.label;
+            vaultId = ev.atom.term_id;
+            target = { ...meta, id: ev.atom.term_id };
+          } else if (ev.triple) {
+            const sMeta = resolveMetadata(ev.triple.subject);
+            const oMeta = resolveMetadata(ev.triple.object);
+            label = `${sMeta.label} ${ev.triple.predicate?.label || 'LINK'} ${oMeta.label}`;
+            vaultId = ev.triple.term_id;
+            target = {
+              label,
+              id: ev.triple.term_id,
+              type: 'CLAIM',
+              subject: sMeta,
+              predicate: ev.triple.predicate?.label,
+              object: oMeta,
+            };
+          }
+        }
+
+        return {
+          id: ev.transaction_hash || ev.id,
+          type: ev.type,
+          timestamp: new Date(ev.created_at).getTime(),
+          sender,
+          target,
+          assets,
+          shares,
+          curveId,
+          vaultId,
+        };
+      }),
+      hasMore: events.length === limit,
+    };
+  } catch (e) {
+    return { items: [], hasMore: false };
+  }
+};
+
+/** Wallet history: only deposits/redemptions routed through FeeProxy/MultiVault with the wallet as receiver. */
+export const getUserIntuRankRoutedHistory = async (userAddress: string): Promise<Transaction[]> => {
+  const userIds = prepareQueryIds(userAddress);
+  if (!userIds.length) return [];
+  const proxyIds = feeProxyRoutedSenderGraphIds();
+  const q = `query ($userIds: [String!]!, $proxyIds: [String!]!) {
+    events(limit: 500, order_by: {created_at: desc}, where: {
+      _and: [
+        { type: { _in: ["Deposited", "Redeemed"] } },
+        { _not: { deposit: { assets_after_fees: { _eq: "0" } } } },
+        { _or: [
+          { _and: [
+            { type: { _eq: "Deposited" } },
+            { deposit: { _and: [{ sender_id: { _in: $proxyIds } }, { receiver_id: { _in: $userIds } }] } }
+          ] },
+          { _and: [
+            { type: { _eq: "Redeemed" } },
+            { redemption: { _and: [{ sender_id: { _in: $proxyIds } }, { receiver_id: { _in: $userIds } }] } }
+          ] }
+        ] }
+      ]
+    }) {
+      id created_at type transaction_hash
+      atom { term_id label data type }
+      triple { term_id subject { label term_id data } predicate { label term_id } object { label term_id data } }
+      deposit { shares assets_after_fees vault { term_id curve_id } }
+      redemption { assets shares vault { term_id curve_id } }
+    }
+  }`;
+  try {
+    const data = await fetchGraphQL(q, { userIds, proxyIds });
+    const events = data?.events ?? [];
+    return events.map((ev: any) => {
+      let label = 'Unknown Node',
+        vaultId = '0x',
+        shares = '0',
+        assets = '0',
+        type: 'DEPOSIT' | 'REDEEM' = 'DEPOSIT',
+        curveId: number | undefined;
+      if (ev.type === 'Deposited' && ev.deposit) {
+        assets = ev.deposit.assets_after_fees || '0';
+        shares = ev.deposit.shares || '0';
+        const v = ev.deposit.vault;
+        const rawCurve = v?.curve_id ?? (ev.deposit as any).curve_id;
+        if (rawCurve != null) curveId = typeof rawCurve === 'string' ? parseInt(rawCurve, 10) : rawCurve;
+        if (v?.term_id) vaultId = v.term_id;
+        if (ev.atom) {
+          label = resolveMetadata(ev.atom).label;
+          if (!vaultId || vaultId === '0x') vaultId = ev.atom.term_id;
+        } else if (ev.triple) {
+          label = `${resolveMetadata(ev.triple.subject).label} ${ev.triple.predicate?.label || 'LINK'} ${resolveMetadata(ev.triple.object).label}`;
+          if (!vaultId || vaultId === '0x') vaultId = ev.triple.term_id;
+        }
+      } else if (ev.type === 'Redeemed' && ev.redemption) {
+        assets = ev.redemption.assets || '0';
+        shares = ev.redemption.shares || '0';
+        type = 'REDEEM';
+        const v = ev.redemption.vault;
+        const rawCurve = v?.curve_id ?? (ev.redemption as any).curve_id;
+        if (rawCurve != null) curveId = typeof rawCurve === 'string' ? parseInt(rawCurve, 10) : rawCurve;
+        if (v?.term_id) vaultId = v.term_id;
+        if (ev.atom) {
+          label = resolveMetadata(ev.atom).label;
+          if (!vaultId || vaultId === '0x') vaultId = ev.atom.term_id;
+        } else if (ev.triple) {
+          label = `${resolveMetadata(ev.triple.subject).label} ${ev.triple.predicate?.label || 'LINK'} ${resolveMetadata(ev.triple.object).label}`;
+          if (!vaultId || vaultId === '0x') vaultId = ev.triple.term_id;
+        }
+      }
+      return {
+        id: ev.transaction_hash || ev.id,
+        type,
+        shares,
+        assets,
+        timestamp: ev.created_at ? new Date(ev.created_at).getTime() : Date.now(),
+        vaultId,
+        curveId,
+        assetLabel: label,
+      };
+    });
+  } catch {
+    return [];
+  }
 };
 
 /** Fetches all user positions (linear and exponential curves). No curve_id filter — both curve 1 and 2 are included. */
@@ -2103,6 +2412,81 @@ export const searchAccountsByLabel = async (term: string) => {
   }
 };
 
+/** Rank `.trust` / label rows so prefix matches beat incidental substring hits after widening ILIKE (see below). */
+function rankTrustLabelStemMatch(label: string | null, stem: string): number {
+  if (!label || !stem) return 500;
+  const l = label.toLowerCase();
+  const base = l.endsWith('.trust') ? l.slice(0, -'.trust'.length) : l;
+  const s = stem.toLowerCase();
+  if (base === s) return 0;
+  if (base.startsWith(s)) return 4 + base.length * 0.001;
+  const idx = base.indexOf(s);
+  if (idx >= 0) return 40 + idx + base.length * 0.001;
+  if (l.includes(s)) return 80;
+  return 200;
+}
+
+/**
+ * Leaderboard profile search: plain `%term%` misses names where typing diverges before the full label
+ * (e.g. `dappes` vs `dappestdev.trust`). We OR several truncated-prefix `%…%` clauses, then rank client-side.
+ */
+export const searchAccountsByLabelSuggest = async (term: string) => {
+  const raw = term.trim();
+  if (!raw) return [];
+  if (isAddress(raw)) return [];
+
+  const lower = raw.toLowerCase();
+  if (lower.includes('.eth')) {
+    return searchAccountsByLabel(raw);
+  }
+
+  const withoutTrust = lower.endsWith('.trust') ? lower.slice(0, -'.trust'.length) : lower;
+  const stem = withoutTrust.replace(/[^a-z0-9-]/g, '');
+  if (!stem) return [];
+
+  const MIN_PREFIX_LEN = stem.length <= 2 ? stem.length : 3;
+  const MAX_OR_CLAUSES = 8;
+  const ilikes: string[] = [];
+  for (let len = stem.length; len >= MIN_PREFIX_LEN && ilikes.length < MAX_OR_CLAUSES; len--) {
+    ilikes.push(`%${stem.slice(0, len)}%`);
+  }
+
+  const where = { _or: ilikes.map((pat) => ({ label: { _ilike: pat } })) };
+
+  const q = `query SearchAccountsSuggest($where: accounts_bool_exp!) {
+      accounts(where: $where, limit: 24, order_by: [{ label: asc }]) {
+        id
+        label
+        image
+      }
+    }`;
+
+  try {
+    const res = await fetchGraphQL(q, { where });
+    const rows = (res?.accounts || []) as { id: string; label: string | null; image: string | null }[];
+
+    const ranked = [...rows].sort((a, b) => {
+      const ra = rankTrustLabelStemMatch(a.label, stem);
+      const rb = rankTrustLabelStemMatch(b.label, stem);
+      if (ra !== rb) return ra - rb;
+      return (a.label || '').localeCompare(b.label || '');
+    });
+
+    const seen = new Set<string>();
+    const deduped: typeof rows = [];
+    for (const r of ranked) {
+      const k = r.id.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      deduped.push(r);
+    }
+    return deduped.slice(0, 12);
+  } catch (e) {
+    console.warn('searchAccountsByLabelSuggest error', e);
+    return [];
+  }
+};
+
 export const getLists = async (limit: number = 40, offset: number = 0, orderBy?: { total_market_cap?: 'asc' | 'desc'; triple_count?: 'asc' | 'desc'; total_position_count?: 'asc' | 'desc' }[]) => {
   const orderByArg = orderBy || [{ total_market_cap: 'desc' as const }];
   const q = `query GetLists($limit: Int, $offset: Int, $where: predicate_objects_bool_exp = {}, $orderBy: [predicate_objects_order_by!] = {}) {
@@ -2130,6 +2514,7 @@ export const getLists = async (limit: number = 40, offset: number = 0, orderBy?:
       const obj = po.object || {};
       const img = obj.image || obj.cached_image?.url;
       const subjects = (po.triples || []).map((t: any) => ({
+        termId: t.subject?.term_id,
         label: t.subject?.label,
         image: t.subject?.image || t.subject?.cached_image?.url,
       }));
@@ -2172,6 +2557,1030 @@ export const getLists = async (limit: number = 40, offset: number = 0, orderBy?:
     }
   }
 };
+
+/**
+ * List members: triples (list predicate) whose **object** is the list — **subject** is a member to rank in Arena.
+ * Leaderboard / Compare use `registerArenaPortalListTermsForIndexing` ∪ indexer portal lists (`getLists`).
+ * Portfolio “My ranked lists” narrows to **extras only** (`fetchPortfolioArenaRankingClaims`) so the UI starts clean until you open lists in Arena.
+ */
+
+const arenaRankingAllowlistExtras = new Set<string>();
+
+/** Persist extras across reloads so leaderboard/explorer retain remembered portal list ids without re-opening Arena. */
+const ARENA_RANKING_ALLOWLIST_EXTRAS_STORAGE_KEY = 'inturank-arena-ranking-extras-v2';
+
+let arenaRankingAllowlistExtrasHydrated = false;
+
+function ensureArenaRankingAllowlistExtrasHydrated() {
+  if (arenaRankingAllowlistExtrasHydrated) return;
+  arenaRankingAllowlistExtrasHydrated = true;
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(ARENA_RANKING_ALLOWLIST_EXTRAS_STORAGE_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return;
+    for (const x of arr) {
+      const n = normalize(String(x ?? ''));
+      if (n) arenaRankingAllowlistExtras.add(n);
+    }
+  } catch {
+    /* ignore corrupt storage */
+  }
+}
+
+function persistArenaRankingAllowlistExtras() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      ARENA_RANKING_ALLOWLIST_EXTRAS_STORAGE_KEY,
+      JSON.stringify(Array.from(arenaRankingAllowlistExtras)),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/**
+ * Drops persisted + in-memory portal list term registrations for this browser (Portfolio “fresh slate”).
+ * Leaderboard/compare still use the full indexer portal merge via `getArenaPortalRankingAllowlist`.
+ */
+export function clearArenaPortalListIndexingExtras() {
+  arenaRankingAllowlistExtras.clear();
+  arenaRankingAllowlistExtrasHydrated = false;
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(ARENA_RANKING_ALLOWLIST_EXTRAS_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** Register list object term ids Arena can write to — e.g. current portal batch + URL-opened portal lists — so portfolio stays accurate without waiting for pagination. */
+export function registerArenaPortalListTermsForIndexing(termIds: string[]) {
+  ensureArenaRankingAllowlistExtrasHydrated();
+  for (const raw of termIds) {
+    const n = normalize(raw);
+    if (n) arenaRankingAllowlistExtras.add(n);
+  }
+  persistArenaRankingAllowlistExtras();
+}
+
+async function getArenaPortalRankingAllowlist(): Promise<Set<string>> {
+  ensureArenaRankingAllowlistExtrasHydrated();
+  const s = new Set<string>(arenaRankingAllowlistExtras);
+  try {
+    const { items } = await getLists(260, 0, [{ total_position_count: 'desc' }]);
+    for (const it of items || []) {
+      const id = (it as any)?.id;
+      if (id) s.add(normalize(id));
+    }
+  } catch {
+    /* extras-only fallback */
+  }
+  return s;
+}
+
+/**
+ * Portal lists merged into Arena browse (same query as `/climb`) plus URL/session-indexed list terms.
+ * Explorer feed only — keeps rankings scoped to IntuRank-surfaced portal lists, not a broad portal scrape.
+ */
+async function getArenaExplorerFeedAllowlist(): Promise<Set<string>> {
+  ensureArenaRankingAllowlistExtrasHydrated();
+  const s = new Set<string>(arenaRankingAllowlistExtras);
+  try {
+    const { items } = await getLists(ARENA_PORTAL_LISTS_FETCH_LIMIT, 0, [{ total_position_count: 'desc' }]);
+    for (const it of items || []) {
+      const id = (it as any)?.id;
+      if (id) s.add(normalize(id));
+    }
+  } catch {
+    /* extras-only */
+  }
+  return s;
+}
+
+export interface ArenaXpRecord {
+  xp: number;
+  duels: number;
+  atomsRanked: number;
+  listsPlayed: number;
+  updatedAt: number;
+}
+
+function emptyArenaXpRecord(): ArenaXpRecord {
+  return { xp: 0, duels: 0, atomsRanked: 0, listsPlayed: 0, updatedAt: 0 };
+}
+
+/** Portal-list allowlist with id variants (padded ↔ unpadded). */
+function arenaListIdMatchesAllowlist(allow: Set<string>, listTermId: string): boolean {
+  if (allow.size === 0) return false;
+  for (const v of prepareQueryIds(String(listTermId || ''))) {
+    if (allow.has(normalize(v))) return true;
+  }
+  return false;
+}
+
+/**
+ * One Arena slot per list+subject. Uses the smallest normalized id variant so subgraph rows do not
+ * split a single rank across padded vs unpadded bytes32 strings.
+ */
+function arenaRankSlotKey(listTermId: string, subjectId: string): string | null {
+  const lists = prepareQueryIds(String(listTermId || ''))
+    .map(normalize)
+    .filter(Boolean)
+    .sort();
+  const subs = prepareQueryIds(String(subjectId || ''))
+    .map(normalize)
+    .filter(Boolean)
+    .sort();
+  const lk = lists[0];
+  const sk = subs[0];
+  if (!lk || !sk) return null;
+  return `${lk}:${sk}`;
+}
+
+/** Vault stance `listTermId` vs portal list object id (handles id padding variants). */
+function portalListStanceMatchesListObject(listTermIdFromStance: string, portalListObjectTermId: string): boolean {
+  const want = new Set(
+    prepareQueryIds(String(portalListObjectTermId || ''))
+      .map(normalize)
+      .filter(Boolean),
+  );
+  if (want.size === 0) return false;
+  for (const v of prepareQueryIds(String(listTermIdFromStance || ''))) {
+    if (want.has(normalize(v))) return true;
+  }
+  return false;
+}
+
+type ArenaGraphTripleStanceRow = {
+  creatorId: string;
+  claimTermId: string;
+  subjectId: string;
+  subjectLabel: string;
+  subjectImage?: string;
+  listTermId: string;
+  listLabel: string;
+  support: boolean;
+  blockNumber: number;
+};
+
+function arenaTriplesResponseToPortalStances(triples: any[]): ArenaGraphTripleStanceRow[] {
+  const listPredLc = LIST_PREDICATE_ID.toLowerCase();
+  const distLc = DISTRUST_ATOM_ID.toLowerCase();
+  const rows: ArenaGraphTripleStanceRow[] = [];
+
+  for (const t of triples || []) {
+    const cid = normalize(t?.creator?.id || '');
+    if (!cid) continue;
+
+    const pred = normalize(t?.predicate?.term_id || '');
+    const obj = normalize(t?.object?.term_id || '');
+    const sub = t?.subject;
+    if (!sub?.term_id) continue;
+
+    const sImg = sub.image || sub.cached_image?.url;
+    const bn =
+      typeof t.block_number === 'number'
+        ? t.block_number
+        : typeof t.block_number === 'string'
+          ? parseInt(t.block_number, 10) || 0
+          : 0;
+
+    if (pred === listPredLc) {
+      const listTermId = t.object?.term_id || '';
+      if (!listTermId) continue;
+      rows.push({
+        creatorId: cid,
+        claimTermId: t.term_id,
+        subjectId: sub.term_id,
+        subjectLabel: resolveMetadata(sub).label || sub.label || sub.term_id.slice(0, 10),
+        subjectImage: (resolveMetadata(sub).image || sImg) as string | undefined,
+        listTermId,
+        listLabel: resolveMetadata(t.object).label || t.object?.label || 'List',
+        support: true,
+        blockNumber: bn,
+      });
+      continue;
+    }
+    if (obj === distLc && t?.predicate?.term_id) {
+      rows.push({
+        creatorId: cid,
+        claimTermId: t.term_id,
+        subjectId: sub.term_id,
+        subjectLabel: resolveMetadata(sub).label || sub.label || sub.term_id.slice(0, 10),
+        subjectImage: (resolveMetadata(sub).image || sImg) as string | undefined,
+        listTermId: t.predicate.term_id,
+        listLabel: resolveMetadata(t.predicate).label || t.predicate.label || 'List',
+        support: false,
+        blockNumber: bn,
+      });
+    }
+  }
+  return rows;
+}
+
+export async function getListMemberSubjectsForObject(
+  listObjectTermId: string,
+  limit: number = 200
+): Promise<Array<{ id: string; label: string; image?: string }>> {
+  const ids = prepareQueryIds(listObjectTermId);
+  if (ids.length === 0) return [];
+  const q = `query ListMemberSubjects($ids: [String!]!, $pred: String!, $limit: Int!) {
+    triples(
+      where: { object_id: { _in: $ids }, predicate_id: { _eq: $pred } }
+      order_by: { block_number: desc }
+      limit: $limit
+    ) {
+      subject {
+        term_id
+        label
+        image
+        data
+        type
+        cached_image {
+          url
+          safe
+        }
+        value {
+          person {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          thing {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          organization {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          account {
+            id
+            label
+            image
+            cached_image {
+              url
+              safe
+            }
+          }
+        }
+      }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { ids, pred: LIST_PREDICATE_ID, limit });
+    const seen = new Set<string>();
+    const out: Array<{ id: string; label: string; image?: string }> = [];
+    for (const t of res?.triples || []) {
+      const sub = t?.subject;
+      if (!sub?.term_id) continue;
+      const key = normalize(sub.term_id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const m = resolveMetadata(sub);
+      out.push({
+        id: sub.term_id,
+        label: m.label || sub.label || sub.term_id.slice(0, 10),
+        image: m.image,
+      });
+    }
+    return out;
+  } catch (e) {
+    console.warn('[getListMemberSubjectsForObject]', e);
+    return [];
+  }
+}
+
+/**
+ * Wallets that have an indexed YES membership triple on this portal list — used to discover Compare
+ * peers beyond the global Arena XP leaderboard (popular lists often have many rankers who are not top‑XP globally).
+ */
+export async function fetchDistinctRankingCreatorsForPortalList(
+  listObjectTermId: string,
+  excludeWallet: string | undefined,
+  maxCreators: number,
+): Promise<string[]> {
+  const ids = prepareQueryIds(listObjectTermId);
+  if (!ids.length || maxCreators <= 0) return [];
+
+  const exclude = new Set((excludeWallet ? prepareQueryIds(excludeWallet) : []).map((x) => normalize(x)));
+  const operators = protocolOperatorCreatorIdsNormalized();
+
+  const q = `query RankingCreatorsForList($ids: [String!]!, $pred: String!, $limit: Int!) {
+    triples(
+      where: { object_id: { _in: $ids }, predicate_id: { _eq: $pred } }
+      order_by: { block_number: desc }
+      limit: $limit
+    ) {
+      creator { id }
+    }
+  }`;
+
+  const scanLimit = Math.min(Math.max(maxCreators * 45, 120), 720);
+
+  try {
+    const res = await fetchGraphQL(q, { ids, pred: LIST_PREDICATE_ID, limit: scanLimit });
+    const out: string[] = [];
+    const seen = new Set<string>();
+
+    for (const t of res?.triples || []) {
+      const raw = t?.creator?.id as string | undefined;
+      if (!raw || !isAddress(raw)) continue;
+      let chk: string;
+      try {
+        chk = getAddress(raw);
+      } catch {
+        continue;
+      }
+      const lc = normalize(chk);
+      if (exclude.has(lc) || operators.has(lc)) continue;
+      if (seen.has(lc)) continue;
+      seen.add(lc);
+      out.push(chk);
+      if (out.length >= maxCreators) break;
+    }
+    return out;
+  } catch (e) {
+    console.warn('[fetchDistinctRankingCreatorsForPortalList]', e);
+    return [];
+  }
+}
+
+/**
+ * Wallets that ranked this portal list through IntuRank FeeProxy/MultiVault (deposit `receiver`), derived from
+ * vault → triple stance — fixes under-counting when `triple.creator` is the operator, not the human ranker.
+ */
+export async function fetchDistinctReceiversForPortalListFromProxyDeposits(
+  listObjectTermId: string,
+  excludeWallet: string | undefined,
+  maxWallets: number,
+): Promise<string[]> {
+  const ids = prepareQueryIds(listObjectTermId.trim());
+  if (!ids.length || maxWallets <= 0) return [];
+
+  const exclude = new Set((excludeWallet ? prepareQueryIds(excludeWallet) : []).map((x) => normalize(x)));
+  const operators = protocolOperatorCreatorIdsNormalized();
+  const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
+
+  const depLimit = Math.min(5200, Math.max(1800, maxWallets * 80));
+  try {
+    const deposits = await fetchProxyArenaRankDeposits(depLimit);
+    if (!deposits.length) return [];
+
+    const vaultIds = Array.from(new Set(deposits.map((d) => d.vaultTermId)));
+    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+    if (!stanceByVault.size) return [];
+
+    const out: string[] = [];
+    const seenRecv = new Set<string>();
+
+    for (const dep of deposits) {
+      const stance = stanceByVault.get(dep.vaultTermId);
+      if (!stance) continue;
+      if (minBnLb != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBnLb) continue;
+      if (!portalListStanceMatchesListObject(stance.stance.listTermId, listObjectTermId)) continue;
+
+      let recv: string;
+      try {
+        recv = getAddress(dep.receiverId as `0x${string}`);
+      } catch {
+        continue;
+      }
+      const lc = recv.toLowerCase();
+      if (exclude.has(lc) || operators.has(lc)) continue;
+      if (seenRecv.has(lc)) continue;
+      seenRecv.add(lc);
+      out.push(recv);
+      if (out.length >= maxWallets) break;
+    }
+    return out;
+  } catch (e) {
+    console.warn('[fetchDistinctReceiversForPortalListFromProxyDeposits]', e);
+    return [];
+  }
+}
+
+/**
+ * Approximate distinct rankers on one portal list: merges deposit receivers + LIST_PREDICATE triple creators (legacy/direct).
+ */
+export async function fetchApproxDistinctPortalListRankerCount(
+  listObjectTermId: string,
+  excludeWallet?: string | null,
+): Promise<number> {
+  const ex = excludeWallet?.trim();
+  const [fromDeposits, fromTriples] = await Promise.all([
+    fetchDistinctReceiversForPortalListFromProxyDeposits(listObjectTermId, ex || undefined, 2400),
+    fetchDistinctRankingCreatorsForPortalList(listObjectTermId, ex || undefined, 2400),
+  ]);
+  const s = new Set<string>();
+  for (const w of fromDeposits) {
+    try {
+      s.add(getAddress(w as `0x${string}`).toLowerCase());
+    } catch {
+      /* skip */
+    }
+  }
+  for (const w of fromTriples) {
+    try {
+      s.add(getAddress(w as `0x${string}`).toLowerCase());
+    } catch {
+      /* skip */
+    }
+  }
+  return s.size;
+}
+
+/**
+ * Canonical vault triple id for “subject belongs on list” (LIST_PREDICATE → list object).
+ * Portal Arena members are sourced from this triple; staking YES must deposit here, not createTriples again.
+ */
+export async function getListMembershipTripleTermId(
+  memberSubjectTermId: string,
+  listObjectTermId: string
+): Promise<string | null> {
+  const subs = prepareQueryIds(memberSubjectTermId);
+  const objs = prepareQueryIds(listObjectTermId);
+  if (!subs.length || !objs.length) return null;
+  const q = `query ListMembershipTriple($subs: [String!]!, $pred: String!, $objs: [String!]!) {
+    triples(
+      where: {
+        subject_id: { _in: $subs }
+        predicate_id: { _eq: $pred }
+        object_id: { _in: $objs }
+      }
+      limit: 1
+    ) {
+      term_id
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, {
+      subs,
+      pred: LIST_PREDICATE_ID,
+      objs,
+    });
+    const tid = res?.triples?.[0]?.term_id;
+    return typeof tid === 'string' && tid.trim() ? tid.trim() : null;
+  } catch (e) {
+    console.warn('[getListMembershipTripleTermId]', e);
+    return null;
+  }
+}
+
+/**
+ * Vault triple id for “subject rejects list” shape indexed as (subject, predicate=list term, object=distrust).
+ * When present, NO should deposit here instead of createTriples (avoids TripleExists revert).
+ */
+export async function getListNegativeStanceTripleTermId(
+  memberSubjectTermId: string,
+  listObjectTermId: string
+): Promise<string | null> {
+  const subs = prepareQueryIds(memberSubjectTermId);
+  const preds = prepareQueryIds(listObjectTermId);
+  const objs = prepareQueryIds(DISTRUST_ATOM_ID);
+  if (!subs.length || !preds.length || !objs.length) return null;
+  const q = `query ListNegativeTriple($subs: [String!]!, $preds: [String!]!, $objs: [String!]!) {
+    triples(
+      where: {
+        subject_id: { _in: $subs }
+        predicate_id: { _in: $preds }
+        object_id: { _in: $objs }
+      }
+      limit: 1
+    ) {
+      term_id
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { subs, preds, objs });
+    const tid = res?.triples?.[0]?.term_id;
+    return typeof tid === 'string' && tid.trim() ? tid.trim() : null;
+  } catch (e) {
+    console.warn('[getListNegativeStanceTripleTermId]', e);
+    return null;
+  }
+}
+
+/** One portal-list stance row after resolving FeeProxy vault → triple (YES vs NO vault side). */
+export type UserArenaRankingClaim = {
+  claimTermId: string;
+  subjectId: string;
+  subjectLabel: string;
+  subjectImage?: string;
+  listTermId: string;
+  listLabel: string;
+  support: boolean;
+  blockNumber: number;
+};
+
+/**
+ * Compare / XP fallback: full portal allowlist (extras ∪ indexer lists). Same FeeProxy receiver attribution as Portfolio.
+ */
+export async function fetchUserArenaRankingClaims(wallet: string): Promise<UserArenaRankingClaim[]> {
+  try {
+    const allow = await getArenaPortalRankingAllowlist();
+    return fetchUserArenaRankingClaimsWithAllowlist(wallet, allow);
+  } catch (e) {
+    console.warn('[fetchUserArenaRankingClaims]', e);
+    return [];
+  }
+}
+
+/**
+ * Portfolio only: ranks on portal lists this browser has explicitly surfaced in Arena (`registerArenaPortalListTermsForIndexing`),
+ * **not** every portal list from the indexer — avoids stale “noise” rows while you rebuild testers’ flows.
+ */
+export async function fetchPortfolioArenaRankingClaims(wallet: string): Promise<UserArenaRankingClaim[]> {
+  ensureArenaRankingAllowlistExtrasHydrated();
+  const allow = new Set(arenaRankingAllowlistExtras);
+  return fetchUserArenaRankingClaimsWithAllowlist(wallet, allow);
+}
+
+async function fetchUserArenaRankingClaimsWithAllowlist(
+  wallet: string,
+  allow: Set<string>,
+): Promise<UserArenaRankingClaim[]> {
+  const recvVariants = prepareQueryIds(wallet.trim());
+  if (!recvVariants.length) return [];
+  const recvSet = new Set(recvVariants.map(normalize));
+
+  try {
+    if (allow.size === 0) return [];
+
+    const operatorCreators = protocolOperatorCreatorIdsNormalized();
+    const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
+
+    const depositsAll = await fetchProxyArenaRankDeposits(4200);
+    const userDeps = depositsAll.filter((d) => {
+      const recvLc = normalize(d.receiverId);
+      return recvLc && recvSet.has(recvLc) && !operatorCreators.has(recvLc);
+    });
+    if (userDeps.length === 0) return [];
+
+    const vaultIds = Array.from(new Set(userDeps.map((d) => d.vaultTermId)));
+    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+    if (stanceByVault.size === 0) return [];
+
+    const seenWalletStake = new Set<string>();
+    const rawStakes: ArenaGraphTripleStanceRow[] = [];
+
+    for (const dep of userDeps) {
+      const stance = stanceByVault.get(dep.vaultTermId);
+      if (!stance) continue;
+      if (minBnLb != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBnLb) continue;
+      if (!arenaListIdMatchesAllowlist(allow, stance.stance.listTermId)) continue;
+
+      const recvLc = normalize(dep.receiverId);
+      const stakeKey = `${recvLc}:${dep.vaultTermId}:${stance.support ? 'y' : 'n'}`;
+      if (seenWalletStake.has(stakeKey)) continue;
+      seenWalletStake.add(stakeKey);
+
+      rawStakes.push({ ...stance.stance, creatorId: recvLc, support: stance.support });
+    }
+
+    const bySlot = new Map<string, UserArenaRankingClaim>();
+    for (const s of rawStakes) {
+      const slotKey = arenaRankSlotKey(s.listTermId, s.subjectId);
+      if (!slotKey) continue;
+      const prev = bySlot.get(slotKey);
+      const row: UserArenaRankingClaim = {
+        claimTermId: s.claimTermId,
+        subjectId: s.subjectId,
+        subjectLabel: s.subjectLabel,
+        subjectImage: s.subjectImage,
+        listTermId: s.listTermId,
+        listLabel: s.listLabel,
+        support: s.support,
+        blockNumber: s.blockNumber,
+      };
+      if (!prev || row.blockNumber >= prev.blockNumber) bySlot.set(slotKey, row);
+    }
+
+    return Array.from(bySlot.values()).sort((a, b) => b.blockNumber - a.blockNumber);
+  } catch (e) {
+    console.warn('[fetchUserArenaRankingClaimsWithAllowlist]', e);
+    return [];
+  }
+}
+
+/** XP derived from FeeProxy-routed ranks (same aggregation as the live leaderboard). */
+export async function fetchArenaXpRecordForWallet(address: string | null | undefined): Promise<ArenaXpRecord> {
+  const raw = (address ?? '').trim();
+  if (!raw) return emptyArenaXpRecord();
+
+  try {
+    const rows = await fetchArenaLeaderboardXpRowsFromGraph(4200);
+    const hit = rows.find((r) => normalize(r.address) === normalize(raw));
+    if (hit && hit.xp > 0) {
+      return {
+        xp: hit.xp,
+        duels: hit.duels,
+        atomsRanked: hit.atomsRanked,
+        listsPlayed: hit.listsPlayed,
+        updatedAt: hit.updatedAt,
+      };
+    }
+  } catch {
+    /* fall back below */
+  }
+
+  const claims = await fetchUserArenaRankingClaims(raw);
+  if (claims.length === 0) return emptyArenaXpRecord();
+  const listsPlayed = new Set(claims.map((c) => normalize(c.listTermId))).size;
+  const atomsRanked = new Set(claims.map((c) => normalize(c.subjectId))).size;
+  const n = claims.length;
+  const lastBlock = claims.reduce((m, c) => Math.max(m, c.blockNumber), 0);
+  return {
+    xp: n * ARENA_XP_PER_RANK_PICK,
+    duels: n,
+    atomsRanked,
+    listsPlayed,
+    updatedAt: lastBlock || 0,
+  };
+}
+
+/** Bounded scan of recent portal-list stakes; leaderboard is approximate vs full chain history. */
+export async function fetchArenaLeaderboardXpRowsFromGraph(maxTriples = 4200): Promise<
+  Array<{
+    address: string;
+    xp: number;
+    duels: number;
+    atomsRanked: number;
+    listsPlayed: number;
+    updatedAt: number;
+  }>
+> {
+  /**
+   * "Ranked through IntuRank" = a deposit whose `sender` is our FeeProxy/MultiVault contract.
+   * We aggregate those deposits by receiver (the actual ranker) and join each deposit's vault
+   * onto the corresponding triple (member or counter) so we can derive listsPlayed / atomsRanked
+   * for the leaderboard. Direct stakes from other apps using portals are excluded.
+   */
+  const operatorCreators = protocolOperatorCreatorIdsNormalized();
+  const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
+
+  try {
+    const allow = await getArenaPortalRankingAllowlist();
+    const deposits = await fetchProxyArenaRankDeposits(Math.max(maxTriples, 1500));
+    if (deposits.length === 0) return [];
+
+    const vaultIds = Array.from(new Set(deposits.map((d) => d.vaultTermId)));
+    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+    if (stanceByVault.size === 0) return [];
+
+    /**
+     * Collapse stakes to **one slot per (list, subject)** — same rule as `fetchUserArenaRankingClaims`
+     * (latest block wins). Without this, the same rank can appear twice when balances moved across
+     * the member vault vs counter vault, multiple curve vaults, or YES→NO history — inflating Arena
+     * XP on the leaderboard (e.g. 425 vs 175) while the profile shows the deduped total.
+     *
+     * Only counts stakes on **portal lists IntuRank surfaces** (`getArenaPortalRankingAllowlist`), so
+     * unrelated FeeProxy activity does not inflate Arena XP.
+     */
+    const byWallet = new Map<string, ArenaGraphTripleStanceRow[]>();
+
+    const seenWalletStake = new Set<string>();
+    for (const dep of deposits) {
+      const stance = stanceByVault.get(dep.vaultTermId);
+      if (!stance) continue;
+      if (minBnLb != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBnLb) continue;
+      if (!arenaListIdMatchesAllowlist(allow, stance.stance.listTermId)) continue;
+
+      const recvLc = normalize(dep.receiverId);
+      if (!recvLc || operatorCreators.has(recvLc)) continue;
+
+      const stakeKey = `${recvLc}:${dep.vaultTermId}:${stance.support ? 'y' : 'n'}`;
+      if (seenWalletStake.has(stakeKey)) continue;
+      seenWalletStake.add(stakeKey);
+
+      let arr = byWallet.get(recvLc);
+      if (!arr) {
+        arr = [];
+        byWallet.set(recvLc, arr);
+      }
+      arr.push({ ...stance.stance, creatorId: recvLc, support: stance.support });
+    }
+
+    const out: Array<{
+      address: string;
+      xp: number;
+      duels: number;
+      atomsRanked: number;
+      listsPlayed: number;
+      updatedAt: number;
+    }> = [];
+
+    for (const [walletAddr, rawStakes] of byWallet.entries()) {
+      const bySlot = new Map<string, ArenaGraphTripleStanceRow>();
+      for (const s of rawStakes) {
+        const slotKey = arenaRankSlotKey(s.listTermId, s.subjectId);
+        if (!slotKey) continue;
+        const prev = bySlot.get(slotKey);
+        if (!prev || s.blockNumber >= prev.blockNumber) bySlot.set(slotKey, s);
+      }
+      const stakes = Array.from(bySlot.values());
+      const n = stakes.length;
+      if (n === 0) continue;
+      const listsPlayed = new Set(
+        stakes.map((s) => arenaRankSlotKey(s.listTermId, s.subjectId)!.split(':')[0]),
+      ).size;
+      const distinctSubjects = new Set(
+        stakes.map((s) => arenaRankSlotKey(s.listTermId, s.subjectId)!.split(':')[1]),
+      ).size;
+      const maxBn = stakes.reduce((m, s) => Math.max(m, s.blockNumber || 0), 0);
+      out.push({
+        address: walletAddr,
+        xp: n * ARENA_XP_PER_RANK_PICK,
+        duels: n,
+        atomsRanked: distinctSubjects,
+        listsPlayed,
+        updatedAt: maxBn || 0,
+      });
+    }
+    out.sort((a, b) => b.xp - a.xp);
+    return out;
+  } catch (e) {
+    console.warn('[fetchArenaLeaderboardXpRowsFromGraph]', e);
+    return [];
+  }
+}
+
+/** One ranking event from Intuition index (portal list YES / NO vault semantics). */
+export type ArenaPortalRankingFeedItem = {
+  claimTermId: string;
+  creatorId: string;
+  creatorLabel: string;
+  subjectLabel: string;
+  listTermId: string;
+  listLabel: string;
+  support: boolean;
+  blockNumber: number;
+  /** Intuition deposit tx when rank flowed through FeeProxy (for local XP lookup). */
+  transactionHash?: string;
+};
+
+function arenaFeedCreatorLabel(triple: any, creatorId: string): string {
+  const raw = typeof triple?.creator?.label === 'string' ? triple.creator.label.trim() : '';
+  if (raw && raw !== '0x' && !/^0x[0-9a-fA-F]{40}$/.test(raw)) return raw;
+  const id = creatorId.trim();
+  if (id.length >= 12) return `${id.slice(0, 6)}…${id.slice(-4)}`;
+  return id || 'Unknown';
+}
+
+/** Triple rows created via FeeProxy/MultiVault index `creator` as the operator, not the user wallet. */
+function protocolOperatorCreatorIdsNormalized(): Set<string> {
+  const s = new Set<string>();
+  for (const a of [FEE_PROXY_ADDRESS, MULTI_VAULT_ADDRESS]) {
+    for (const v of prepareQueryIds(a)) s.add(normalize(v));
+  }
+  return s;
+}
+
+type ArenaProxyDepositRow = {
+  vaultTermId: string;
+  receiverId: string;
+  receiverLabel?: string;
+  receiverImage?: string;
+  createdAt: number;
+  transactionHash?: string;
+};
+
+/**
+ * Recent deposits routed through IntuRank's FeeProxy/MultiVault — the canonical "ranked through IntuRank" signal.
+ * `sender_id` on the deposit row pins us as the originator regardless of when/who first created the triple.
+ */
+async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepositRow[]> {
+  const proxyIds = Array.from(
+    new Set([FEE_PROXY_ADDRESS, MULTI_VAULT_ADDRESS].flatMap((a) => prepareQueryIds(a))),
+  );
+  const q = `query ArenaProxyDeposits($proxyIds: [String!]!, $limit: Int!) {
+    deposits(
+      where: { sender_id: { _in: $proxyIds } }
+      order_by: { created_at: desc }
+      limit: $limit
+    ) {
+      created_at
+      transaction_hash
+      receiver { id label image }
+      vault { term_id }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { proxyIds, limit });
+    const out: ArenaProxyDepositRow[] = [];
+    for (const d of res?.deposits ?? []) {
+      const tid = d?.vault?.term_id ? normalize(d.vault.term_id) : '';
+      const recv = d?.receiver?.id ? String(d.receiver.id) : '';
+      if (!tid || !recv) continue;
+      const createdAt = (() => {
+        const v = d?.created_at;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') return parseInt(v, 10) || 0;
+        return 0;
+      })();
+      out.push({
+        vaultTermId: tid,
+        receiverId: recv,
+        receiverLabel: d?.receiver?.label || undefined,
+        receiverImage: d?.receiver?.image || undefined,
+        createdAt,
+        transactionHash: d?.transaction_hash || undefined,
+      });
+    }
+    return out;
+  } catch (e) {
+    console.warn('[fetchProxyArenaRankDeposits]', e);
+    return [];
+  }
+}
+
+type ArenaVaultStance = {
+  stance: ArenaGraphTripleStanceRow;
+  /** True when the deposit hit the membership triple vault (YES); false for counter-triple (NO). */
+  support: boolean;
+};
+
+/**
+ * Map vault term-id → triple stance for ANY triple a FeeProxy deposit landed on. We deliberately
+ * accept all predicates because IntuRank's legacy / portal / batch paths all produce different
+ * predicate atoms (canonical `LIST_PREDICATE`, custom `belongs in <list>`, freeform claims, etc.) —
+ * the deposit's `sender = FeeProxy` is what proves it was an IntuRank rank, so the explorer should
+ * surface every one regardless of predicate shape. We still surface YES (member) and NO (counter)
+ * vault sides distinctly.
+ */
+async function fetchArenaVaultStanceMap(
+  vaultTermIds: string[],
+): Promise<Map<string, ArenaVaultStance>> {
+  const ids = Array.from(new Set(vaultTermIds.flatMap((id) => prepareQueryIds(id).map(normalize)))).slice(0, 480);
+  if (ids.length === 0) return new Map();
+  const idSet = new Set(ids);
+  const q = `query ArenaVaultTriples($ids: [String!]!) {
+    triples(
+      where: { _or: [{ term_id: { _in: $ids } }, { counter_term_id: { _in: $ids } }] }
+      limit: 1000
+    ) {
+      term_id
+      counter_term_id
+      block_number
+      creator { id label }
+      subject { term_id label image }
+      predicate { term_id label }
+      object { term_id label image }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { ids });
+    const triples = res?.triples ?? [];
+    const distLc = DISTRUST_ATOM_ID.toLowerCase();
+    const map = new Map<string, ArenaVaultStance>();
+    for (const t of triples) {
+      const sub = t?.subject;
+      const obj = t?.object;
+      const pred = t?.predicate;
+      if (!sub?.term_id) continue;
+      // Pull a sentence-friendly stance row regardless of predicate shape.
+      const subjectLabel =
+        resolveMetadata(sub).label || sub.label || String(sub.term_id).slice(0, 10);
+      const subjectImage = resolveMetadata(sub).image || sub.image || sub.cached_image?.url;
+      // Prefer the object atom as the "list / context"; fall back to predicate label when the
+      // triple is shaped like (subject, "is", listLabel) without a list-style object.
+      const isDistrustObj = normalize(obj?.term_id || '') === distLc;
+      const listAtom = isDistrustObj ? pred : obj;
+      const listTermId = listAtom?.term_id || obj?.term_id || '';
+      const listLabel =
+        resolveMetadata(listAtom).label || listAtom?.label || obj?.label || pred?.label || 'Claim';
+      const bn = (() => {
+        const v = t?.block_number;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'string') return parseInt(v, 10) || 0;
+        return 0;
+      })();
+
+      const memberTid = normalize(t.term_id || '');
+      const counterTid = normalize(t.counter_term_id || '');
+
+      const baseStance: ArenaGraphTripleStanceRow = {
+        creatorId: normalize(t?.creator?.id || ''),
+        claimTermId: t.term_id,
+        subjectId: sub.term_id,
+        subjectLabel,
+        subjectImage: subjectImage as string | undefined,
+        listTermId,
+        listLabel,
+        support: true,
+        blockNumber: bn,
+      };
+
+      if (memberTid && idSet.has(memberTid)) {
+        map.set(memberTid, { stance: { ...baseStance, support: true }, support: true });
+      }
+      if (counterTid && idSet.has(counterTid)) {
+        map.set(counterTid, { stance: { ...baseStance, support: false }, support: false });
+      }
+    }
+    return map;
+  } catch (e) {
+    console.warn('[fetchArenaVaultStanceMap]', e);
+    return new Map();
+  }
+}
+
+/**
+ * Recent Arena rankings done **through IntuRank** — anchored to deposits where our FeeProxy is the
+ * `sender`, then mapped onto either the membership triple (YES) or its counter-triple (NO) for the
+ * Arena allowlisted lists. Receiver is the actual ranker; their label / TNS resolves client-side.
+ *
+ * @param opts.onlyCreators "My rankings" filter — narrow to a single wallet (still requires the
+ *   deposit to have flowed through IntuRank's FeeProxy).
+ */
+export async function fetchRecentArenaPortalRankingFeed(
+  limit = 28,
+  opts?: { onlyCreators?: string[] },
+): Promise<ArenaPortalRankingFeedItem[]> {
+  let viewerAllow: Set<string> | null = null;
+  const rawCreators = opts?.onlyCreators?.map((c) => c.trim()).filter(Boolean) ?? [];
+  if (rawCreators.length > 0) {
+    const variants = rawCreators.flatMap((w) => prepareQueryIds(w));
+    viewerAllow = new Set(variants.map((v) => normalize(v)));
+  }
+
+  const minBn = ARENA_ATTRIBUTION_MIN_BLOCK;
+  const operatorCreators = protocolOperatorCreatorIdsNormalized();
+
+  const deposits = await fetchProxyArenaRankDeposits(Math.max(limit * 12, 600));
+  if (deposits.length === 0) return [];
+
+  const vaultIds = Array.from(new Set(deposits.map((d) => d.vaultTermId)));
+  const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+  if (stanceByVault.size === 0) return [];
+
+  const out: ArenaPortalRankingFeedItem[] = [];
+  const seen = new Set<string>();
+  for (const dep of deposits) {
+    const stance = stanceByVault.get(dep.vaultTermId);
+    if (!stance) continue;
+    if (minBn != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBn) continue;
+
+    const recvLc = normalize(dep.receiverId);
+    if (operatorCreators.has(recvLc)) continue;
+    if (viewerAllow && !viewerAllow.has(recvLc)) continue;
+
+    const key = `${dep.vaultTermId}|${recvLc}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    let receiverDisplayId = dep.receiverId;
+    try {
+      receiverDisplayId = getAddress(dep.receiverId as `0x${string}`);
+    } catch {
+      /* leave as-is for non-checksum identifiers */
+    }
+    const cleanedLabel = dep.receiverLabel?.trim();
+    const fallbackShort = receiverDisplayId.length >= 12
+      ? `${receiverDisplayId.slice(0, 6)}…${receiverDisplayId.slice(-4)}`
+      : receiverDisplayId;
+    const label = cleanedLabel && cleanedLabel.length > 0 && cleanedLabel.length <= 64
+      ? cleanedLabel
+      : fallbackShort;
+
+    out.push({
+      claimTermId: stance.stance.claimTermId,
+      creatorId: receiverDisplayId,
+      creatorLabel: label,
+      subjectLabel: stance.stance.subjectLabel,
+      listTermId: stance.stance.listTermId,
+      listLabel: stance.stance.listLabel,
+      support: stance.support,
+      blockNumber: stance.stance.blockNumber || dep.createdAt,
+      transactionHash: dep.transactionHash?.startsWith('0x') ? dep.transactionHash : undefined,
+    });
+
+    if (out.length >= limit) break;
+  }
+
+  return out;
+}
 
 /** Prefer ENS / account name; avoid showing subgraph hex snippets or duplicate address as "label". */
 function pickDisplayLabel(
@@ -2312,19 +3721,29 @@ export function getCurveLabel(curveId: number | string | undefined): string {
 export const getActivityOnMyMarkets = async (
   userAddress: string,
   vaultIds: string[],
-  limit: number = 30
+  limit: number = 30,
+  options?: { onlyIntuRankRouted?: boolean },
 ): Promise<PositionActivityNotification[]> => {
   if (!vaultIds.length) return [];
   const ids = Array.from(new Set(vaultIds.map(normalize).filter(Boolean)));
   if (!ids.length) return [];
   const userAddr = userAddress.toLowerCase();
+  const proxyIds = options?.onlyIntuRankRouted ? feeProxyRoutedSenderGraphIds() : null;
+  const proxyFilter = proxyIds?.length
+    ? `,
+          { _or: [
+            { deposit: { sender_id: { _in: $proxyIds } } },
+            { redemption: { sender_id: { _in: $proxyIds } } }
+          ] }`
+    : '';
   // Fetch activity on both Linear and Offset Progressive (exponential) curves — filter by term_id only so all curve types are included
-  const q = `query GetActivityOnMyMarkets($ids: [String!]!, $limit: Int!) {
+  const q = `query GetActivityOnMyMarkets($ids: [String!]!, $limit: Int!${proxyIds ? ', $proxyIds: [String!]!' : ''}) {
     events(
       where: {
         _and: [
           { type: { _in: ["Deposited", "Redeemed"] } },
           { _or: [{ atom: { term_id: { _in: $ids } } }, { triple: { term_id: { _in: $ids } } }] }
+          ${proxyFilter}
         ]
       },
       order_by: { created_at: desc },
@@ -2338,7 +3757,9 @@ export const getActivityOnMyMarkets = async (
     }
   }`;
   try {
-    const data = await fetchGraphQL(q, { ids, limit });
+    const vars: Record<string, unknown> = { ids, limit };
+    if (proxyIds?.length) vars.proxyIds = proxyIds;
+    const data = await fetchGraphQL(q, vars);
     const rawEvents = data?.events ?? [];
     // Dedupe by event id so the same activity never appears or triggers email twice
     const seenEventIds = new Set<string>();
@@ -2400,12 +3821,21 @@ export const getActivityOnMyMarkets = async (
  */
 export const getActivityBySenderIds = async (
   senderIds: string[],
-  limit: number = 40
+  limit: number = 40,
+  options?: { onlyIntuRankRouted?: boolean },
 ): Promise<PositionActivityNotification[]> => {
   if (!senderIds?.length) return [];
   const ids = Array.from(new Set(senderIds.flatMap((s) => prepareQueryIds(s)).filter(Boolean)));
   if (!ids.length) return [];
-  const q = `query GetActivityBySenders($ids: [String!]!, $limit: Int!) {
+  const proxyIds = options?.onlyIntuRankRouted ? feeProxyRoutedSenderGraphIds() : null;
+  const proxyFilter = proxyIds?.length
+    ? `,
+          { _or: [
+            { deposit: { sender_id: { _in: $proxyIds } } },
+            { redemption: { sender_id: { _in: $proxyIds } } }
+          ] }`
+    : '';
+  const q = `query GetActivityBySenders($ids: [String!]!, $limit: Int!${proxyIds ? ', $proxyIds: [String!]!' : ''}) {
     events(
       where: {
         _and: [
@@ -2414,6 +3844,7 @@ export const getActivityBySenderIds = async (
             { deposit: { _or: [{ sender_id: { _in: $ids } }, { receiver_id: { _in: $ids } }] } },
             { redemption: { _or: [{ sender_id: { _in: $ids } }, { receiver_id: { _in: $ids } }] } }
           ] }
+          ${proxyFilter}
         ]
       },
       order_by: { created_at: desc },
@@ -2427,7 +3858,9 @@ export const getActivityBySenderIds = async (
     }
   }`;
   try {
-    const data = await fetchGraphQL(q, { ids, limit });
+    const vars: Record<string, unknown> = { ids, limit };
+    if (proxyIds?.length) vars.proxyIds = proxyIds;
+    const data = await fetchGraphQL(q, vars);
     const rawEvents = data?.events ?? [];
     const seenEventIds = new Set<string>();
     const events = rawEvents.filter((ev: any) => {
@@ -2436,7 +3869,7 @@ export const getActivityBySenderIds = async (
       seenEventIds.add(eid);
       return true;
     });
-      const idsSet = new Set(ids.map((i) => i.toLowerCase()));
+    const idsSet = new Set(ids.map((i) => i.toLowerCase()));
     const out: PositionActivityNotification[] = [];
     for (const ev of events) {
       const deposit = ev.deposit;
@@ -2855,6 +4288,916 @@ export function predicateIsSocialTagNoise(pred: string): boolean {
 }
 
 /**
+ * Signal lane predicate quality gate. The Pulse feed needs *stanceable* third-person
+ * relations (e.g. "uses", "is a", "trusts", "competes with") — not first-person diary
+ * entries like "i visit for work" or rambling sentences.
+ *
+ * Two-stage: any predicate in the curated allow-list passes immediately, otherwise
+ * a strict shape check (length, word count, no first-person, alphabetic words only).
+ */
+const SIGNAL_STANCEABLE_ALLOW = new Set<string>([
+    'is', 'is a', 'is an', 'is the',
+    'uses', 'used by', 'used for',
+    'trusts', 'vouches for', 'follows', 'recommends', 'endorses', 'supports',
+    'competes with', 'rivals', 'beats',
+    'made by', 'created by', 'authored by', 'built by', 'invented by',
+    'owned by', 'belongs to', 'part of',
+    'works at', 'works for', 'works with', 'partnered with',
+    'tagged as', 'tagged with', 'has tag',
+    'votes for', 'opposes',
+    'knows', 'respects',
+    'similar to', 'related to',
+    'contains', 'depends on',
+    'married to', 'parent of', 'child of',
+    'vs', 'versus',
+    'is trustworthy', 'trustworthy',
+    'is credible', 'credible',
+]);
+const SIGNAL_STANCEABLE_FIRST_PERSON = /\b(?:i|my|we|you|me|us|our|im|i'?m|i'?ve|i'?d|i'?ll)\b/;
+
+export function predicateIsStanceableForSignal(pred: string): boolean {
+    const raw = (pred || '').trim();
+    if (!raw) return false;
+    const lower = raw.toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!lower) return false;
+
+    // Curated allow-list always wins.
+    if (SIGNAL_STANCEABLE_ALLOW.has(lower)) return true;
+
+    if (lower.length < 2 || lower.length > 20) return false;
+    if (predicateIsSocialTagNoise(lower)) return false;
+
+    // Reject URLs, paths, identifiers, addresses.
+    if (/[:\/\\#@?<>{}\[\]()"|]/.test(lower)) return false;
+    if (/^https?\b/.test(lower)) return false;
+    if (/^0x/.test(lower)) return false;
+
+    // Reject any first-person token anywhere (kills "i visit for fun", "i trust for learning").
+    if (SIGNAL_STANCEABLE_FIRST_PERSON.test(lower)) return false;
+
+    const words = lower.split(/\s+/).filter(Boolean);
+    if (words.length === 0 || words.length > 3) return false;
+    if (lower === 'tag' || lower === 'tags') return false;
+
+    // Each word must be alphabetic (letters/dashes/apostrophes only). Single-letter words
+    // are allowed only for a tiny set of common English connectors.
+    const SHORT_OK = new Set(['a', 'is', 'in', 'of', 'by', 'to', 'on', 'at', 'or']);
+    for (const w of words) {
+        if (w.length < 2 && !SHORT_OK.has(w)) return false;
+        if (!/^[a-z'][a-z'-]*$/.test(w)) return false;
+    }
+
+    return true;
+}
+
+export type SignalIdentityAccountTld = '.eth' | '.trust';
+
+/** @deprecated Prefer {@link SignalNamedIdentityRow} */
+export type SignalIdentityAccount = {
+    id: string;
+    label: string;
+    image: string | null;
+    tld: SignalIdentityAccountTld;
+};
+
+function inferNamedTldFromLabel(label: string): SignalIdentityAccountTld | null {
+    const l = (label || '').trim().toLowerCase();
+    if (l.endsWith('.trust')) return '.trust';
+    if (l.endsWith('.eth')) return '.eth';
+    return null;
+}
+
+function namedStemLooksLikeJunk(stem: string): boolean {
+    if (!stem.length) return true;
+    return /^[._-]+$/.test(stem);
+}
+
+/**
+ * Vault-backed + account-index **named identities** (`.eth` / `.trust`) as they appear
+ * on Intuition — same atom sourcing as Markets, not a thin `accounts` scrape alone.
+ */
+export type SignalNamedIdentityRow = {
+    /** Canonical key: vault `term_id` when present, else wallet id. */
+    rowKey: string;
+    label: string;
+    image: string | null;
+    tld: SignalIdentityAccountTld;
+    walletId?: string;
+    termId?: string;
+    totalAssetsWei: bigint;
+    positionCount: number;
+    source: 'vault' | 'account';
+};
+
+export async function fetchSignalNamedIdentityRows(opts?: {
+    vaultLimit?: number;
+    accountLimit?: number;
+}): Promise<SignalNamedIdentityRow[]> {
+    const vaultLimit = Math.max(40, Math.min(360, opts?.vaultLimit ?? 260));
+    const accountLimit = Math.max(20, Math.min(200, opts?.accountLimit ?? 96));
+
+    const vaultQ = `query SignalNamedVaults($limit: Int!) {
+      vaults(order_by: { total_assets: desc }, limit: $limit, offset: 0) {
+        term_id
+        total_assets
+        position_count
+      }
+    }`;
+
+    try {
+        const vRes = await fetchGraphQL(vaultQ, { limit: vaultLimit }, 2, 22_000);
+        const rawVaults = (vRes?.vaults || []) as {
+            term_id: string;
+            total_assets: string;
+            position_count?: number;
+        }[];
+
+        const aggregated = aggregateVaultData(rawVaults);
+        const termIds = aggregated.map((v: any) => v.term_id).filter(Boolean);
+        if (!termIds.length) return fetchSignalNamedAccountsOnly(accountLimit);
+
+        const dataQ = `query SignalNamedAtoms($ids: [String!]!) {
+          atoms(where: { term_id: { _in: $ids } }) {
+            term_id
+            label
+            data
+            image
+            type
+            creator { id label image }
+            value { person { name } organization { name } thing { name } }
+          }
+        }`;
+
+        const aRes = await fetchGraphQL(dataQ, { ids: termIds }, 2, 26_000);
+        const atoms = (aRes?.atoms || []) as any[];
+
+        const byLabel = new Map<string, SignalNamedIdentityRow>();
+
+        for (const atom of atoms) {
+            const tid = String(atom?.term_id ?? '').trim();
+            if (!tid) continue;
+            const meta = resolveMetadata(atom);
+            const lab = (meta.label || '').trim();
+            const tld = inferNamedTldFromLabel(lab);
+            if (!tld) continue;
+            const stem = lab.slice(0, -(tld.length)).trim().toLowerCase();
+            if (namedStemLooksLikeJunk(stem)) continue;
+
+            const agg = aggregated.find((v: any) => normalize(v.term_id) === normalize(tid));
+            const ta = agg ? BigInt(String(agg.total_assets ?? '0')) : 0n;
+            const pc = agg ? Number(agg.position_count ?? 0) : 0;
+
+            const row: SignalNamedIdentityRow = {
+                rowKey: tid.toLowerCase(),
+                label: lab,
+                image: (atom.image as string | null) ?? meta.image ?? null,
+                tld,
+                termId: tid,
+                walletId: atom.creator?.id ? String(atom.creator.id) : undefined,
+                totalAssetsWei: ta,
+                positionCount: pc,
+                source: 'vault',
+            };
+
+            const lk = lab.toLowerCase();
+            const prev = byLabel.get(lk);
+            if (!prev || row.totalAssetsWei > prev.totalAssetsWei) byLabel.set(lk, row);
+        }
+
+        const fromVaults = [...byLabel.values()];
+        const acctRows = await fetchSignalAccountIndexRows(accountLimit);
+        const outMap = new Map<string, SignalNamedIdentityRow>();
+        for (const r of fromVaults) outMap.set(r.label.toLowerCase(), r);
+        for (const r of acctRows) {
+            const k = r.label.toLowerCase();
+            if (!outMap.has(k)) outMap.set(k, r);
+            else {
+                const v = outMap.get(k)!;
+                if (!v.walletId && r.walletId) v.walletId = r.walletId;
+            }
+        }
+
+        return [...outMap.values()].sort((a, b) => {
+            if (a.totalAssetsWei > b.totalAssetsWei) return -1;
+            if (a.totalAssetsWei < b.totalAssetsWei) return 1;
+            return a.label.localeCompare(b.label);
+        });
+    } catch {
+        return fetchSignalNamedAccountsOnly(accountLimit);
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Signal · Identity atom rail — same claim data path as MarketDetail Claims    */
+/*                                                                              */
+/* Each row is built from getAgentTriplesWithVaults(termId): vault aggregates   */
+/* and predicate / object labels come from the graph (not a LIST scan). Seeds   */
+/* are portal list members + spotlight picks (e.g. USDC from «Stablecoin»).   */
+/* -------------------------------------------------------------------------- */
+
+export type SignalAtomTagRow = {
+  tripleTermId: string;
+  counterTermId?: string;
+  /** Predicate label from the triple (e.g. "has tag"). */
+  predicateLabel: string;
+  /** Object atom label for this row (tag / claim object). */
+  objectLabel: string;
+  subjectLabel: string;
+  subjectImage?: string;
+  forCount: number;
+  againstCount: number;
+  totalAssetsForLabel: string;
+  totalAssetsAgainstLabel: string;
+  /** Sum of positive + counter vault assets, used for sorting only. */
+  weight: bigint;
+};
+
+export type SignalAtomTagCard = {
+  subjectTermId: string;
+  subjectLabel: string;
+  subjectImage?: string;
+  /** On-graph claims for this identity (MarketDetail-style vault enrichment). */
+  tags: SignalAtomTagRow[];
+  /** Sum of activity across rows (positions). */
+  totalPositions: number;
+  /** Index in `SIGNAL_PULSE_HERO_ATOM_LABELS` when this card came from the homepage whitelist. */
+  heroIndex?: number;
+  /** When set, this card was seeded from a named portal list (pin + label in UI). */
+  spotlightSourceListLabel?: string;
+  /**
+   * Crowd rail: graph miss or atom resolved but no vault claims yet — UI shows a slot instead of hiding the row.
+   */
+  pulseSlotKind?: 'unresolved' | 'empty_claims';
+};
+
+function fmtTrustFromAssetsBig(total: bigint): string {
+  if (total <= 0n) return '0';
+  const whole = total / 10n ** 18n;
+  if (whole >= 1000n) return `${(Number(whole) / 1000).toFixed(1)}k`;
+  if (whole > 0n) return whole.toString();
+  const milli = (total / 10n ** 16n).toString();
+  if (milli === '0') return '0';
+  const padded = milli.padStart(3, '0');
+  return `0.${padded.slice(0, 2)}`;
+}
+
+/** Drop URL-shaped / path junk atoms from the Pulse hero rail (e.g. x.com/… links indexed as “atoms”). */
+function isJunkSignalAtomLabel(label: string): boolean {
+  const s = label.trim().toLowerCase();
+  if (!s) return true;
+  if (s === 'x.com') return false;
+  if (/^https?:\/\//.test(s)) return true;
+  if (s.includes('://')) return true;
+  if (/\bx\.com\b|twitter\.com|t\.co\//.test(s)) return true;
+  // Path-like labels "domain/foo/bar" from bad imports
+  if (/^[a-z0-9.-]+\.[a-z]{2,}\/[^\s]+$/i.test(s)) return true;
+  if ((s.match(/\//g) || []).length >= 2 && /\w+\/\w+/.test(s)) return true;
+  return false;
+}
+
+type ClaimWithVaults = Awaited<ReturnType<typeof getAgentTriplesWithVaults>>[number];
+
+function predicateLooksLikeHasTag(label: string | undefined): boolean {
+  const n = String(label ?? '').replace(/_/g, ' ').trim().toLowerCase();
+  return n === 'has tag' || n.includes('has tag');
+}
+
+type PulseIdentitySeed = {
+  termId: string;
+  label: string;
+  image?: string;
+  spotlightSourceListLabel?: string;
+  /** Position in `SIGNAL_PULSE_HERO_ATOM_LABELS` (stable Hot ordering). */
+  whitelistIndex?: number;
+  /** False when the whitelist label did not resolve to a subgraph atom (Crowd slot mode). */
+  graphResolved?: boolean;
+};
+
+async function resolvePulseHeroAtomByLabel(displayLabel: string): Promise<PulseIdentitySeed | null> {
+  const raw = displayLabel.trim();
+  if (!raw) return null;
+  const needle = raw.toLowerCase();
+  const pattern = `%${raw.replace(/[%_]/g, (ch) => `\\${ch}`)}%`;
+  const q = `query PulseHeroAtoms($pat: String!, $limit: Int!) {
+    atoms(
+      where: {
+        _or: [{ label: { _ilike: $pat } }, { term_id: { _ilike: $pat } }]
+      }
+      limit: $limit
+    ) {
+      term_id
+      label
+      data
+      image
+      type
+      value { person { name } thing { name } organization { name } }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { pat: pattern, limit: 48 });
+    const atoms = res?.atoms ?? [];
+    if (!Array.isArray(atoms) || atoms.length === 0) return null;
+    const scored = atoms.map((a: any) => {
+      const meta = resolveMetadata(a);
+      const lab = String(meta.label || a.label || '').trim();
+      const ll = lab.toLowerCase();
+      const tid = String(a.term_id ?? '').toLowerCase();
+      let score = 0;
+      if (isJunkSignalAtomLabel(lab)) score -= 5000;
+      if (ll === needle) score += 200;
+      else if (ll.replace(/\s+/g, '') === needle.replace(/\s+/g, '')) score += 190;
+      else if (ll.startsWith(needle) || needle.startsWith(ll)) score += 80;
+      else if (ll.includes(needle)) score += 40;
+      if (tid.includes(needle.replace(/^0x/, '')) && needle.startsWith('0x')) score += 60;
+      const lenPenalty = Math.min(lab.length, 48);
+      return { a, meta, lab, score: score * 1000 - lenPenalty };
+    });
+    const termIds = [...new Set(scored.map((x) => String(x.a.term_id ?? '').trim()).filter(Boolean))];
+    const assetsByKey = new Map<string, bigint>();
+    if (termIds.length > 0) {
+      const vq = `query PulseHeroVaults($ids: [String!]!) {
+        vaults(where: { term_id: { _in: $ids } }) {
+          term_id
+          total_assets
+        }
+      }`;
+      const vRes = await fetchGraphQL(vq, { ids: termIds }, 2, 22_000);
+      const vs = (vRes?.vaults ?? []) as { term_id?: string; total_assets?: string }[];
+      for (const v of vs) {
+        const tid = String(v.term_id ?? '').trim();
+        if (!tid) continue;
+        const key = normalize(tid);
+        let w = 0n;
+        try {
+          w = BigInt(String(v.total_assets ?? '0'));
+        } catch {
+          w = 0n;
+        }
+        assetsByKey.set(key, (assetsByKey.get(key) || 0n) + w);
+      }
+    }
+    scored.sort((x, y) => {
+      if (y.score !== x.score) return y.score - x.score;
+      const ax = assetsByKey.get(normalize(String(x.a.term_id ?? ''))) || 0n;
+      const ay = assetsByKey.get(normalize(String(y.a.term_id ?? ''))) || 0n;
+      if (ay > ax) return 1;
+      if (ay < ax) return -1;
+      return 0;
+    });
+    const best = scored[0];
+    if (!best || best.score < -1000) return null;
+    return {
+      termId: best.a.term_id,
+      label: best.lab,
+      image: (best.meta.image || best.a.image) as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Bounded parallel map — avoids firing dozens of subgraph + vault calls at once on Pulse Crowd. */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const lim = Math.max(1, Math.min(limit, items.length));
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: lim }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) break;
+      out[i] = await fn(items[i]!, i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+async function discoverSignalPulseIdentitySeedsFromLabels(
+  labels: readonly string[],
+  maxCards: number,
+  opts?: { slotPerLabel?: boolean; labelResolveConcurrency?: number },
+): Promise<PulseIdentitySeed[]> {
+  const cap = Math.min(48, Math.max(1, maxCards));
+  const lim = Math.max(
+    1,
+    Math.min(opts?.labelResolveConcurrency ?? 12, labels.length || 1),
+  );
+  const resolved = await mapWithConcurrency(labels, lim, async (label, wi) => {
+    const seed = await resolvePulseHeroAtomByLabel(label);
+    return { seed, wi, label } as const;
+  });
+
+  if (opts?.slotPerLabel) {
+    const out: PulseIdentitySeed[] = [];
+    for (const { seed, wi, label } of resolved) {
+      if (out.length >= cap) break;
+      const displayLabel = String(label ?? '').trim() || '—';
+      if (!seed) {
+        console.warn('[discoverSignalPulseIdentitySeedsFromLabels] No graph match for label:', label);
+        out.push({
+          termId: '',
+          label: displayLabel,
+          whitelistIndex: wi,
+          graphResolved: false,
+        });
+        continue;
+      }
+      if (isJunkSignalAtomLabel(seed.label)) {
+        out.push({
+          termId: '',
+          label: displayLabel,
+          whitelistIndex: wi,
+          graphResolved: false,
+        });
+        continue;
+      }
+      const k = normalize(seed.termId);
+      if (!k) {
+        out.push({
+          termId: '',
+          label: displayLabel,
+          whitelistIndex: wi,
+          graphResolved: false,
+        });
+        continue;
+      }
+      out.push({ ...seed, whitelistIndex: wi, graphResolved: true });
+    }
+    return out;
+  }
+
+  const seen = new Set<string>();
+  const out: PulseIdentitySeed[] = [];
+  for (const { seed, wi, label } of resolved) {
+    if (out.length >= cap) break;
+    if (!seed) {
+      console.warn('[discoverSignalPulseIdentitySeedsFromLabels] No graph match for label:', label);
+      continue;
+    }
+    const k = normalize(seed.termId);
+    if (!k || seen.has(k)) continue;
+    if (isJunkSignalAtomLabel(seed.label)) continue;
+    seen.add(k);
+    out.push({ ...seed, whitelistIndex: wi });
+  }
+  return out;
+}
+
+async function fetchPulseIdentitySeedForTermId(termId: string): Promise<PulseIdentitySeed | null> {
+  const raw = termId.trim();
+  if (!raw) return null;
+  const ids = prepareQueryIds(raw);
+  if (ids.length === 0) return null;
+  const q = `query PulseSeedByTermId($ids: [String!]!) {
+    atoms(where: { term_id: { _in: $ids } }, limit: 1) {
+      term_id
+      label
+      data
+      image
+      type
+      value { person { name } thing { name } organization { name } }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { ids });
+    const a = res?.atoms?.[0];
+    if (!a?.term_id) return null;
+    const meta = resolveMetadata(a);
+    const lab = String(meta.label || a.label || '').trim();
+    if (!lab || isJunkSignalAtomLabel(lab)) return null;
+    return {
+      termId: a.term_id,
+      label: lab,
+      image: (meta.image || a.image) as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function claimWithVaultsToTagRow(c: ClaimWithVaults): SignalAtomTagRow {
+  let sw = 0n;
+  let ow = 0n;
+  try {
+    sw = BigInt(String(c.supportTotalAssets || '0'));
+  } catch {
+    /* ignore */
+  }
+  try {
+    ow = BigInt(String(c.opposeTotalAssets || '0'));
+  } catch {
+    /* ignore */
+  }
+  const pred = String(c.predicate?.label || 'LINK').replace(/_/g, ' ').trim();
+  return {
+    tripleTermId: c.id,
+    counterTermId: c.counterTermId,
+    predicateLabel: pred,
+    objectLabel: c.object?.label ?? '—',
+    subjectLabel: c.subject?.label ?? '—',
+    subjectImage: c.subject?.image,
+    forCount: c.supportPositionCount,
+    againstCount: c.opposePositionCount,
+    totalAssetsForLabel: fmtTrustFromAssetsBig(sw),
+    totalAssetsAgainstLabel: fmtTrustFromAssetsBig(ow),
+    weight: sw + ow,
+  };
+}
+
+async function buildSignalAtomTagCardFromVaultClaims(
+  seed: PulseIdentitySeed,
+  maxClaims: number,
+  opts?: { allowEmptyClaims?: boolean },
+): Promise<SignalAtomTagCard | null> {
+  if (seed.graphResolved === false || !String(seed.termId ?? '').trim()) {
+    const wi = seed.whitelistIndex ?? 0;
+    const slug = encodeURIComponent(seed.label.trim() || 'slot');
+    return {
+      subjectTermId: `__pulse_unresolved__:${wi}:${slug}`,
+      subjectLabel: seed.label,
+      subjectImage: seed.image,
+      tags: [],
+      totalPositions: 0,
+      heroIndex: seed.whitelistIndex,
+      spotlightSourceListLabel: seed.spotlightSourceListLabel,
+      pulseSlotKind: 'unresolved',
+    };
+  }
+
+  const claims = await getAgentTriplesWithVaults(seed.termId);
+  if (!claims.length) {
+    if (!opts?.allowEmptyClaims) return null;
+    return {
+      subjectTermId: seed.termId,
+      subjectLabel: seed.label,
+      subjectImage: seed.image,
+      tags: [],
+      totalPositions: 0,
+      heroIndex: seed.whitelistIndex,
+      spotlightSourceListLabel: seed.spotlightSourceListLabel,
+      pulseSlotKind: 'empty_claims',
+    };
+  }
+
+  let pool = claims.filter((c) => normalize(c.subject.term_id) === normalize(seed.termId));
+  if (pool.length === 0) pool = claims;
+
+  const tagPref = pool.filter((c) => predicateLooksLikeHasTag(c.predicate?.label));
+  pool = tagPref.length > 0 ? tagPref : pool;
+
+  const slice = pool.slice(0, maxClaims);
+  const tags = slice.map(claimWithVaultsToTagRow);
+  const totalPositions = tags.reduce((s, t) => s + t.forCount + t.againstCount, 0);
+
+  tags.sort((a, b) => {
+    if (b.weight !== a.weight) return b.weight > a.weight ? 1 : -1;
+    return b.forCount + b.againstCount - (a.forCount + a.againstCount);
+  });
+
+  return {
+    subjectTermId: seed.termId,
+    subjectLabel: seed.label,
+    subjectImage: seed.image,
+    tags,
+    totalPositions,
+    spotlightSourceListLabel: seed.spotlightSourceListLabel,
+  };
+}
+
+/**
+ * Identity atoms for the Pulse rail: ordered whitelist in `SIGNAL_PULSE_HERO_ATOM_LABELS`, resolved on the
+ * subgraph by label; each card’s rows from `getAgentTriplesWithVaults` (MarketDetail-style vault enrichment).
+ */
+export async function fetchSignalPulseIdentityCards(opts?: {
+  maxIdentityCards?: number;
+  maxClaimsPerCard?: number;
+  /** When set, resolve this list instead of `SIGNAL_PULSE_HERO_ATOM_LABELS` (e.g. Crowd rail). */
+  identityLabels?: readonly string[];
+  /** Cap concurrent `getAgentTriplesWithVaults` fan-out (default 6). */
+  buildConcurrency?: number;
+}): Promise<SignalAtomTagCard[]> {
+  const labels = opts?.identityLabels ?? SIGNAL_PULSE_HERO_ATOM_LABELS;
+  const slotPerLabel = opts?.identityLabels != null;
+  const defaultMax =
+    opts?.identityLabels != null ? labels.length : Math.min(24, labels.length);
+  const maxCards = Math.min(48, Math.max(1, opts?.maxIdentityCards ?? defaultMax));
+  const maxCardsClamped = Math.min(maxCards, labels.length);
+  const maxClaims = Math.min(100, Math.max(4, opts?.maxClaimsPerCard ?? 48));
+  const buildConcurrency = Math.max(
+    1,
+    Math.min(
+      12,
+      Number.isFinite(opts?.buildConcurrency as number) ? Number(opts?.buildConcurrency) : slotPerLabel ? 8 : 6,
+    ),
+  );
+  try {
+    const seeds = await discoverSignalPulseIdentitySeedsFromLabels(labels, maxCardsClamped, {
+      slotPerLabel,
+      labelResolveConcurrency: slotPerLabel ? 16 : 12,
+    });
+    const built = await mapWithConcurrency(seeds, buildConcurrency, (seed) =>
+      buildSignalAtomTagCardFromVaultClaims(seed, maxClaims, { allowEmptyClaims: slotPerLabel }),
+    );
+    const cards: SignalAtomTagCard[] = [];
+    for (let i = 0; i < seeds.length; i++) {
+      const card = built[i];
+      const seed = seeds[i];
+      if (!card) continue;
+      if (!slotPerLabel && card.tags.length === 0) continue;
+      const hi = seed.whitelistIndex;
+      cards.push(hi === undefined ? card : { ...card, heroIndex: hi });
+    }
+    return cards;
+  } catch (e) {
+    console.warn('[fetchSignalPulseIdentityCards]', e);
+    return [];
+  }
+}
+
+/**
+ * Load Pulse-style tag cards for arbitrary atom `term_id`s (Yours rail), preserving caller order.
+ */
+export async function fetchSignalPulseIdentityCardsForTermIds(
+  termIds: string[],
+  opts?: { maxClaimsPerCard?: number; buildConcurrency?: number },
+): Promise<SignalAtomTagCard[]> {
+  const maxClaims = Math.min(100, Math.max(4, opts?.maxClaimsPerCard ?? 48));
+  const buildConcurrency = Math.max(
+    1,
+    Math.min(12, Number.isFinite(opts?.buildConcurrency as number) ? Number(opts?.buildConcurrency) : 6),
+  );
+  const seen = new Set<string>();
+  const uniqueOrdered: string[] = [];
+  for (const tid of termIds) {
+    const raw = tid?.trim();
+    if (!raw) continue;
+    const k = normalize(raw);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    uniqueOrdered.push(raw);
+  }
+  const pairs = await mapWithConcurrency(uniqueOrdered, buildConcurrency, async (raw) => {
+    const seed = await fetchPulseIdentitySeedForTermId(raw);
+    if (!seed) return null;
+    const card = await buildSignalAtomTagCardFromVaultClaims(seed, maxClaims);
+    return card && card.tags.length > 0 ? { card, raw } : null;
+  });
+  const byRaw = new Map(pairs.filter(Boolean).map((p) => [p!.raw.trim().toLowerCase(), p!.card]));
+  const cards: SignalAtomTagCard[] = [];
+  let order = 0;
+  for (const raw of uniqueOrdered) {
+    const c = byRaw.get(raw.trim().toLowerCase());
+    if (c) {
+      cards.push({ ...c, heroIndex: order });
+      order += 1;
+    }
+  }
+  return cards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Signal · "Me" — every stance the viewer has staked on a triple              */
+/* -------------------------------------------------------------------------- */
+
+export type UserStanceRow = {
+  /** Triple `term_id` — the positive vault. */
+  tripleTermId: string;
+  counterTermId?: string;
+  subjectLabel: string;
+  subjectImage?: string;
+  predicateLabel: string;
+  objectLabel: string;
+  objectImage?: string;
+  /** true = staked on the positive vault (Stand / Agreed); false = staked on the counter (Oppose / Disagreed). */
+  support: boolean;
+  /** TRUST notional from the matched vault (computed from shares × current_share_price). */
+  trustAmount: number;
+  /** Raw share balance in wei-units (string for safety). */
+  shares: string;
+  /** Block-ish ordering field. Falls back to created_at when block isn't on the row. */
+  ordering: number;
+};
+
+function pickAtomLabel(node: any): string {
+  const label =
+    node?.label ||
+    node?.value?.person?.name ||
+    node?.value?.thing?.name ||
+    node?.value?.organization?.name ||
+    '';
+  const trimmed = String(label || '').trim();
+  if (trimmed) return trimmed.length > 96 ? `${trimmed.slice(0, 94)}…` : trimmed;
+  return '—';
+}
+
+function pickAtomImage(node: any): string | undefined {
+  const raw =
+    node?.cached_image?.url ||
+    node?.image ||
+    node?.value?.person?.cached_image?.url ||
+    node?.value?.person?.image ||
+    node?.value?.thing?.cached_image?.url ||
+    node?.value?.thing?.image ||
+    node?.value?.organization?.image ||
+    undefined;
+  return normalizeWebMediaUrl(raw);
+}
+
+/** Convert a vault's `userPosition[].shares` × `current_share_price` into a TRUST decimal. Returns 0 if nothing. */
+function computeUserTrust(vault: any): { trust: number; sharesStr: string } {
+  const positions = Array.isArray(vault?.userPosition) ? vault.userPosition : [];
+  let totalShares = 0;
+  for (const p of positions) {
+    const s = Number(p?.shares ?? 0);
+    if (Number.isFinite(s) && s > 0) totalShares += s;
+  }
+  if (totalShares <= 0) return { trust: 0, sharesStr: '0' };
+  const price = Number(vault?.current_share_price ?? 0);
+  const trust = Number.isFinite(price) && price > 0 ? (totalShares * price) / 1e36 : totalShares / 1e18;
+  return { trust, sharesStr: String(totalShares) };
+}
+
+function vaultsHaveUserPosition(vaults: any[] | undefined): boolean {
+  if (!Array.isArray(vaults)) return false;
+  for (const v of vaults) {
+    const positions = Array.isArray(v?.userPosition) ? v.userPosition : [];
+    for (const p of positions) {
+      const s = Number(p?.shares ?? 0);
+      if (Number.isFinite(s) && s > 0) return true;
+    }
+  }
+  return false;
+}
+
+function sumVaultsUserTrust(vaults: any[] | undefined): { trust: number; sharesStr: string } {
+  let trust = 0;
+  let shares = 0;
+  for (const v of vaults ?? []) {
+    const r = computeUserTrust(v);
+    trust += r.trust;
+    shares += Number(r.sharesStr) || 0;
+  }
+  return { trust, sharesStr: String(shares) };
+}
+
+/**
+ * Triples where the connected wallet has staked TRUST on either the positive vault (Stand) or the
+ * counter vault (Oppose). Sorted newest-first; capped at `limit`.
+ */
+export async function fetchUserStanceHistory(
+  walletAddress: string,
+  limit = 80,
+): Promise<UserStanceRow[]> {
+  const variants = accountVariantsForGraph(walletAddress);
+  if (variants.length === 0) return [];
+
+  const where = {
+    _or: [
+      { term: { vaults: { positions: { account_id: { _in: variants } } } } },
+      { counter_term: { vaults: { positions: { account_id: { _in: variants } } } } },
+    ],
+  };
+
+  try {
+    const triples = await getTriplesWithPositions(
+      Math.min(120, Math.max(20, limit)),
+      0,
+      [{ created_at: 'desc' }],
+      where,
+      walletAddress,
+    );
+
+    const out: UserStanceRow[] = [];
+    for (const t of triples ?? []) {
+      const tripleTermId = String(t?.term_id ?? '').trim();
+      if (!tripleTermId) continue;
+
+      const positiveVaults = t?.term?.vaults ?? [];
+      const counterVaults = t?.counter_term?.vaults ?? [];
+
+      const onPositive = vaultsHaveUserPosition(positiveVaults);
+      const onCounter = vaultsHaveUserPosition(counterVaults);
+      if (!onPositive && !onCounter) continue;
+
+      const subjectLabel = pickAtomLabel(t?.subject);
+      const objectLabel = pickAtomLabel(t?.object);
+      if (subjectLabel === '—' || objectLabel === '—') continue;
+
+      // If user is on both sides (rare), show the heavier one.
+      const matched = onPositive && onCounter
+        ? (sumVaultsUserTrust(positiveVaults).trust >= sumVaultsUserTrust(counterVaults).trust)
+        : onPositive;
+
+      const { trust, sharesStr } = matched
+        ? sumVaultsUserTrust(positiveVaults)
+        : sumVaultsUserTrust(counterVaults);
+
+      out.push({
+        tripleTermId,
+        counterTermId: t?.counter_term_id ? String(t.counter_term_id) : undefined,
+        subjectLabel,
+        subjectImage: pickAtomImage(t?.subject),
+        predicateLabel: String(t?.predicate?.label ?? '').trim(),
+        objectLabel,
+        objectImage: pickAtomImage(t?.object),
+        support: matched,
+        trustAmount: trust,
+        shares: sharesStr,
+        ordering: Number(t?.created_at ?? 0) || 0,
+      });
+    }
+
+    out.sort((a, b) => (b.trustAmount - a.trustAmount) || (b.ordering - a.ordering));
+    return out.slice(0, limit);
+  } catch (e) {
+    console.warn('[fetchUserStanceHistory]', e);
+    return [];
+  }
+}
+
+/** Top named vault atoms by TRUST locked — Frontier lane. */
+export async function fetchSignalNamedFrontierRows(limit = 48): Promise<SignalNamedIdentityRow[]> {
+    const rows = await fetchSignalNamedIdentityRows({ vaultLimit: 280, accountLimit: 48 });
+    return [...rows]
+        .filter((r) => r.source === 'vault' && r.termId)
+        .sort((a, b) => {
+            if (a.totalAssetsWei > b.totalAssetsWei) return -1;
+            if (a.totalAssetsWei < b.totalAssetsWei) return 1;
+            if (b.positionCount !== a.positionCount) return b.positionCount - a.positionCount;
+            return a.label.localeCompare(b.label);
+        })
+        .slice(0, Math.max(8, Math.min(96, limit)));
+}
+
+async function fetchSignalNamedAccountsOnly(accountLimit: number): Promise<SignalNamedIdentityRow[]> {
+    const rows = await fetchSignalAccountIndexRows(accountLimit);
+    return rows.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+async function fetchSignalAccountIndexRows(accountLimit: number): Promise<SignalNamedIdentityRow[]> {
+    const lim = Math.max(1, accountLimit);
+    const q = `query SignalAccountIndex($lim: Int!) {
+      eth: accounts(where: { label: { _ilike: "%.eth" } }, limit: $lim, order_by: [{ id: desc }]) {
+        id label image
+      }
+      trust: accounts(where: { label: { _ilike: "%.trust" } }, limit: $lim, order_by: [{ id: desc }]) {
+        id label image
+      }
+    }`;
+    try {
+        const res = await fetchGraphQL(q, { lim }, 2, 18_000);
+        const out: SignalNamedIdentityRow[] = [];
+        const push = (rows: any[] | undefined, tld: SignalIdentityAccountTld) => {
+            for (const r of rows || []) {
+                const walletId = String(r?.id ?? '').trim();
+                const label = String(r?.label ?? '').trim();
+                if (!walletId || !label) continue;
+                const lower = label.toLowerCase();
+                if (!lower.endsWith(tld)) continue;
+                const stem = lower.slice(0, -tld.length);
+                if (namedStemLooksLikeJunk(stem)) continue;
+                out.push({
+                    rowKey: walletId.toLowerCase(),
+                    label,
+                    image: r?.image ?? null,
+                    tld,
+                    walletId,
+                    totalAssetsWei: 0n,
+                    positionCount: 0,
+                    source: 'account',
+                });
+            }
+        };
+        push(res?.trust, '.trust');
+        push(res?.eth, '.eth');
+        return out;
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * @deprecated Use {@link fetchSignalNamedIdentityRows}.
+ */
+export async function fetchSignalIdentityAccounts(perTldLimit = 50): Promise<SignalIdentityAccount[]> {
+    const rows = await fetchSignalNamedIdentityRows({
+        vaultLimit: 220,
+        accountLimit: Math.max(24, perTldLimit),
+    });
+    return rows.map((r) => ({
+        id: r.rowKey,
+        label: r.label,
+        image: r.image,
+        tld: r.tld,
+    }));
+}
+
+/**
  * Head-to-head: broad GraphQL match on `vs` / `versus`, then client-side
  * `predicateLooksLikeBattlePredicate` removes false positives (e.g. "vscode").
  */
@@ -2883,8 +5226,11 @@ export function buildArenaTriplesWhere(tab: ArenaCategory): Record<string, unkno
 }
 
 export async function getTriplesWithPositions(limit = 10, offset = 0, orderBy: any[] = [], where: any = {}, address?: string) {
+  const accountIds = address?.trim() ? accountVariantsForGraph(address).slice(0, 24) : [];
+  if (accountIds.length === 0) return [];
+
   const query = `
-    query GetTriplesWithPositions($limit: Int, $offset: Int, $orderBy: [triples_order_by!], $where: triples_bool_exp, $address: String) {
+    query GetTriplesWithPositions($limit: Int, $offset: Int, $orderBy: [triples_order_by!], $where: triples_bool_exp, $accountIds: [String!]) {
       triples(limit: $limit, offset: $offset, order_by: $orderBy, where: $where) {
         term_id
         counter_term_id
@@ -2956,7 +5302,7 @@ export async function getTriplesWithPositions(limit = 10, offset = 0, orderBy: a
             total_shares
             position_count
             market_cap
-            userPosition: positions(where: {account_id: {_eq: $address}}) {
+            userPosition: positions(where: {account_id: {_in: $accountIds}}) {
               account {
                 id
                 label
@@ -2980,7 +5326,7 @@ export async function getTriplesWithPositions(limit = 10, offset = 0, orderBy: a
             total_shares
             position_count
             market_cap
-            userPosition: positions(where: {account_id: {_eq: $address}}) {
+            userPosition: positions(where: {account_id: {_in: $accountIds}}) {
               account {
                 id
                 label
@@ -3146,7 +5492,7 @@ export async function getTriplesWithPositions(limit = 10, offset = 0, orderBy: a
     }
   `;
 
-  const variables = { limit, offset, orderBy, where, address };
+  const variables = { limit, offset, orderBy, where, accountIds };
   const data = await fetchGraphQL(query, variables);
   return data?.triples || [];
 }

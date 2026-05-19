@@ -9,10 +9,12 @@ import { uploadImageToIpfs, ensureIpfsUploadConfigured } from '../services/ipfs'
 import { searchGlobalAgents, getAllAgents } from '../services/graphql';
 import { playClick, playHover } from '../services/audio';
 import { toast } from '../components/Toast';
-import { formatEther } from 'viem';
+import { formatEther, parseEther } from 'viem';
 import { APP_VERSION_DISPLAY, CURRENCY_SYMBOL, EXPLORER_URL, PAGE_HERO_TITLE, PAGE_HERO_BODY } from '../constants';
 import { CurrencySymbol } from '../components/CurrencySymbol';
 import { formatMarketValue } from '../services/analytics';
+import { notifyProtocolXpEarned } from '../services/protocolXp';
+import { XpEarnHint } from '../components/XpEarnHint';
 
 type View = 'root' | 'identity_choice' | 'identity_manual' | 'identity_review' | 'claim' | 'claim_review' | 'construct_atom' | 'sdk' | 'manual_pathway' | 'establish_synapse' | 'ingress';
 
@@ -145,7 +147,7 @@ const CreateSignal: React.FC = () => {
       setSuccessModal({ termId, type: 'signal', txHash });
       toast.success('Claim created successfully');
     } catch (err: any) {
-      toast.error((err?.message || 'BROADCAST_FAILED').slice(0, 120));
+      toast.error((err?.message || 'Could not create claim').slice(0, 120));
     } finally {
       setCreating(false);
     }
@@ -154,7 +156,7 @@ const CreateSignal: React.FC = () => {
   const handleConstructAtom = async () => {
     playClick();
     if (!nodeAlias.trim()) {
-      toast.error('ENTER_ENTITY_NAME');
+      toast.error('Enter a name for this atom');
       return;
     }
     const dep = atomDeposit || '0.5';
@@ -212,9 +214,15 @@ const CreateSignal: React.FC = () => {
         setReturnToSynapseSlot(null);
       }
       setSuccessModal({ termId: termId ?? null, type: 'atom', txHash: atomTxHash });
-      toast.success('ATOM_ESTABLISHED');
+      notifyProtocolXpEarned({
+        address: account,
+        reasonKey: 'create_atom',
+        txHash: atomTxHash,
+        depositTrustWei: parseEther(atomDeposit || '0.5'),
+      });
+      toast.success('Atom created');
     } catch (err: any) {
-      toast.error((err?.message || 'GENESIS_FAILED').slice(0, 120));
+      toast.error((err?.message || 'Could not create atom').slice(0, 120));
     } finally {
       setCreatingAtom(false);
     }
@@ -223,7 +231,7 @@ const CreateSignal: React.FC = () => {
   const handleEstablishSynapse = async () => {
     playClick();
     if (!subjectId || !predicateId || !objectId) {
-      toast.error('CONNECT_ALL_NODES');
+      toast.error('Choose subject, predicate, and object');
       return;
     }
     const depositAmount = synapseDeposit || '0.5';
@@ -241,7 +249,13 @@ const CreateSignal: React.FC = () => {
       const synapseTxHash = await createSemanticTriple(subjectId, predicateId, objectId, depositAmount, account);
       markProxyApproved(account);
       setSuccessModal({ termId: termId as Hex, type: 'synapse', txHash: synapseTxHash });
-      toast.success('SYNAPSE_ESTABLISHED');
+      notifyProtocolXpEarned({
+        address: account,
+        reasonKey: 'create_claim',
+        txHash: synapseTxHash,
+        depositTrustWei: parseEther(depositAmount),
+      });
+      toast.success('Link created');
       setSubjectId('');
       setSubjectLabel('');
       setPredicateId('');
@@ -493,10 +507,15 @@ const CreateSignal: React.FC = () => {
       setImageFile(null);
       if (termId) setLastTermId(termId as Hex);
       setSuccessModal({ termId: termId ?? null, type: 'atom', txHash: atomTxHash });
-      toast.success('ATOM_ESTABLISHED');
-      setView('root');
+      notifyProtocolXpEarned({
+        address: account,
+        reasonKey: 'create_atom',
+        txHash: atomTxHash,
+        depositTrustWei: parseEther(deposit),
+      });
+      toast.success('Atom created');
     } catch (err: any) {
-      toast.error((err?.message || 'GENESIS_FAILED').slice(0, 120));
+      toast.error((err?.message || 'Could not create atom').slice(0, 120));
     } finally {
       setCreatingAtom(false);
     }
@@ -525,7 +544,13 @@ const CreateSignal: React.FC = () => {
       const synapseTxHash = await createSemanticTriple(subjectId, predicateId, objectId, depositAmount, account, undefined, claimReviewBypassValidation);
       markProxyApproved(account);
       setSuccessModal({ termId: termId as Hex, type: 'synapse', txHash: synapseTxHash });
-      toast.success('SYNAPSE_ESTABLISHED');
+      notifyProtocolXpEarned({
+        address: account,
+        reasonKey: 'create_claim',
+        txHash: synapseTxHash,
+        depositTrustWei: parseEther(depositAmount),
+      });
+      toast.success('Link created');
       setSubjectId('');
       setSubjectLabel('');
       setPredicateId('');
@@ -664,6 +689,7 @@ const CreateSignal: React.FC = () => {
               <p className={`${PAGE_HERO_BODY} text-center mb-10 max-w-lg mx-auto`}>
                 Anchor a new identity on the graph or attest a semantic claim (triple).
               </p>
+              <XpEarnHint variant="create_hub" className="mb-8 max-w-lg mx-auto justify-center text-center" />
               <div className="w-full grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
                 <button
                   type="button"

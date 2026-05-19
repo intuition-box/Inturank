@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAccount } from 'wagmi';
-import { Search, TrendingUp, Filter, Tag, Zap, Activity, ShieldCheck, Loader2, Database, ChevronDown, Star, LayoutGrid, Grid, Hexagon, Network, Layers, ArrowRight, Shield, User, Globe, Cpu, Component, Boxes, ScanSearch, Hash, Users, BadgeCheck, UserCog, List, Trophy } from 'lucide-react';
+import { Search, TrendingUp, Filter, Tag, Zap, Activity, ShieldCheck, Loader2, Database, ChevronDown, ChevronLeft, ChevronRight, Star, LayoutGrid, Hexagon, Network, Layers, ArrowRight, Shield, User, Globe, Cpu, Component, Boxes, ScanSearch, Hash, Users, BadgeCheck, UserCog, List, Trophy } from 'lucide-react';
 import { formatEther } from 'viem';
 import { getAllAgents, searchGlobalAgents, searchClaims, getLists, getTopClaims } from '../services/graphql';
 import { playHover, playClick } from '../services/audio';
@@ -12,11 +12,11 @@ import { toast } from '../components/Toast';
 import { calculateTrustScore, calculateAgentPrice, formatMarketValue, calculateMarketCap, formatLargeNumber, isSystemVerified } from '../services/analytics';
 import { APP_VERSION_DISPLAY, CURRENCY_SYMBOL, NETWORK_NAME, PAGE_HERO_TITLE } from '../constants';
 import { CurrencySymbol } from '../components/CurrencySymbol';
+import { XpEarnHint } from '../components/XpEarnHint';
 
 type SortOption = 'MCAP_DESC' | 'MCAP_ASC' | 'VOL_DESC' | 'VOL_ASC' | 'PRICE_DESC' | 'PRICE_ASC' | 'TRUST_DESC' | 'TRUST_ASC';
 type ClaimSortOption = 'TOTAL_MCAP_DESC' | 'TOTAL_MCAP_ASC' | 'SUPPORT_MCAP_DESC' | 'SUPPORT_MCAP_ASC' | 'OPPOSE_MCAP_DESC' | 'OPPOSE_MCAP_ASC' | 'SUPPORTERS_DESC' | 'SUPPORTERS_ASC' | 'OPPOSERS_DESC' | 'OPPOSERS_ASC' | 'POSITIONS_DESC' | 'POSITIONS_ASC';
 type ListSortOption = 'MCAP_DESC' | 'MCAP_ASC' | 'POSITIONS_DESC' | 'POSITIONS_ASC' | 'ENTRIES_DESC' | 'ENTRIES_ASC' | 'AZ' | 'ZA';
-type ViewMode = 'GRID' | 'HEATMAP';
 type ListViewMode = 'GRID' | 'LIST';
 type MarketSegment = 'NODES' | 'SYNAPSES' | 'VECTORS';
 
@@ -39,7 +39,6 @@ const Markets: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showWatchlistOnly, setShowWatchlistOnly] = useState(false);
   const [watchlistIds, setWatchlistIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('GRID');
   const pathSegment = location.pathname.split('/').pop() || 'atoms';
   const activeSegment = SEGMENT_FROM_PATH[pathSegment] ?? 'NODES';
   const [account, setAccount] = useState<string | null>(null);
@@ -57,12 +56,42 @@ const Markets: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 40;
   const CLAIMS_PAGE_SIZE = 80; // Fetch more claims — triple_terms is efficient
+  /** Mobile: 3×3 grid paging (Prev / Next) instead of one endless column */
+  const MOBILE_GRID_PAGE_SIZE = 9;
+  const MOBILE_SYNAPSES_PAGE_SIZE = 6;
 
   const sortRef = useRef<HTMLDivElement>(null);
   const claimSortRef = useRef<HTMLDivElement>(null);
   const listSortRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<any>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  const [isMdUp, setIsMdUp] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+  );
+  const [mobileGridPage, setMobileGridPage] = useState(0);
+  const [mobileSynapsesPage, setMobileSynapsesPage] = useState(0);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const fn = () => setIsMdUp(mq.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, []);
+
+  useEffect(() => {
+    setMobileGridPage(0);
+    setMobileSynapsesPage(0);
+  }, [
+    activeSegment,
+    debouncedTerm,
+    sortOption,
+    listSortOption,
+    claimSortOption,
+    showWatchlistOnly,
+    listViewMode,
+    pathSegment,
+  ]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -192,24 +221,6 @@ const Markets: React.FC = () => {
      }
   }, [debouncedTerm, activeSegment]);
 
-  // Infinite Scroll Observer
-  useEffect(() => {
-      const observer = new IntersectionObserver(
-          entries => {
-              if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && debouncedTerm.trim().length === 0) {
-                  fetchMoreData();
-              }
-          },
-          { threshold: 0.1 }
-      );
-
-      if (observerTarget.current) {
-          observer.observe(observerTarget.current);
-      }
-
-      return () => observer.disconnect();
-  }, [hasMore, loading, loadingMore, fetchMoreData, debouncedTerm]);
-
   const filteredItems = useMemo(() => {
     const term = debouncedTerm.trim().toLowerCase();
     let candidates: any[] = [];
@@ -307,11 +318,93 @@ const Markets: React.FC = () => {
     return candidates;
   }, [agents, lists, claims, debouncedTerm, serverResults, claimSearchResults, sortOption, claimSortOption, listSortOption, showWatchlistOnly, watchlistIds, activeSegment]);
 
+  const useMobileMarketPaging =
+    !isMdUp &&
+    activeSegment !== 'SYNAPSES' &&
+    (activeSegment === 'NODES' || (activeSegment === 'VECTORS' && listViewMode === 'GRID'));
+
+  useEffect(() => {
+    if (!useMobileMarketPaging) return;
+    const maxIdx = Math.max(0, Math.ceil(filteredItems.length / MOBILE_GRID_PAGE_SIZE) - 1);
+    if (mobileGridPage > maxIdx) setMobileGridPage(maxIdx);
+  }, [useMobileMarketPaging, filteredItems.length, mobileGridPage]);
+
+  useEffect(() => {
+    if (isMdUp || activeSegment !== 'SYNAPSES') return;
+    const maxIdx = Math.max(0, Math.ceil(filteredItems.length / MOBILE_SYNAPSES_PAGE_SIZE) - 1);
+    if (mobileSynapsesPage > maxIdx) setMobileSynapsesPage(maxIdx);
+  }, [isMdUp, activeSegment, filteredItems.length, mobileSynapsesPage]);
+
+  const pagedGridItems = useMemo(() => {
+    if (!useMobileMarketPaging) return filteredItems;
+    const start = mobileGridPage * MOBILE_GRID_PAGE_SIZE;
+    return filteredItems.slice(start, start + MOBILE_GRID_PAGE_SIZE);
+  }, [useMobileMarketPaging, filteredItems, mobileGridPage]);
+
+  const mobileGridPageCount = useMemo(() => {
+    if (!useMobileMarketPaging) return 1;
+    return Math.max(1, Math.ceil(filteredItems.length / MOBILE_GRID_PAGE_SIZE));
+  }, [useMobileMarketPaging, filteredItems.length]);
+
+  const pagedSynapsesItems = useMemo(() => {
+    if (isMdUp || activeSegment !== 'SYNAPSES') return filteredItems;
+    const start = mobileSynapsesPage * MOBILE_SYNAPSES_PAGE_SIZE;
+    return filteredItems.slice(start, start + MOBILE_SYNAPSES_PAGE_SIZE);
+  }, [isMdUp, activeSegment, filteredItems, mobileSynapsesPage]);
+
+  const synapsesPageCount = useMemo(() => {
+    if (isMdUp || activeSegment !== 'SYNAPSES') return 1;
+    return Math.max(1, Math.ceil(filteredItems.length / MOBILE_SYNAPSES_PAGE_SIZE));
+  }, [isMdUp, activeSegment, filteredItems.length]);
+
+  const handleMobileGridNext = useCallback(async () => {
+    playClick();
+    const start = (mobileGridPage + 1) * MOBILE_GRID_PAGE_SIZE;
+    if (start >= filteredItems.length && hasMore && !loadingMore && debouncedTerm.trim() === '') {
+      await fetchMoreData();
+    }
+    setMobileGridPage((p) => p + 1);
+  }, [mobileGridPage, filteredItems.length, hasMore, loadingMore, debouncedTerm, fetchMoreData]);
+
+  const handleMobileSynapsesNext = useCallback(async () => {
+    playClick();
+    const start = (mobileSynapsesPage + 1) * MOBILE_SYNAPSES_PAGE_SIZE;
+    if (start >= filteredItems.length && hasMore && !loadingMore && debouncedTerm.trim() === '') {
+      await fetchMoreData();
+    }
+    setMobileSynapsesPage((p) => p + 1);
+  }, [mobileSynapsesPage, filteredItems.length, hasMore, loadingMore, debouncedTerm, fetchMoreData]);
+
+  /** Mobile grid + synapses card list use explicit paging; avoid duplicate infinite fetch */
+  const mobileInfiniteScrollDisabled =
+    useMobileMarketPaging || (!isMdUp && activeSegment === 'SYNAPSES');
+
+  useEffect(() => {
+    if (mobileInfiniteScrollDisabled) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore && debouncedTerm.trim().length === 0) {
+          fetchMoreData();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [mobileInfiniteScrollDisabled, hasMore, loading, loadingMore, fetchMoreData, debouncedTerm]);
+
+  const mobileGridAtEnd =
+    mobileGridPage >= mobileGridPageCount - 1 && (debouncedTerm.trim() !== '' || !hasMore);
+  const mobileGridNextDisabled = loadingMore || mobileGridAtEnd;
+  const mobileSynapsesAtEnd =
+    mobileSynapsesPage >= synapsesPageCount - 1 && (debouncedTerm.trim() !== '' || !hasMore);
+  const mobileSynapsesNextDisabled = loadingMore || mobileSynapsesAtEnd;
+
   const toggleSort = (option: SortOption) => { setSortOption(option); setIsSortOpen(false); playClick(); };
   
   const toggleWatchlistFilter = () => {
       playClick();
-      if (!account) { toast.error("WALLET_CONNECTION_REQUIRED"); return; }
+      if (!account) { toast.error("Connect your wallet"); return; }
       setShowWatchlistOnly(!showWatchlistOnly);
   };
 
@@ -365,31 +458,32 @@ const Markets: React.FC = () => {
   const toggleListSort = (opt: ListSortOption) => { setListSortOption(opt); setIsListSortOpen(false); playClick(); };
 
   return (
-    <div className="w-full min-w-0 overflow-x-hidden px-4 sm:px-6 lg:px-8 pt-12 pb-32">
-      {/* HEADER */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-12 gap-8 border-b border-white/10 pb-10 relative z-10">
-        <div className="relative z-10 min-w-0 max-w-2xl space-y-3">
-          <p className="text-sm text-slate-500 font-sans">
-            Reputation markets · {APP_VERSION_DISPLAY}
+    <div className="w-full min-w-0 overflow-x-hidden px-3 pt-6 pb-28 sm:px-4 md:px-6 lg:px-8 md:pt-12 md:pb-32">
+      {/* HEADER — tighter on small screens */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-6 md:mb-12 gap-4 md:gap-8 border-b border-white/10 pb-6 md:pb-10 relative z-10 max-md:pb-5">
+        <div className="relative z-10 min-w-0 max-w-2xl shrink-0 space-y-2 md:space-y-3">
+          <p className="text-xs md:text-sm text-slate-500 font-sans">
+            Reputation · {APP_VERSION_DISPLAY}
           </p>
-          <h1 className={PAGE_HERO_TITLE}>Markets</h1>
-          <p className="text-[15px] text-slate-400 leading-relaxed font-sans">
-            Browse atoms, claims, and lists. Prices and positions settle on-chain in {CURRENCY_SYMBOL} on {NETWORK_NAME}.
+          <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Markets</h1>
+          <p className="text-sm md:text-[15px] text-slate-400 leading-relaxed font-sans max-md:line-clamp-3">
+            Atoms, claims, lists — on-chain in {CURRENCY_SYMBOL} on {NETWORK_NAME}.
           </p>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 font-sans">
+          <div className="flex flex-wrap items-center gap-2 pt-0.5 md:pt-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-slate-300 font-sans">
               <Globe size={14} className="text-intuition-primary/90 shrink-0" aria-hidden />
               {NETWORK_NAME}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 font-sans">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 md:px-3 md:py-1.5 text-[11px] md:text-xs text-slate-300 font-sans">
               <Activity size={14} className="text-slate-500 shrink-0" aria-hidden />
               TRUST ({CURRENCY_SYMBOL})
             </span>
           </div>
+          <XpEarnHint variant="markets" className="mt-2 max-w-2xl max-md:[&_.text]:text-xs" />
         </div>
 
         <div
-          className="flex shrink-0 rounded-2xl border border-white/[0.08] bg-[#080a10] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] relative z-10 h-fit self-stretch lg:self-center"
+          className="flex w-full shrink-0 rounded-xl md:rounded-2xl border border-white/[0.08] bg-[#080a10] p-0.5 md:p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] relative z-10 h-fit self-stretch lg:w-auto lg:self-center"
           role="tablist"
           aria-label="Market type"
         >
@@ -407,89 +501,79 @@ const Markets: React.FC = () => {
                   playClick();
                 }}
                 onMouseEnter={playHover}
-                className={`px-4 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 rounded-xl text-sm font-medium font-sans transition-colors ${
+                className={`flex-1 min-w-0 px-2 py-2 md:px-6 md:py-3 flex items-center justify-center gap-1 sm:gap-2 rounded-lg md:rounded-xl text-[11px] sm:text-sm font-medium font-sans transition-colors border border-transparent ${
                   isActive
-                    ? 'text-black bg-intuition-primary shadow-[0_0_0_1px_rgba(0,243,255,0.35)]'
-                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]'
+                    ? 'max-md:border-intuition-primary/40 max-md:bg-intuition-primary/14 max-md:text-intuition-primary max-md:font-semibold md:bg-intuition-primary md:text-black md:shadow-[0_0_0_1px_rgba(0,243,255,0.35)]'
+                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] max-md:hover:border-white/[0.08]'
                 }`}
               >
-                {seg === 'NODES' ? <Hexagon size={17} className="shrink-0 opacity-90" /> : seg === 'SYNAPSES' ? <Network size={17} className="shrink-0 opacity-90" /> : <Layers size={17} className="shrink-0 opacity-90" />}
-                {label}
+                {seg === 'NODES' ? <Hexagon size={15} className="shrink-0 opacity-90 sm:w-[17px] sm:h-[17px]" /> : seg === 'SYNAPSES' ? <Network size={15} className="shrink-0 opacity-90 sm:w-[17px] sm:h-[17px]" /> : <Layers size={15} className="shrink-0 opacity-90 sm:w-[17px] sm:h-[17px]" />}
+                <span className={`min-w-0 truncate ${isActive ? 'max-md:text-intuition-primary md:text-black' : ''}`}>{label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className={`flex flex-col lg:flex-row gap-4 sm:gap-6 items-stretch lg:items-center w-full min-w-0 mb-10 relative ${isSortOpen ? 'z-[60]' : 'z-40'}`}>
-            {(activeSegment === 'NODES' || activeSegment === 'VECTORS') && (
-                <div className="flex gap-2 p-1.5 bg-black/60 border border-slate-800 rounded-2xl">
-                    {activeSegment === 'NODES' ? (
-                        <>
-                            <button 
-                                onClick={() => { playClick(); setViewMode('GRID'); }}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black font-mono transition-all duration-300 ${viewMode === 'GRID' ? 'bg-intuition-primary text-black shadow-[0_0_20px_rgba(0,243,255,0.4)]' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
-                            >
-                                <LayoutGrid size={14} /> GRID
-                            </button>
-                            <button 
-                                onClick={() => { playClick(); setViewMode('HEATMAP'); }}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black font-mono transition-all duration-300 ${viewMode === 'HEATMAP' ? 'bg-intuition-primary text-black shadow-[0_0_20px_rgba(0,243,255,0.4)]' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
-                            >
-                                <Grid size={14} /> HEATMAP
-                            </button>
-                        </>
-                    ) : (
+      <div
+        className={`flex flex-col md:flex-row gap-2 sm:gap-3 md:gap-6 items-stretch md:items-center w-full min-w-0 mb-5 md:mb-10 relative max-md:gap-2 ${isSortOpen ? 'z-[60]' : 'z-40'}`}
+      >
+            {(activeSegment === 'VECTORS') && (
+                <div className="flex gap-1 p-1 md:gap-2 md:p-1.5 bg-black/60 border border-slate-800 rounded-xl md:rounded-2xl w-full md:w-auto shrink-0">
                         <>
                             <button 
                                 onClick={() => { playClick(); setListViewMode('GRID'); }}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black font-mono transition-all duration-300 ${listViewMode === 'GRID' ? 'bg-intuition-primary text-black shadow-[0_0_20px_rgba(0,243,255,0.4)]' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'GRID' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(0,243,255,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
                             >
-                                <LayoutGrid size={14} /> GRID
+                                <LayoutGrid size={14} /> Grid
                             </button>
                             <button 
                                 onClick={() => { playClick(); setListViewMode('LIST'); }}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black font-mono transition-all duration-300 ${listViewMode === 'LIST' ? 'bg-intuition-primary text-black shadow-[0_0_20px_rgba(0,243,255,0.4)]' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'LIST' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(0,243,255,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
                             >
-                                <List size={14} /> LIST
+                                <List size={14} /> List
                             </button>
                         </>
-                    )}
                 </div>
             )}
 
+            <div className="flex w-full min-w-0 flex-row flex-wrap items-stretch gap-2 md:flex-nowrap md:flex-1 md:items-center md:gap-6">
             {activeSegment === 'NODES' && (
-                <div className="p-[2px] bg-slate-900 clip-path-slant">
+                <div className="flex shrink-0 items-stretch gap-2 md:block">
+                  <div className="p-[2px] bg-slate-900 clip-path-slant shrink-0">
                   <button 
                       onClick={toggleWatchlistFilter}
-                      className={`flex items-center justify-center gap-2 px-6 py-3 bg-black rounded-none text-[10px] font-black font-mono clip-path-slant transition-all ${showWatchlistOnly ? 'text-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(234,179,8,0.2)]' : 'text-slate-600 hover:text-white'}`}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-black rounded-none text-[10px] font-black font-mono clip-path-slant transition-all min-h-[40px] md:min-h-0 ${showWatchlistOnly ? 'text-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(234,179,8,0.2)]' : 'text-slate-600 hover:text-white'}`}
                   >
                       <Star size={16} fill={showWatchlistOnly ? "currentColor" : "none"} />
+                      <span className="md:hidden font-sans font-semibold text-[11px]">Watchlist</span>
                   </button>
+                  </div>
                 </div>
             )}
 
-            <div className="relative group flex-1 min-w-0 p-[2px] bg-slate-900 clip-path-slant focus-within:bg-intuition-primary/50 transition-colors">
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-intuition-primary z-10">
-                  <Search size={18} className="group-focus-within:animate-pulse" />
+            <div className="relative group min-w-0 flex-1 basis-full md:basis-auto p-[2px] bg-slate-900 clip-path-slant focus-within:bg-intuition-primary/50 transition-colors w-full md:w-auto md:min-w-[12rem]">
+              <div className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 text-intuition-primary z-10">
+                  <Search size={16} className="md:w-[18px] md:h-[18px] group-focus-within:animate-pulse" />
               </div>
               <input 
                   type="text" 
-                  placeholder={activeSegment === 'SYNAPSES' ? 'Search claims by subject, predicate, or object' : `Search ${activeSegment === 'NODES' ? 'atoms' : 'lists'}...`} 
-                  className="w-full bg-black rounded-none py-4 pl-12 pr-12 text-white font-mono text-xs focus:outline-none transition-all placeholder-slate-800 uppercase tracking-widest clip-path-slant"
+                  placeholder={activeSegment === 'SYNAPSES' ? 'Search claims…' : `Search ${activeSegment === 'NODES' ? 'atoms' : 'lists'}…`} 
+                  className="w-full bg-black rounded-none py-2.5 md:py-4 pl-10 md:pl-12 pr-10 md:pr-12 text-white font-mono text-xs focus:outline-none transition-all placeholder-slate-600 md:placeholder-slate-800 tracking-normal md:uppercase md:tracking-widest clip-path-slant"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onFocus={playHover}
               />
-              {isSearching && <div className="absolute right-5 top-1/2 -translate-y-1/2"><Loader2 size={18} className="text-intuition-primary animate-spin" /></div>}
+              {isSearching && <div className="absolute right-3 md:right-5 top-1/2 -translate-y-1/2"><Loader2 size={16} className="md:w-[18px] md:h-[18px] text-intuition-primary animate-spin" /></div>}
             </div>
 
+            <div className="flex w-full min-w-0 shrink-0 flex-col gap-2 max-md:basis-full md:w-auto md:flex-row md:items-center">
             {activeSegment === 'NODES' && (
                 <div className="relative" ref={sortRef}>
                     <div className={`p-[2px] clip-path-slant transition-colors ${isSortOpen ? 'bg-intuition-primary' : 'bg-slate-900 hover:bg-intuition-primary/50'}`}>
                         <button 
                             onClick={() => { setIsSortOpen(!isSortOpen); playClick(); }}
-                            className={`flex items-center justify-between gap-4 sm:gap-6 min-h-[44px] px-4 sm:px-6 py-3 sm:py-4 min-w-[160px] sm:min-w-[220px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
+                            className={`flex w-full items-center justify-between gap-2 min-h-[40px] px-3 py-2.5 sm:px-6 sm:py-4 sm:min-w-[220px] md:min-w-[220px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
                         >
                             <div className="flex items-center gap-3"><Filter size={14} />{getSortLabel(sortOption)}</div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -523,7 +607,7 @@ const Markets: React.FC = () => {
                     <div className={`p-[2px] clip-path-slant transition-colors ${isListSortOpen ? 'bg-intuition-primary' : 'bg-slate-900 hover:bg-intuition-primary/50'}`}>
                         <button 
                             onClick={() => { setIsListSortOpen(!isListSortOpen); playClick(); }}
-                            className={`flex items-center justify-between gap-4 sm:gap-6 min-h-[44px] px-4 sm:px-6 py-3 sm:py-4 min-w-[180px] sm:min-w-[220px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
+                            className={`flex w-full items-center justify-between gap-2 min-h-[40px] px-3 py-2.5 sm:px-6 sm:py-4 md:min-w-[220px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
                         >
                             <div className="flex items-center gap-3"><Filter size={14} />{getListSortLabel(listSortOption)}</div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${isListSortOpen ? 'rotate-180' : ''}`} />
@@ -553,7 +637,7 @@ const Markets: React.FC = () => {
                     <div className={`p-[2px] clip-path-slant transition-colors ${isClaimSortOpen ? 'bg-intuition-primary' : 'bg-slate-900 hover:bg-intuition-primary/50'}`}>
                         <button 
                             onClick={() => { setIsClaimSortOpen(!isClaimSortOpen); playClick(); }}
-                            className={`flex items-center justify-between gap-4 sm:gap-6 min-h-[44px] px-4 sm:px-6 py-3 sm:py-4 min-w-[180px] sm:min-w-[260px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
+                            className={`flex w-full items-center justify-between gap-2 min-h-[40px] px-3 py-2.5 sm:px-6 sm:py-4 md:min-w-[260px] bg-black text-[9px] sm:text-[10px] font-black font-mono text-intuition-primary clip-path-slant transition-all`}
                         >
                             <div className="flex items-center gap-3"><Filter size={14} />{getClaimSortLabel(claimSortOption)}</div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${isClaimSortOpen ? 'rotate-180' : ''}`} />
@@ -584,10 +668,12 @@ const Markets: React.FC = () => {
                     )}
                 </div>
             )}
+            </div>
+            </div>
       </div>
 
       {loading && offset === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 min-w-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8 min-w-0">
            {[...Array(8)].map((_, i) => (
              <div key={i} className="h-[320px] bg-black border-2 border-white/5 animate-pulse relative overflow-hidden clip-path-slant">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
@@ -662,12 +748,13 @@ const Markets: React.FC = () => {
               </div>
             </div>
           ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 relative z-10 min-w-0">
-              {filteredItems.map((list) => (
+          <>
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 relative z-10 min-w-0">
+              {pagedGridItems.map((list) => (
                   <Link 
                     key={list.id} 
                     to={`/markets/${list.id}`} 
-                    className="group relative flex flex-col p-6 bg-slate-950/80 backdrop-blur-xl border-2 border-slate-800 hover:border-intuition-primary/60 transition-all duration-500 rounded-2xl overflow-hidden min-h-[320px] min-w-0 shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_40px_rgba(0,243,255,0.15),0_0_0_1px_rgba(0,243,255,0.3)]"
+                    className="group relative flex flex-col p-3 max-md:min-h-[200px] md:p-6 bg-slate-950/80 backdrop-blur-xl border-2 border-slate-800 hover:border-intuition-primary/60 transition-all duration-500 rounded-xl md:rounded-2xl overflow-hidden min-h-[280px] md:min-h-[320px] min-w-0 shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_40px_rgba(0,243,255,0.15),0_0_0_1px_rgba(0,243,255,0.3)]"
                     onClick={playClick}
                     onMouseEnter={playHover}
                   >
@@ -679,14 +766,14 @@ const Markets: React.FC = () => {
                           <span className="text-[9px] font-black font-mono text-intuition-primary/80 uppercase tracking-wider">LIST</span>
                       </div>
 
-                      <div className="flex flex-col items-center justify-center flex-1 relative z-10 mb-5 mt-2">
-                          <div className="relative mb-5 group-hover:scale-105 transition-transform duration-500">
+                      <div className="flex flex-col items-center justify-center flex-1 relative z-10 mb-2 mt-1 md:mb-5 md:mt-2">
+                          <div className="relative mb-2 md:mb-5 group-hover:scale-105 transition-transform duration-500">
                               <div className="absolute inset-0 bg-intuition-primary blur-[20px] opacity-20 group-hover:opacity-35 transition-all duration-500 rounded-full scale-110" />
-                              <div className="relative w-20 h-20 rounded-2xl bg-black/80 border-2 border-slate-700 group-hover:border-intuition-primary/60 flex items-center justify-center text-slate-500 group-hover:text-intuition-primary transition-all duration-500 overflow-hidden shadow-[0_0_25px_rgba(0,243,255,0.4)]">
+                              <div className="relative w-12 h-12 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-black/80 border-2 border-slate-700 group-hover:border-intuition-primary/60 flex items-center justify-center text-slate-500 group-hover:text-intuition-primary transition-all duration-500 overflow-hidden shadow-[0_0_25px_rgba(0,243,255,0.4)]">
                                   {list.image ? (
                                       <img src={list.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-500" alt="" />
                                   ) : (
-                                      <Component size={32} className="group-hover:scale-110 transition-transform duration-500 opacity-70 group-hover:opacity-100" />
+                                      <Component size={32} className="max-md:w-5 max-md:h-5 group-hover:scale-110 transition-transform duration-500 opacity-70 group-hover:opacity-100" />
                                   )}
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                               </div>
@@ -697,7 +784,7 @@ const Markets: React.FC = () => {
                                   <div className="w-1.5 h-1.5 rounded-full bg-intuition-primary animate-pulse" />
                                   <span className="text-[9px] font-black font-mono text-intuition-primary/90 uppercase tracking-wider">Aggregate</span>
                               </div>
-                              <h3 className="text-base md:text-lg font-black font-display text-white group-hover:text-glow-blue transition-all uppercase tracking-tight leading-tight mb-3 line-clamp-2">
+                              <h3 className="text-[11px] md:text-lg font-black font-display text-white group-hover:text-glow-blue transition-all uppercase tracking-tight leading-tight mb-1.5 md:mb-3 line-clamp-2">
                                   {list.label || 'Untitled list'}
                               </h3>
                               
@@ -710,7 +797,7 @@ const Markets: React.FC = () => {
                           </div>
                       </div>
 
-                      <div className="flex items-center justify-center -space-x-2 mt-auto relative z-10 group-hover:translate-y-[-2px] transition-transform duration-300 mb-4">
+                      <div className="hidden sm:flex items-center justify-center -space-x-2 mt-auto relative z-10 group-hover:translate-y-[-2px] transition-transform duration-300 mb-2 md:mb-4">
                           {(list.items || []).slice(0, 5).map((item: any, i: number) => (
                               <div key={i} className="w-9 h-9 rounded-xl border-2 border-slate-800 hover:border-intuition-primary/60 bg-slate-900 flex items-center justify-center overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 hover:z-10">
                                   {item.image ? <img src={item.image} className="w-full h-full object-cover" alt="" /> : <span className="text-[10px] font-black text-slate-600">{item.label?.[0]}</span>}
@@ -723,16 +810,142 @@ const Markets: React.FC = () => {
                           )}
                       </div>
 
-                      <div className="absolute bottom-4 right-4 opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300">
-                          <ArrowRight size={18} className="text-intuition-primary drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]" />
+                      <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300">
+                          <ArrowRight size={18} className="max-md:w-3.5 max-md:h-3.5 text-intuition-primary drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]" />
                       </div>
                   </Link>
               ))}
           </div>
+          {useMobileMarketPaging && activeSegment === 'VECTORS' && (
+            <div className="mt-4 flex items-center justify-center gap-4 md:hidden">
+              <button
+                type="button"
+                disabled={mobileGridPage <= 0 || loadingMore}
+                onClick={() => { playClick(); setMobileGridPage((p) => Math.max(0, p - 1)); }}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <span className="min-w-[4.5rem] text-center font-mono text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {mobileGridPage + 1} / {mobileGridPageCount}
+              </span>
+              <button
+                type="button"
+                disabled={mobileGridNextDisabled}
+                onClick={handleMobileGridNext}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+                aria-label="Next page"
+              >
+                {loadingMore ? <Loader2 size={20} className="animate-spin" /> : <ChevronRight size={22} />}
+              </button>
+            </div>
+          )}
+          </>
           )}
           </div>
       ) : activeSegment === 'SYNAPSES' ? (
-          <div className="bg-black border-2 border-slate-900 clip-path-slant overflow-hidden relative z-10 animate-in fade-in duration-500 shadow-2xl">
+          <>
+            <div className="relative z-10 space-y-3 md:hidden">
+              {pagedSynapsesItems.map((claim) => {
+                const subj = claim.subject?.label || '—';
+                const obj = claim.object?.label || '—';
+                const predRaw = String(claim.predicate || 'link').replace(/_/g, ' ');
+                const pred = predRaw.charAt(0).toUpperCase() + predRaw.slice(1).toLowerCase();
+                const titleHint = `${subj} · ${pred} · ${obj}`;
+                return (
+                  <div
+                    key={claim.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { playClick(); navigate(`/markets/${claim.id}`); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        playClick();
+                        navigate(`/markets/${claim.id}`);
+                      }
+                    }}
+                    className="w-full rounded-2xl border border-slate-800/90 bg-[#080a10] p-4 text-left shadow-lg active:scale-[0.99] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/50"
+                  >
+                    <div className="flex gap-3 min-w-0">
+                      <div className="h-11 w-11 shrink-0 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden">
+                        {claim.subject?.image ? (
+                          <img src={claim.subject.image} className="h-full w-full object-cover" alt="" />
+                        ) : (
+                          <User size={18} className="text-slate-600" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-white leading-snug line-clamp-2" title={titleHint}>
+                          <span className="text-white">{subj}</span>{' '}
+                          <span className="text-slate-500 font-normal text-xs">{pred}</span>{' '}
+                          <span className="text-intuition-primary/90">{obj}</span>
+                        </p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="rounded-xl bg-[#3498DB]/10 border border-[#3498DB]/25 px-3 py-2">
+                            <div className="flex items-center gap-1 text-[10px] font-medium text-[#3498DB] mb-0.5">
+                              <Users size={12} /> Support
+                            </div>
+                            <p className="text-xs font-bold text-[#3498DB] tabular-nums">
+                              {formatLargeNumber(claim.holders)} · {formatMarketValue(claim.value)}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-[#F39C12]/10 border border-[#F39C12]/25 px-3 py-2">
+                            <div className="flex items-center gap-1 text-[10px] font-medium text-[#F39C12] mb-0.5">
+                              <Users size={12} /> Oppose
+                            </div>
+                            <p className="text-xs font-bold text-[#F39C12] tabular-nums">
+                              {formatLargeNumber(claim.opposeHolders || 0)} · {formatMarketValue(claim.opposeValue || 0)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Link
+                            to={`/markets/${claim.id}`}
+                            onClick={playClick}
+                            className="flex-1 min-w-0 text-center px-3 py-2 rounded-lg border border-sky-500/25 bg-sky-500/[0.06] text-sky-300/95 text-xs font-semibold hover:bg-sky-500/10 transition-colors"
+                          >
+                            Support
+                          </Link>
+                          <Link
+                            to={`/markets/${claim.id}`}
+                            onClick={playClick}
+                            className="flex-1 min-w-0 text-center px-3 py-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] text-amber-300/95 text-xs font-semibold hover:bg-amber-500/10 transition-colors"
+                          >
+                            Oppose
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-4 md:hidden">
+              <button
+                type="button"
+                disabled={mobileSynapsesPage <= 0 || loadingMore}
+                onClick={() => { playClick(); setMobileSynapsesPage((p) => Math.max(0, p - 1)); }}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+                aria-label="Previous claims page"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <span className="min-w-[4.5rem] text-center font-mono text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {mobileSynapsesPage + 1} / {synapsesPageCount}
+              </span>
+              <button
+                type="button"
+                disabled={mobileSynapsesNextDisabled}
+                onClick={handleMobileSynapsesNext}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+                aria-label="Next claims page"
+              >
+                {loadingMore ? <Loader2 size={20} className="animate-spin" /> : <ChevronRight size={22} />}
+              </button>
+            </div>
+            <div className="hidden md:block bg-black border-2 border-slate-900 clip-path-slant overflow-hidden relative z-10 animate-in fade-in duration-500 shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left font-mono border-collapse min-w-[900px] table-fixed">
                     <colgroup>
@@ -766,7 +979,6 @@ const Markets: React.FC = () => {
                                         <span className="px-2.5 py-0.5 rounded-md bg-[#2D3A4B] text-white text-xs font-medium shrink-0 truncate max-w-[120px]" title={claim.object?.label || ''}>{claim.object?.label || '—'}</span>
                                     </div>
                                 </td>
-                                
                                 <td className="px-4 py-3 align-middle">
                                     <div className="flex items-center gap-1.5">
                                         <Users size={14} className="text-[#3498DB] shrink-0" />
@@ -774,7 +986,6 @@ const Markets: React.FC = () => {
                                         <span className="text-[12px] font-bold text-[#3498DB]">{formatMarketValue(claim.value)} TRUST</span>
                                     </div>
                                 </td>
-                                
                                 <td className="px-4 py-3 align-middle">
                                     <div className="flex items-center gap-1.5">
                                         <Users size={14} className="text-[#F39C12] shrink-0" />
@@ -782,13 +993,12 @@ const Markets: React.FC = () => {
                                         <span className="text-[12px] font-bold text-[#F39C12]">{formatMarketValue(claim.opposeValue || 0)} TRUST</span>
                                     </div>
                                 </td>
-
                                 <td className="px-4 py-3 text-right align-middle">
-                                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                        <Link to={`/markets/${claim.id}`} onClick={playClick} className="px-4 py-2 bg-[#3498DB] text-white text-xs font-bold rounded-lg hover:bg-[#2980B9] transition-colors">
+                                    <div className="flex justify-end gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                                        <Link to={`/markets/${claim.id}`} onClick={playClick} className="px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/[0.06] text-sky-300 text-xs font-semibold hover:bg-sky-500/12 transition-colors">
                                             Support
                                         </Link>
-                                        <Link to={`/markets/${claim.id}`} onClick={playClick} className="px-4 py-2 bg-[#F39C12] text-white text-xs font-bold rounded-lg hover:bg-[#E67E22] transition-colors">
+                                        <Link to={`/markets/${claim.id}`} onClick={playClick} className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] text-amber-300 text-xs font-semibold hover:bg-amber-500/12 transition-colors">
                                             Oppose
                                         </Link>
                                     </div>
@@ -798,39 +1008,12 @@ const Markets: React.FC = () => {
                     </tbody>
                 </table>
               </div>
-          </div>
-      ) : viewMode === 'HEATMAP' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 min-w-0 relative z-10">
-            {filteredItems.map(agent => {
-                const strength = calculateTrustScore(agent.totalAssets || '0', agent.totalShares || '0', agent.currentSharePrice);
-                const mktVal = calculateMarketCap(agent.marketCap || agent.totalAssets || '0', agent.totalShares || '0', agent.currentSharePrice);
-                let bgClass = 'bg-slate-900';
-                if (strength > 75) bgClass = 'bg-emerald-600';
-                else if (strength > 60) bgClass = 'bg-emerald-800';
-                else if (strength > 45) bgClass = 'bg-slate-800';
-                else if (strength > 40) bgClass = 'bg-rose-900';
-                else bgClass = 'bg-rose-700';
-
-                return (
-                    <Link 
-                        key={agent.id} 
-                        to={`/markets/${agent.id}`}
-                        onClick={playClick}
-                        className={`aspect-square p-4 flex flex-col justify-between hover:scale-105 transition-all duration-300 relative group overflow-hidden border border-black/40 ${bgClass} shadow-2xl rounded-2xl hover:z-20`}
-                    >
-                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="text-[10px] font-black font-display text-white truncate z-10 uppercase tracking-tighter drop-shadow-md">{agent.label}</div>
-                        <div className="text-[8px] font-black font-mono text-white/80 z-10 flex justify-between uppercase">
-                            <span>{strength.toFixed(0)}%</span>
-                            <span>{mktVal > 0 ? `${formatMarketValue(mktVal)}T` : '-'}</span>
-                        </div>
-                    </Link>
-                );
-            })}
-        </div>
+            </div>
+          </>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-w-0 relative z-10 gap-4 sm:gap-6 md:gap-8">
-          {filteredItems.map((agent) => {
+        <>
+        <div className="grid grid-cols-3 gap-2 min-w-0 relative z-10 sm:gap-3 md:gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {pagedGridItems.map((agent) => {
              const price = calculateAgentPrice(agent.totalAssets || '0', agent.totalShares || '0', agent.currentSharePrice);
              const mktCap = calculateMarketCap(agent.marketCap || agent.totalAssets || '0', agent.totalShares || '0', agent.currentSharePrice);
              const strength = calculateTrustScore(agent.totalAssets || '0', agent.totalShares || '0', agent.currentSharePrice);
@@ -870,25 +1053,25 @@ const Markets: React.FC = () => {
                 to={`/markets/${agent.id}`}
                 onClick={playClick}
                 onMouseEnter={playHover}
-                className={`group relative flex flex-col rounded-3xl bg-gradient-to-br ${tierStyle.glow} border border-slate-900/80 transition-all duration-300 overflow-hidden hover:-translate-y-2 hover:border-white/60 shadow-[0_18px_45px_rgba(0,0,0,0.85)]`}
+                className={`group relative flex flex-col rounded-xl md:rounded-3xl bg-gradient-to-br ${tierStyle.glow} border border-slate-900/80 transition-all duration-300 overflow-hidden md:hover:-translate-y-2 hover:border-white/60 shadow-[0_18px_45px_rgba(0,0,0,0.85)]`}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none" />
                 
-                <div className="relative p-5 sm:p-6 z-10 flex flex-col h-full">
-                   <div className="flex items-start gap-4 mb-4">
+                <div className="relative z-10 flex h-full flex-col p-3 max-md:pb-4 sm:p-6">
+                   <div className="mb-2 flex items-start gap-2 md:mb-4 md:gap-4">
                       <div className="relative shrink-0">
                         <div className="absolute -inset-1 rounded-2xl bg-black/60" />
-                        <div className={`relative w-16 h-16 sm:w-18 sm:h-18 border border-white/10 bg-black/80 rounded-2xl flex items-center justify-center overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.9)]`}>
+                        <div className={`relative h-11 w-11 border border-white/10 bg-black/80 sm:h-16 sm:w-16 sm:rounded-2xl flex items-center justify-center overflow-hidden rounded-xl shadow-[0_12px_30px_rgba(0,0,0,0.9)]`}>
                           {agent.image ? (
                              <img src={agent.image} alt={agent.label} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                           ) : (
-                             <div className={`text-3xl font-black ${tierStyle.color}`}>{agent.label?.[0]?.toUpperCase()}</div>
+                             <div className={`text-lg font-black sm:text-3xl ${tierStyle.color}`}>{agent.label?.[0]?.toUpperCase()}</div>
                           )}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono font-black uppercase tracking-[0.25em] text-slate-400 flex items-center gap-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-0.5 flex flex-wrap items-center gap-1 md:mb-1.5 md:gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[7px] font-black uppercase tracking-[0.2em] text-slate-400 sm:px-2 sm:text-[9px] sm:tracking-[0.25em]">
                             <Shield size={10} className="text-intuition-primary" />
                             {tierStyle.name}
                           </span>
@@ -901,7 +1084,7 @@ const Markets: React.FC = () => {
                         <h3 className="text-white font-black font-display text-[15px] sm:text-[17px] leading-tight truncate uppercase tracking-tight group-hover:text-intuition-primary transition-colors">
                           {agent.label || 'UNKNOWN_NODE'}
                         </h3>
-                        <p className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.25em] mt-1">
+                        <p className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.22em] mt-1">
                           ID: {agent.id.slice(0, 10)}...
                         </p>
                       </div>
@@ -909,7 +1092,7 @@ const Markets: React.FC = () => {
                         <span className={`text-2xl font-black font-display ${tierStyle.color} leading-none`}>
                           {tierStyle.label}
                         </span>
-                        <span className="text-[8px] font-mono text-slate-500 uppercase tracking-[0.3em]">
+                        <span className="text-[9px] font-mono text-slate-400 uppercase tracking-[0.28em]">
                           Trust Class
                         </span>
                       </div>
@@ -917,14 +1100,14 @@ const Markets: React.FC = () => {
 
                    <div className="mt-2 mb-4 grid grid-cols-2 gap-3">
                      <div className="rounded-2xl bg-black/70 border border-white/5 px-3 py-3 flex flex-col justify-center">
-                       <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Mkt Cap</span>
+                       <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Total Mkt Cap</span>
                        <span className="text-sm font-mono font-black text-white inline-flex items-baseline gap-1">
                          <CurrencySymbol size="sm" leading className="text-intuition-primary/90" />
                          {mktCap > 0 ? formatMarketValue(mktCap) : '0.00K'}
                        </span>
                      </div>
-                     <div className="rounded-2xl bg-black/70 border border-white/5/10 px-3 py-3 flex flex-col justify-center">
-                       <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Price / Unit</span>
+                     <div className="rounded-2xl bg-black/70 border border-white/10 px-3 py-3 flex flex-col justify-center">
+                       <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Price / Unit</span>
                        <span className="text-sm font-mono font-black text-white inline-flex items-baseline gap-1">
                          <CurrencySymbol size="sm" leading className="text-slate-500" />
                          {formatMarketValue(price)}
@@ -935,7 +1118,7 @@ const Markets: React.FC = () => {
                    <div className="mt-auto pt-3">
                      <div className="flex items-center justify-between text-[9px] font-mono font-black uppercase mb-1">
                        <span className={tierStyle.color}>Trust {strength.toFixed(0)}%</span>
-                       <span className="text-slate-600">Distrust {(100-strength).toFixed(0)}%</span>
+                       <span className="text-slate-500">Distrust {(100-strength).toFixed(0)}%</span>
                      </div>
                      <div className="h-2.5 w-full rounded-full bg-slate-900/90 border border-white/5 overflow-hidden">
                        <div
@@ -949,9 +1132,35 @@ const Markets: React.FC = () => {
              );
           })}
         </div>
+        {useMobileMarketPaging && activeSegment === 'NODES' && (
+          <div className="mt-4 flex items-center justify-center gap-4 md:hidden">
+            <button
+              type="button"
+              disabled={mobileGridPage <= 0 || loadingMore}
+              onClick={() => { playClick(); setMobileGridPage((p) => Math.max(0, p - 1)); }}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={22} />
+            </button>
+            <span className="min-w-[4.5rem] text-center font-mono text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {mobileGridPage + 1} / {mobileGridPageCount}
+            </span>
+            <button
+              type="button"
+              disabled={mobileGridNextDisabled}
+              onClick={handleMobileGridNext}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-black/90 text-intuition-primary shadow-lg disabled:opacity-25 disabled:pointer-events-none"
+              aria-label="Next page"
+            >
+              {loadingMore ? <Loader2 size={20} className="animate-spin" /> : <ChevronRight size={22} />}
+            </button>
+          </div>
+        )}
+        </>
       )}
 
-      {/* INFINITE SCROLL SENTINEL */}
+      {!mobileInfiniteScrollDisabled && (
       <div ref={observerTarget} className="h-48 flex items-center justify-center mt-12 w-full">
           {loadingMore && (
               <div className="flex flex-col items-center gap-4 animate-in fade-in duration-500">
@@ -961,15 +1170,16 @@ const Markets: React.FC = () => {
                           <Activity size={16} className="text-intuition-primary animate-pulse" />
                       </div>
                   </div>
-                  <span className="text-[8px] font-black font-mono text-intuition-primary/60 uppercase tracking-[0.6em]">NEURAL_BUFFERING_SECTOR_04...</span>
+                  <span className="text-xs font-medium font-sans text-intuition-primary/70 tracking-wide">Loading more…</span>
               </div>
           )}
           {!hasMore && !loading && (
-              <div className="text-[8px] font-black font-mono text-slate-800 uppercase tracking-[1em] border-t border-slate-900 pt-8 w-full text-center">
-                  END_OF_GLOBAL_DATABASE_REACHED
+              <div className="text-xs font-medium font-sans text-slate-600 tracking-wide border-t border-slate-900 pt-8 w-full text-center">
+                  End of list
               </div>
           )}
       </div>
+      )}
     </div>
   );
 };

@@ -6,7 +6,8 @@ import { getActivityOnMyMarkets, getActivityBySenderIds, getUserPositions, getCu
 import { formatMarketValue, formatDisplayedShares } from '../services/analytics';
 import { requestEmailNotification, requestFollowedActivityEmail } from '../services/emailNotifications';
 import { getFollowedIdentities } from '../services/follows';
-import { resolveENS, toAddress, isGraphResolvableAddress } from '../services/web3';
+import { toAddress, isGraphResolvableAddress } from '../services/web3';
+import { resolveFollowIdentityToAddress } from '../services/tns';
 import { useEmailNotify } from '../contexts/EmailNotifyContext';
 import { EXPLORER_URL } from '../constants';
 import { CurrencySymbol } from './CurrencySymbol';
@@ -144,7 +145,7 @@ const NotificationBar: React.FC<NotificationBarProps> = ({ walletAddress }) => {
             allFollows.map(async (f) => {
               const direct = toAddress(f.identityId);
               if (direct) return { follow: f, addr: direct as string };
-              const r = await resolveENS(f.identityId);
+              const r = await resolveFollowIdentityToAddress(f.identityId);
               const addr = r ? (toAddress(r) || (isGraphResolvableAddress(r) ? r : null)) : null;
               return { follow: f, addr };
             })

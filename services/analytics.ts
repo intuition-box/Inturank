@@ -41,6 +41,28 @@ export const safeParseUnits = (val: string | undefined | null): number => {
     }
 };
 
+/** Display-only: shorten hex wallets (~10 hex chars visible by default). Copy actions should still use the full address. */
+export function formatMaskedWalletAddress(address: string | null | undefined, leadHex = 6, tailHex = 4): string {
+  const a = (address || '').trim();
+  if (!a.startsWith('0x')) return a || '';
+  const hex = a.slice(2);
+  if (!/^[a-fA-F0-9]+$/.test(hex) || hex.length < leadHex + tailHex + 2) return a;
+  return `${a.slice(0, 2 + leadHex)}…${a.slice(-tailHex)}`;
+}
+
+/** Header / pills: show .trust / ENS names verbatim; mask raw 0x primary labels. */
+export function formatWalletHeadlineForUi(
+  meta: { primaryLabel: string; isNamed: boolean } | null | undefined,
+  walletAddress: string | null | undefined,
+): string {
+  const w = (walletAddress || '').trim();
+  if (!w) return '';
+  if (!meta?.primaryLabel?.trim()) return formatMaskedWalletAddress(w);
+  if (meta.isNamed) return meta.primaryLabel.trim();
+  if (/^0x[a-fA-F0-9]{40}$/.test(meta.primaryLabel.trim())) return formatMaskedWalletAddress(meta.primaryLabel.trim());
+  return meta.primaryLabel.trim();
+}
+
 /** Sum shares from holder rows (same source as atom Positions tab) for one curve — use when RPC/subgraph disagree. */
 export function getSharesFromHolderRowsForCurve(
   holders: Array<{ shares?: string | number; account?: { id?: string }; vault?: { curve_id?: number | string } }> | undefined,

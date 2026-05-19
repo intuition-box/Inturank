@@ -116,14 +116,14 @@ export const AIBriefing: React.FC<{ agent: Account; triples: Triple[]; history: 
   }, [agent.id, agent.label, agent.type, agent.totalAssets, agent.totalShares, triplesContext, triples?.length, history?.length]);
 
   return (
-    <div className="bg-black border border-slate-900 p-8 clip-path-slant relative overflow-hidden group min-h-[160px] shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-colors duration-200">
+    <div className="bg-black border border-slate-900 p-4 sm:p-8 clip-path-slant relative overflow-hidden group min-h-[140px] sm:min-h-[160px] shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-colors duration-200">
       <div
         className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-600"
         aria-hidden
       >
-        <Brain className="h-[min(9rem,42vw)] w-[min(9rem,42vw)] opacity-[0.06]" strokeWidth={1} />
+        <Brain className="h-[min(6.5rem,32vw)] w-[min(6.5rem,32vw)] opacity-[0.035] sm:h-[min(9rem,42vw)] sm:w-[min(9rem,42vw)] sm:opacity-[0.06]" strokeWidth={1} />
       </div>
-      <h3 className="mb-5 relative z-10 text-sm font-semibold text-slate-100 tracking-tight">
+      <h3 className="mb-3 sm:mb-5 relative z-10 text-xs sm:text-sm font-semibold text-slate-100 tracking-tight">
         AI summary
       </h3>
       {loading ? (

@@ -16,6 +16,24 @@ interface TransactionModalProps {
   onClose: () => void;
 }
 
+/**
+ * Derive a concise upper-case heading from the parsed protocol message.
+ * Recognises codes prefixed by `parseProtocolError` (e.g. `STANCE_CONFLICT:`,
+ * `MINIMUM_DEPOSIT:`, `INSUFFICIENT_TRUST_BALANCE`) so users see exactly why
+ * the wallet step failed instead of a generic "ACCESS_DENIED".
+ */
+function deriveErrorHeading(rawMessage: string | undefined | null): string {
+  const m = (rawMessage ?? '').trim();
+  if (!m) return 'ACCESS_DENIED';
+  const codeMatch = m.match(/^([A-Z][A-Z0-9_]{3,})(?=[:\s]|$)/);
+  if (codeMatch) return codeMatch[1]!;
+  const lower = m.toLowerCase();
+  if (lower.includes('user rejected')) return 'USER_REJECTED_HANDSHAKE';
+  if (lower.includes('insufficient') && lower.includes('trust')) return 'INSUFFICIENT_TRUST_BALANCE';
+  if (lower.includes('counter') && lower.includes('stake')) return 'STANCE_CONFLICT';
+  return 'ACCESS_DENIED';
+}
+
 const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, status, title, message, hash, logs = [], onClose }) => {
   const logContainerRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +119,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, status, tit
             className={`text-xl font-black font-display uppercase tracking-widest mb-2 animate-tx-modal-item-in ${isSuccess ? 'text-intuition-success' : isError ? 'text-intuition-danger' : 'text-intuition-primary'}`}
             style={{ textShadow: `0 0 15px ${themeColor}88`, animationDelay: '0.22s' }}
           >
-            {isError ? 'ACCESS_DENIED' : title}
+            {isError ? deriveErrorHeading(message) : title}
           </h2>
           
           <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-6 animate-tx-modal-item-in" style={{ animationDelay: '0.28s' }}>

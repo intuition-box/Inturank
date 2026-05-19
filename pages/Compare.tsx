@@ -192,7 +192,7 @@ const PokeBallArena: React.FC<{
                                 <span className={`text-lg font-black tabular-nums ${isWinner ? 'text-emerald-400' : 'text-white'}`}>{hp.toFixed(0)}</span>
                             </div>
                         </div>
-                        <div className="relative h-32 sm:h-40 flex items-center justify-center p-4">
+                        <div className="relative h-28 max-md:max-h-[7.5rem] sm:h-40 flex items-center justify-center p-3 sm:p-4">
                             <div className={`absolute inset-0 opacity-20 ${isRed ? 'bg-red-500' : 'bg-blue-500'}`} />
                             {agent.image ? <img src={agent.image} alt={agent.label} className="relative z-10 w-full h-full object-cover rounded-lg" /> : (
                                 <div className="relative z-10 w-20 h-20 rounded-full bg-black/60 flex items-center justify-center text-2xl font-black text-white/60">{agent.label?.slice(0, 2)}</div>
@@ -269,7 +269,7 @@ export const ComparisonRow: React.FC<{
   return (
     <div
       className={`flex items-center justify-between transition-all group relative overflow-hidden border-b ${
-        arena ? 'py-3 px-3 sm:px-5 min-h-[72px] sm:min-h-[84px] border-slate-800/80' : 'py-4 px-4 sm:px-6 md:px-10 min-h-[80px] sm:min-h-[100px] border-white/5'
+        arena ? 'py-2.5 px-2 sm:px-5 min-h-[64px] sm:min-h-[84px] border-slate-800/80' : 'py-3 px-3 sm:px-10 min-h-[68px] sm:min-h-[100px] border-white/5'
       }`}
     >
       <div className={`absolute inset-0 flex pointer-events-none ${arena ? 'opacity-[0.12] group-hover:opacity-[0.18]' : 'opacity-[0.08] group-hover:opacity-[0.12]'} transition-opacity`}>
@@ -282,7 +282,7 @@ export const ComparisonRow: React.FC<{
           arena ? (leftWins ? '' : 'opacity-70') : leftWins ? 'scale-110' : 'opacity-40 grayscale'
         }`}
       >
-        <div className={`font-mono font-black text-2xl sm:text-3xl tracking-tighter ${leftText}`}>
+        <div className={`font-mono font-black text-lg sm:text-3xl tracking-tighter ${leftText}`}>
           {Number(leftVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <span className="inline-flex items-baseline text-slate-400 font-bold uppercase tracking-wider text-[9px] sm:text-[10px] mt-0.5">
@@ -304,7 +304,7 @@ export const ComparisonRow: React.FC<{
           arena ? (rightWins ? '' : 'opacity-70') : rightWins ? 'scale-110' : 'opacity-40 grayscale'
         }`}
       >
-        <div className={`font-mono font-black text-2xl sm:text-3xl tracking-tighter ${rightText}`}>
+        <div className={`font-mono font-black text-lg sm:text-3xl tracking-tighter ${rightText}`}>
           {Number(rightVal).toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </div>
         <span className="inline-flex items-baseline text-slate-400 font-bold uppercase tracking-wider text-[9px] sm:text-[10px] mt-0.5">
@@ -396,17 +396,17 @@ const Compare: React.FC = () => {
     const filteredAgents = agents.filter(a => (a.label || '').toLowerCase().includes(search.toLowerCase()) || a.id.includes(search));
 
     return (
-        <div className="min-h-screen bg-[#020308] pt-12 pb-32 px-4 sm:px-6 max-w-[1500px] mx-auto relative font-mono selection:bg-intuition-primary selection:text-black min-w-0 overflow-x-hidden">
+        <div className="min-h-screen bg-[#020308] pt-6 pb-28 px-3 sm:pt-12 sm:pb-32 sm:px-6 max-w-[1500px] mx-auto relative font-mono selection:bg-intuition-primary selection:text-black min-w-0 overflow-x-hidden">
             <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
 
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8 border-b border-white/10 pb-10 relative z-10">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-4 border-b border-white/10 pb-6 relative z-10 sm:mb-12 sm:gap-8 sm:pb-10">
                 <div className="flex items-start gap-4 min-w-0">
-                    <div className="w-14 h-14 shrink-0 rounded-2xl bg-black/80 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
-                        <Swords size={28} />
+                    <div className="w-11 h-11 sm:w-14 sm:h-14 shrink-0 rounded-2xl bg-black/80 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
+                        <Swords size={22} className="sm:w-7 sm:h-7" />
                     </div>
                     <div className="min-w-0 space-y-2">
                         <p className="text-sm text-slate-500 font-sans">Compare two atoms</p>
-                        <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold text-white font-display tracking-tight leading-[1.12] mobile-break">
+                        <h1 className="text-2xl sm:text-4xl lg:text-[2.75rem] font-bold text-white font-display tracking-tight leading-[1.12] mobile-break">
                             Battleground
                         </h1>
                         <p className="text-[15px] text-slate-400 leading-relaxed font-sans max-w-xl">
@@ -425,7 +425,7 @@ const Compare: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mb-12 z-10">
+            <div className="mb-8 z-10 sm:mb-12">
                 <PokeBallArena
                     topAgent={leftAgent}
                     bottomAgent={rightAgent}

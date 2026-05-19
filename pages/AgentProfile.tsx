@@ -5,12 +5,13 @@ import { getAgentById, getAgentTriples } from '../services/graphql';
 import { depositToVault, connectWallet, getProtocolConfig, getWalletBalance, parseProtocolError } from '../services/web3';
 import { Account, Triple } from '../types';
 import TransactionModal from '../components/TransactionModal';
-import { playClick, playSuccess } from '../services/audio';
+import { playClick } from '../services/audio';
 import { CURRENCY_SYMBOL } from '../constants';
+import { notifyProtocolXpEarned } from '../services/protocolXp';
 import { CurrencySymbol } from '../components/CurrencySymbol';
 import { sendTransactionReceiptEmail } from '../services/emailNotifications';
 import { formatDisplayedShares, formatMarketValue } from '../services/analytics';
-import { formatEther } from 'viem';
+import { formatEther, parseEther } from 'viem';
 
 const AgentProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +83,12 @@ const AgentProfile: React.FC = () => {
       }
       
       const { hash, shares, assets } = await depositToVault(stakeAmount, id, wallet);
-      playSuccess();
+      notifyProtocolXpEarned({
+        address: wallet,
+        reasonKey: 'market_acquire',
+        txHash: hash,
+        depositTrustWei: parseEther(stakeAmount.trim() || '0'),
+      });
 
       sendTransactionReceiptEmail(wallet, {
         txHash: hash,

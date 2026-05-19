@@ -1,12 +1,18 @@
 
-import { createPublicClient, createWalletClient, custom, http, parseEther, formatEther, pad, getAddress, isAddress, type Hex, stringToHex, toHex, keccak256, encodePacked, decodeEventLog, slice, encodeFunctionData, parseEventLogs, type TransactionReceipt } from 'viem';
+import { createPublicClient, createWalletClient, custom, http, parseEther, formatEther, pad, getAddress, isAddress, type Hex, stringToHex, toHex, keccak256, decodeEventLog, slice, encodeFunctionData, parseEventLogs, type TransactionReceipt, UserRejectedRequestError } from 'viem';
+import { switchChain as wagmiSwitchChain } from '@wagmi/core';
 import { mainnet } from 'viem/chains';
 import { normalize } from 'viem/ens';
-import { CHAIN_ID, NETWORK_NAME, RPC_URL, MULTI_VAULT_ABI, MULTI_VAULT_ADDRESS, EXPLORER_URL, FEE_PROXY_ADDRESS, FEE_PROXY_ABI, LINEAR_CURVE_ID, OFFSET_PROGRESSIVE_CURVE_ID, DISPLAY_DIVISOR, CURRENCY_SYMBOL, CURVE_OFFSET } from '../constants';
+import { CHAIN_ID, NETWORK_NAME, RPC_URL, MULTI_VAULT_ABI, MULTI_VAULT_ADDRESS, EXPLORER_URL, FEE_PROXY_ADDRESS, FEE_PROXY_ABI, LINEAR_CURVE_ID, OFFSET_PROGRESSIVE_CURVE_ID, DISPLAY_DIVISOR, CURRENCY_SYMBOL, CURVE_OFFSET, DISTRUST_ATOM_ID, LIST_PREDICATE_ID, IS_PREDICATE_ID } from '../constants';
+import { wagmiConfig } from '../wagmi-config';
 import { getSubgraphPositionSharesForTerm, pickEffectiveShareBalance } from './graphql';
 import { Transaction } from '../types';
 import { toast } from '../components/Toast';
 import EthereumProvider from '@walletconnect/ethereum-provider';
+import {
+  calculateTripleId as intuitionCalculateTripleId,
+  calculateCounterTripleId as intuitionCalculateCounterTripleId,
+} from '@0xintuition/sdk';
 
 export const intuitionChain = {
   id: CHAIN_ID,
@@ -164,21 +170,36 @@ export const broadcastTransaction = async (
   return hash;
 };
 
+/** Normalize term id to bytes32 for protocol hashing (matches MultiVault inputs). */
+const padBytes32Term = (id: string): Hex =>
+    pad((id.startsWith('0x') ? id : `0x${id}`) as Hex, { size: 32 });
+
+/** MultiVault `isTermCreated` is unreliable for protocol singletons; createTriples still accepts them. */
+function isProtocolSingletonTermId(id: string): boolean {
+    const k = padBytes32Term(id).toLowerCase();
+    return (
+        k === padBytes32Term(DISTRUST_ATOM_ID).toLowerCase() ||
+        k === padBytes32Term(LIST_PREDICATE_ID).toLowerCase() ||
+        k === padBytes32Term(IS_PREDICATE_ID).toLowerCase()
+    );
+}
+
 /**
- * Deterministically calculates a Triple ID from components.
+ * Canonical triple term id (protocol uses TRIPLE_SALT — must match MultiVault.calculateTripleId).
  */
 export const calculateTripleId = (subjectId: string, predicateId: string, objectId: string): Hex => {
-    const s = pad(subjectId as Hex, { size: 32 });
-    const p = pad(predicateId as Hex, { size: 32 });
-    const o = pad(objectId as Hex, { size: 32 });
-    return keccak256(encodePacked(['bytes32', 'bytes32', 'bytes32'], [s, p, o]));
+    return intuitionCalculateTripleId(
+        padBytes32Term(subjectId),
+        padBytes32Term(predicateId),
+        padBytes32Term(objectId),
+    );
 };
 
 /**
- * Deterministically calculates a Counter Triple ID.
+ * Counter triple id (COUNTER_SALT + triple id).
  */
 export const calculateCounterTripleId = (tripleId: string): Hex => {
-    return keccak256(encodePacked(['bytes32', 'string'], [tripleId as Hex, 'counter']));
+    return intuitionCalculateCounterTripleId(padBytes32Term(tripleId));
 };
 
 const DISCONNECT_FLAG_KEY = 'inturank_wallet_disconnected';
@@ -194,35 +215,101 @@ export const getConnectedAccount = async (): Promise<string | null> => {
   } catch { return null; }
 };
 
-export const switchNetwork = async () => {
-    const provider = getProvider();
-    if (!provider) return;
-    
+function isUserRejectedError(error: unknown): boolean {
+  if (error instanceof UserRejectedRequestError) return true;
+  if (typeof error === 'object' && error !== null) {
+    const e = error as { code?: number; name?: string };
+    if (e.code === 4001) return true;
+    if (e.name === 'UserRejectedRequestError') return true;
+  }
+  return false;
+}
+
+/** MetaMask validates the RPC when adding a chain; Intuition’s JSON-RPC is on `/http` (bare `/` often fails). */
+function rpcUrlForWalletChainPrompt(): string {
+  const raw = String(RPC_URL ?? '').trim();
+  const base = raw.replace(/\/+$/, '');
+  if (CHAIN_ID === 1155 || CHAIN_ID === 13579) {
+    if (base.toLowerCase().endsWith('/http')) return base;
+    return `${base}/http`;
+  }
+  return raw || base;
+}
+
+function walletAddEthereumChainPayload() {
+  const chainIdHex = `0x${CHAIN_ID.toString(16)}` as const;
+  return {
+    chainId: chainIdHex,
+    chainName: NETWORK_NAME,
+    nativeCurrency: { name: 'TRUST', symbol: 'TRUST', decimals: 18 },
+    rpcUrls: [rpcUrlForWalletChainPrompt()] as const,
+    blockExplorerUrls: [EXPLORER_URL] as const,
+  };
+}
+
+async function switchNetworkViaInjectedProvider(provider: NonNullable<ReturnType<typeof getProvider>>) {
+  const chainIdHex = `0x${CHAIN_ID.toString(16)}`;
+  const addParams = walletAddEthereumChainPayload();
+
+  const attemptSwitch = () =>
+    provider.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: chainIdHex }],
+    });
+
+  try {
+    await attemptSwitch();
+    return;
+  } catch (error: unknown) {
+    if (isUserRejectedError(error)) return;
     try {
-        await provider.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
-        });
-    } catch (error: any) {
-        if (error.code === 4902 || error?.data?.originalError?.code === 4902) {
-            try {
-                await provider.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [
-                        {
-                            chainId: `0x${CHAIN_ID.toString(16)}`,
-                            chainName: NETWORK_NAME,
-                            nativeCurrency: { name: 'TRUST', symbol: 'TRUST', decimals: 18 },
-                            rpcUrls: [RPC_URL],
-                            blockExplorerUrls: [EXPLORER_URL],
-                        },
-                    ],
-                });
-            } catch (addError) { 
-                console.error("ADD_CHAIN_ERROR:", addError); 
-            }
-        }
+      await provider.request({
+        method: 'wallet_addEthereumChain',
+        params: [addParams],
+      });
+    } catch (addError: unknown) {
+      if (isUserRejectedError(addError)) return;
+      // Chain may already be registered; still try switching again.
     }
+    try {
+      await attemptSwitch();
+    } catch (e2: unknown) {
+      if (isUserRejectedError(e2)) return;
+      console.error('SWITCH_NETWORK_ERROR:', error, e2);
+      toast.error('Could not switch network. Try switching to Intuition in your wallet.');
+    }
+  }
+}
+
+/** Prefer Wagmi `switchChain` so RainbowKit’s active connector prompts the wallet (EIP-1193 shim was a no-op in some cases). */
+export const switchNetwork = async () => {
+  const addEthereumChainParameter = {
+    chainName: NETWORK_NAME,
+    nativeCurrency: { name: 'TRUST', symbol: 'TRUST', decimals: 18 },
+    rpcUrls: [rpcUrlForWalletChainPrompt()],
+    blockExplorerUrls: [EXPLORER_URL],
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      await wagmiSwitchChain(wagmiConfig, {
+        chainId: CHAIN_ID,
+        addEthereumChainParameter,
+      });
+      return;
+    } catch (error: unknown) {
+      if (isUserRejectedError(error)) return;
+      console.warn('wagmi switchChain failed, falling back to injected provider:', error);
+    }
+  }
+
+  const provider = getProvider();
+  if (!provider) {
+    toast.error('Wallet not ready. Wait a moment and try again, or switch network in your wallet.');
+    return;
+  }
+
+  await switchNetworkViaInjectedProvider(provider);
 };
 
 export type WalletConnector = 'injected' | 'walletconnect';
@@ -320,6 +407,26 @@ export const getShareBalance = async (account: string, termId: string, curveId: 
     } as any);
     return formatEther(shares as bigint);
   } catch { return "0"; }
+};
+
+/** Raw `getShares` (wei) — used to enforce protocol's “no counter-stake on the same triple” invariant before deposits. */
+export const getRawShareBalance = async (
+  account: string,
+  termId: string,
+  curveId: number = LINEAR_CURVE_ID,
+): Promise<bigint> => {
+  try {
+    const tid = padBytes32Term(termId);
+    const shares = await publicClient.readContract({
+      address: MULTI_VAULT_ADDRESS as `0x${string}`,
+      abi: MULTI_VAULT_ABI,
+      functionName: 'getShares',
+      args: [getAddress(account), tid, BigInt(curveId)],
+    } as any);
+    return shares as bigint;
+  } catch {
+    return 0n;
+  }
 };
 
 /** RPC getShares merged with subgraph positions — avoids 0 balance when indexer has your deposit but the vault read disagrees. */
@@ -462,6 +569,80 @@ export const depositToVault = async (amount: string, termId: string, receiver: s
       console.error("DEPOSIT_ERROR:", error);
       throw error;
   }
+};
+
+/** One leg of FeeProxy.depositBatch (multiple vault deposits in a single tx, one fee lump). */
+export type DepositBatchLeg = {
+  termId: string;
+  assetsWei: bigint;
+  curveId?: number;
+};
+
+/**
+ * FeeProxy depositBatch — matches on-chain fee rule: totalDeposit + calculateDepositFee(count, totalDeposit).
+ */
+export const depositBatchToVaults = async (
+  legs: DepositBatchLeg[],
+  receiver: string,
+  onProgress?: (log: string) => void,
+): Promise<{ hash: `0x${string}` }> => {
+  if (!legs.length) throw new Error('No deposits in batch.');
+  const checksumReceiver = getAddress(receiver);
+  const provider = getProvider();
+  if (!provider) throw new Error('Wallet not connected');
+  const walletClient = createWalletClient({
+    chain: intuitionChain,
+    transport: custom(provider),
+    account: checksumReceiver,
+  });
+
+  const termIds = legs.map((l) =>
+    pad((l.termId.startsWith('0x') ? l.termId : `0x${l.termId}`) as Hex, { size: 32 }),
+  );
+  const curveIds = legs.map((l) => BigInt(l.curveId ?? LINEAR_CURVE_ID));
+  const assets = legs.map((l) => l.assetsWei);
+  const minShares = legs.map(() => 0n);
+  const totalDeposit = assets.reduce((a, b) => a + b, 0n);
+
+  onProgress?.('Calculating batch deposit total (TRUST + fees)…');
+  const fee = (await publicClient.readContract({
+    address: FEE_PROXY_ADDRESS as `0x${string}`,
+    abi: FEE_PROXY_ABI,
+    functionName: 'calculateDepositFee',
+    args: [BigInt(legs.length), totalDeposit],
+  } as any)) as bigint;
+  const totalRequired = totalDeposit + fee;
+  const value = (totalRequired * 102n) / 100n;
+
+  onProgress?.(`Batch total with fee buffer: ${formatEther(value)} ${CURRENCY_SYMBOL}`);
+
+  let request: any;
+  try {
+    const simulation = await publicClient.simulateContract({
+      address: FEE_PROXY_ADDRESS as `0x${string}`,
+      abi: FEE_PROXY_ABI,
+      functionName: 'depositBatch',
+      account: checksumReceiver,
+      args: [checksumReceiver, termIds, curveIds, assets, minShares],
+      value,
+    } as any);
+    request = simulation.request;
+  } catch (e: any) {
+    console.error('DEPOSIT_BATCH_SIM_ERROR:', e);
+    throw e;
+  }
+
+  onProgress?.('Confirm batch deposit in wallet…');
+  const hash = await walletClient.writeContract(request);
+  onProgress?.(`Broadcasting batch… ${hash.slice(0, 10)}…`);
+  try {
+    await publicClient.waitForTransactionReceipt({ hash });
+    onProgress?.('Batch confirmed on-chain.');
+  } catch (waitError: any) {
+    console.warn('DEPOSIT_BATCH_RECEIPT_TIMEOUT:', waitError);
+  }
+  window.dispatchEvent(new Event('local-tx-updated'));
+  return { hash };
 };
 
 export const redeemFromVault = async (sharesAmount: string, termId: string, receiver: string, curveIdOrOnProgress?: number | ((log: string) => void), onProgress?: (log: string) => void) => {
@@ -804,7 +985,32 @@ function collectErrorText(error: unknown, depth = 0): string {
     return String(error);
 }
 
-export const parseProtocolError = (error: any) => {
+/** Collapses accidental duplicate halves (e.g. nested viem error repeats the same sentence). */
+export function collapseAdjacentDuplicateSentences(msg: string): string {
+    const t = msg.trim();
+    if (t.length < 12) return msg;
+    const n = t.length;
+    if (n % 2 === 0) {
+        const half = n / 2;
+        const a = t.slice(0, half);
+        const b = t.slice(half);
+        if (a === b) return a.trim();
+    }
+    const dupParagraph = /^([\s\S]+?)\.\s+\1\.?$/;
+    const m = t.match(dupParagraph);
+    if (m?.[1]) return `${m[1].trim()}.`;
+    const sep = '. ';
+    const parts = t.split(sep);
+    if (parts.length >= 4 && parts.length % 2 === 0) {
+        const halfLen = parts.length / 2;
+        const firstHalf = parts.slice(0, halfLen).join(sep);
+        const secondHalf = parts.slice(halfLen).join(sep);
+        if (firstHalf === secondHalf) return `${firstHalf}.`;
+    }
+    return msg;
+}
+
+function parseProtocolErrorRaw(error: any): string {
     const rawMsg = error?.message || error?.toString() || "";
     const combined = `${rawMsg} ${collectErrorText(error)}`.trim();
     const msg = combined.toLowerCase();
@@ -813,6 +1019,21 @@ export const parseProtocolError = (error: any) => {
         return "PROTOCOL_APPROVAL_REQUIRED: Enable the IntuRank fee proxy first (Skill chat bar or Create flow), then retry.";
     if (msg.includes("minimumdeposit") || /MinimumDeposit/i.test(msg)) {
         return `MINIMUM_DEPOSIT: The protocol requires at least ${formatEther(CURVE_OFFSET)} TRUST as vault deposit (same as claims).`;
+    }
+    // FeeProxy MultiVault custom errors (human-readable when RPC forwards data)
+    if (msg.includes("0x86d94276") || msg.includes("0x22319959") || /MultiVault_TripleExists/i.test(msg) || /TripleExists/i.test(msg)) {
+        return "This stance triple already exists on-chain — stake via the existing vault instead of creating it again (retry submit after refreshing).";
+    }
+    if (msg.includes("0x3f1472eb") || /AtomDoesNotExist/i.test(msg)) {
+        return "Triple creation failed: one component is not registered as an on-chain atom yet. Wait for indexer sync or verify TRUST balance.";
+    }
+    // MultiVault_AtomExists(bytes) — duplicate createAtoms while the atom is already registered (RPC lag or duplicate cart lines).
+    if (msg.includes("0xb4856ebc") || /MultiVault_AtomExists/i.test(msg)) {
+        return "That atom already exists on-chain. Retry submit — the app now reuses existing atoms. Remove duplicate rows (same tool twice) if this keeps happening.";
+    }
+    // MultiVault_HasCounterStake() — depositing on a triple while you hold shares on its counter-triple (Arena YES vs NO on the same claim).
+    if (msg.includes("0x332c26cd") || /MultiVault_HasCounterStake/i.test(msg)) {
+        return "STANCE_CONFLICT: You already hold the opposite side of this claim. Withdraw your existing position from your portfolio before voting the other way.";
     }
     if (msg.includes("insufficient funds") || msg.includes("exceeds the balance")) return "INSUFFICIENT_TRUST_BALANCE";
 
@@ -832,7 +1053,19 @@ export const parseProtocolError = (error: any) => {
     if (msg.includes("creation failed")) return combined.slice(0, 200) + (combined.length > 200 ? "…" : "");
 
     if (msg.includes("createtriples") || (msg.includes("reverted") && msg.includes("triple"))) {
-        return "Triple creation failed. Check: all 3 atoms exist on-chain, enough TRUST, and fee proxy enabled.";
+        const normalized = combined.replace(/\s+/g, " ").trim();
+        const concise = normalized.length > 420 ? `${normalized.slice(0, 417)}…` : normalized;
+        if (
+            concise.length > 56 &&
+            !/^execution reverted\.?$/i.test(concise) &&
+            !/^contractfunctionexecutionerror:?$/i.test(concise)
+        ) {
+            return concise;
+        }
+        return (
+            "Triple simulation failed (Arena NO / claim path). Usual fixes: enough TRUST for triple creation + vault deposit, " +
+            "fee proxy enabled (Skill bar or Create flow), then retry. RPC detail was empty — open the browser console for the raw error."
+        );
     }
 
     // previewRedeem / redeem — often indexer UI > on-chain getShares, or wrong curve
@@ -852,7 +1085,95 @@ export const parseProtocolError = (error: any) => {
         return "Transaction reverted. Ensure all 3 atoms exist on-chain and you have enough TRUST.";
     }
     return combined.slice(0, 200) + (combined.length > 200 ? "…" : "");
-};
+}
+
+export const parseProtocolError = (error: any): string =>
+    collapseAdjacentDuplicateSentences(parseProtocolErrorRaw(error));
+
+/** True when createTriples would revert because the claim triple is already registered — stake via deposit instead. */
+export function errorLooksLikeTripleAlreadyExists(error: unknown): boolean {
+    const text = `${collectErrorText(error)} ${error instanceof Error ? error.message : String(error)}`.toLowerCase();
+    if (
+        text.includes('0x86d94276') ||
+        text.includes('0x22319959') ||
+        /multivault_tripleexists/.test(text) ||
+        (/tripleexists/.test(text) && !/atomexists/.test(text))
+    ) {
+        return true;
+    }
+    const p = parseProtocolError(error).toLowerCase();
+    return p.includes('stance triple already exists') || p.includes('triple already exists on-chain');
+}
+
+/**
+ * When subject/predicate/object resolve to a claim that already exists on-chain, stake TRUST into that vault
+ * (avoids a second createTriples tx that reverts with MultiVault_TripleExists).
+ */
+export async function stakeVaultOnTripleFromLabels(
+    subjectRef: string,
+    predicateRef: string,
+    objectRef: string,
+    depositTrust: string,
+    receiver: string,
+    onProgress?: (log: string) => void,
+): Promise<{ hash: `0x${string}` }> {
+    onProgress?.('Existing claim found — staking into vault…');
+    const s = await resolveAtomReferenceToTermId(subjectRef, depositTrust, receiver, onProgress);
+    const p = await resolveAtomReferenceToTermId(predicateRef, depositTrust, receiver, onProgress);
+    const o = await resolveAtomReferenceToTermId(objectRef, depositTrust, receiver, onProgress);
+    const tripleTermId = calculateTripleId(s.termId, p.termId, o.termId);
+    const exists = await isTermCreatedOnChain(tripleTermId);
+    if (!exists) {
+        throw new Error(
+            'Claim is not registered on-chain yet — wait for indexer sync or refresh, then retry.',
+        );
+    }
+    const dep = await depositToVault(depositTrust, tripleTermId, receiver, onProgress);
+    return { hash: dep.hash };
+}
+
+/**
+ * UX copy when Arena vault stakes succeeded but optional personal-attestation triples failed.
+ * Unlike {@link parseProtocolError}, avoids “retry submit” / duplicate-cart wording — the batch is done.
+ */
+export function arenaPersonalAttestationFootnote(err: unknown): string {
+    const rawMsg =
+        err != null && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message ?? "")
+            : typeof err === "string"
+              ? err
+              : String(err ?? "");
+    const combined = `${rawMsg} ${collectErrorText(err)}`.trim();
+    const lower = combined.toLowerCase();
+
+    if (lower.includes("user rejected"))
+        return "Wallet declined the optional personal-tags transaction. Arena stakes above still went through.";
+    if (lower.includes("0xb4856ebc") || /multivault_atomexists/i.test(combined)) {
+        return (
+            "Optional personal tags need small on-chain “atoms” for your stance wording. One of those atoms " +
+            "was already registered (same text as before, or a brief chain/indexer mismatch). Your list stakes " +
+            "and deposits are unaffected — tags are bonus metadata on the graph, not required for Arena."
+        );
+    }
+    if (lower.includes("0x86d94276") || lower.includes("0x22319959") || /multivault_tripleexists/i.test(combined) || /tripleexists/i.test(combined)) {
+        return (
+            "Optional personal-tags triple already existed on-chain (repeating nearly the same stance text). " +
+            "Arena stakes finished normally; duplicate tag lines are harmless."
+        );
+    }
+    if (lower.includes("0x7b0a37cf") || /multivault_insufficientbalance/i.test(lower)) {
+        return (
+            "Optional personal tags need a bit more TRUST for atom/triple fees on top of your vault deposits. " +
+            "Raise balance or retry later — Arena stakes completed."
+        );
+    }
+    const parsed = parseProtocolError(err)?.trim();
+    if (parsed) {
+        const short = parsed.length > 260 ? `${parsed.slice(0, 257)}…` : parsed;
+        return `${short} (Arena stakes still completed; tags are optional.)`;
+    }
+    return "Personal tags didn’t finalize; Arena stakes still completed.";
+}
 
 /** Selectors for FeeProxy functions this app supports (see constants FEE_PROXY_ABI). */
 const FEE_PROXY_ALLOWED_SELECTORS = new Set([
@@ -861,10 +1182,34 @@ const FEE_PROXY_ALLOWED_SELECTORS = new Set([
     '0x58a19d5e', // deposit(...)
 ]);
 
+/**
+ * When the Skill LLM sends FeeProxy calldata but omits `action`, infer it for review UI and routing.
+ */
+export function inferFeeProxyActionFromCalldata(data: string | undefined): 'createAtoms' | 'createTriples' | 'deposit' | null {
+    if (!data || !data.startsWith('0x') || data.length < 10) return null;
+    const sel = data.slice(0, 10).toLowerCase();
+    if (sel === '0x8581c32f') return 'createAtoms';
+    if (sel === '0xbc2439e4') return 'createTriples';
+    if (sel === '0x58a19d5e') return 'deposit';
+    return null;
+}
+
 const PREFLIGHT_PREFIX =
     "Simulation failed — wallet was not opened because this call would revert on-chain. ";
 
 function preflightFailureMessage(err: unknown): string {
+    if (errorLooksLikeTripleAlreadyExists(err)) {
+        return (
+            'Simulation failed: this claim triple already exists on-chain. Open it in Markets / Portfolio and deposit TRUST there instead of signing another create.'
+        );
+    }
+    if (errorLooksLikeAtomAlreadyExists(err)) {
+        return (
+            'Simulation failed: FeeProxy would revert because this atom anchor already exists on-chain (duplicate create). ' +
+            'Prefer chat **tripleFromLabels** + labels so missing atoms batch into **one** signature, ' +
+            'or paste existing `0x…` term ids from Explorer instead of minting again.'
+        );
+    }
     const parsed = parseProtocolError(err);
     const nested = collectErrorText(err);
     const combined = `${parsed} ${nested}`.trim();
@@ -1099,6 +1444,17 @@ export async function getFeeProxyAtomParams(
     return { dataHex, depositWei, valueWei };
 }
 
+/** MultiVault term id for atom payload bytes (`FeeProxy.createAtoms` data element). Uses `calculateAtomId`, not `keccak256(data)`. */
+export async function getProtocolAtomIdFromAtomData(dataHex: `0x${string}`): Promise<`0x${string}`> {
+    const id = await publicClient.readContract({
+        address: MULTI_VAULT_ADDRESS as `0x${string}`,
+        abi: MULTI_VAULT_ABI,
+        functionName: 'calculateAtomId',
+        args: [dataHex],
+    } as any);
+    return id as `0x${string}`;
+}
+
 /** Read TripleCreated termId from a confirmed triple tx (canonical claim id — not keccak(subject,predicate,object)). */
 export async function getTripleTermIdFromTxHash(hash: `0x${string}`): Promise<`0x${string}` | undefined> {
     try {
@@ -1142,7 +1498,7 @@ export async function getAtomTermIdFromTxHash(
             return atomCreated[0].args.termId as `0x${string}`;
         }
         if (dataHexFallback) {
-            const candidate = keccak256(dataHexFallback) as `0x${string}`;
+            const candidate = await getProtocolAtomIdFromAtomData(dataHexFallback);
             try {
                 const exists = await publicClient.readContract({
                     address: FEE_PROXY_ADDRESS as `0x${string}`,
@@ -1193,6 +1549,84 @@ export async function isTermCreatedOnChain(termId: string): Promise<boolean> {
     }
 }
 
+/** Poll until `isTermCreated` reflects a tx mined in the same session (avoids MultiVault_AtomExists on duplicate picks). */
+async function waitUntilTermCreatedOnChain(
+    termId: string,
+    opts?: { maxAttempts?: number; delayMs?: number },
+): Promise<boolean> {
+    const maxAttempts = opts?.maxAttempts ?? 12;
+    const delayMs = opts?.delayMs ?? 450;
+    for (let i = 0; i < maxAttempts; i++) {
+        if (await isTermCreatedOnChain(termId)) return true;
+        if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, delayMs));
+    }
+    return false;
+}
+
+function errorLooksLikeAtomAlreadyExists(err: unknown): boolean {
+    const text = `${collectErrorText(err)} ${err instanceof Error ? err.message : String(err)}`.toLowerCase();
+    if (/multivault_tripleexists|tripleexists/.test(text) && !/atomexists/.test(text)) return false;
+    return (
+        text.includes('0xb4856ebc') ||
+        text.includes('multivault_atomexists') ||
+        text.includes('atomexists') ||
+        text.includes('atom already exists')
+    );
+}
+
+/**
+ * Inspect one atom ref without sending a tx: either an existing term id or calldata for a batched `createAtoms` leg.
+ */
+export async function peekAtomTermId(
+    ref: string,
+    depositTrust: string,
+): Promise<
+    | { status: 'existing'; termId: `0x${string}` }
+    | { status: 'create'; dataHex: `0x${string}`; assetsWei: bigint }
+> {
+    const trimmed = ref.trim();
+    if (!trimmed) throw new Error('Atom reference (label or term id) is required');
+    let assetsWei: bigint;
+    try {
+        assetsWei = parseEther(depositTrust.trim() || '0');
+    } catch {
+        throw new Error('Invalid TRUST amount for atom resolution');
+    }
+    if (assetsWei < CURVE_OFFSET) {
+        throw new Error(`Minimum deposit is ${formatEther(CURVE_OFFSET)} TRUST for atom anchoring.`);
+    }
+
+    if (looksLikeBytes32TermId(trimmed)) {
+        const tid = padTermId(trimmed);
+        const exists = await isTermCreatedOnChain(trimmed);
+        if (exists) return { status: 'existing', termId: tid };
+        throw new Error(
+            `Term ${trimmed.slice(0, 12)}… is not on-chain. Use a text label so the app can anchor an atom, or pick from search.`,
+        );
+    }
+
+    if (isAddress(trimmed)) {
+        const addr = getAddress(trimmed);
+        const metadata = { type: 'Account' as const, address: addr };
+        const { dataHex } = await getFeeProxyAtomParams(metadata, depositTrust);
+        const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+        if (await isTermCreatedOnChain(candidate)) return { status: 'existing', termId: candidate };
+        if (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 4, delayMs: 200 })) {
+            return { status: 'existing', termId: candidate };
+        }
+        return { status: 'create', dataHex, assetsWei };
+    }
+
+    const metadata = { name: normalizeAtomLabel(trimmed), type: 'Thing' as const };
+    const { dataHex } = await getFeeProxyAtomParams(metadata, depositTrust);
+    const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+    if (await isTermCreatedOnChain(candidate)) return { status: 'existing', termId: candidate };
+    if (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 4, delayMs: 200 })) {
+        return { status: 'existing', termId: candidate };
+    }
+    return { status: 'create', dataHex, assetsWei };
+}
+
 /**
  * Resolve one atom reference: existing bytes32 term id, or a text label (create atom if missing).
  * Multiple wallet signatures may be required when creating new atoms.
@@ -1215,24 +1649,72 @@ export async function resolveAtomReferenceToTermId(
         );
     }
 
+    /** Wallet address → Intuition Account atom (deterministic); enables personalized stance triples with subject = you. */
+    if (isAddress(trimmed)) {
+        const addr = getAddress(trimmed);
+        const metadata = { type: 'Account' as const, address: addr };
+        const { dataHex } = await getFeeProxyAtomParams(metadata, depositTrust);
+        const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+        if (await isTermCreatedOnChain(candidate)) {
+            return { termId: candidate };
+        }
+        if (await waitUntilTermCreatedOnChain(candidate)) {
+            return { termId: candidate };
+        }
+        onProgress?.(`Anchoring Account atom for ${addr.slice(0, 8)}…`);
+        try {
+            const { hash, termId } = await createIdentityAtom(metadata, depositTrust, receiver, onProgress);
+            let tid = termId ?? (await getAtomTermIdFromTxHash(hash, dataHex));
+            if (!tid) tid = candidate;
+            return { termId: tid, createdTxHash: hash };
+        } catch (e) {
+            if (errorLooksLikeAtomAlreadyExists(e)) {
+                const ready =
+                    (await isTermCreatedOnChain(candidate)) ||
+                    (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 22, delayMs: 400 }));
+                if (ready) {
+                    onProgress?.('Account atom already on-chain — reusing it.');
+                    return { termId: candidate };
+                }
+            }
+            throw e;
+        }
+    }
+
     const metadata = { name: normalizeAtomLabel(trimmed), type: 'Thing' as const };
     const { dataHex } = await getFeeProxyAtomParams(metadata, depositTrust);
-    const candidate = keccak256(dataHex) as `0x${string}`;
+    const candidate = await getProtocolAtomIdFromAtomData(dataHex);
     if (await isTermCreatedOnChain(candidate)) {
+        return { termId: candidate };
+    }
+    if (await waitUntilTermCreatedOnChain(candidate)) {
         return { termId: candidate };
     }
 
     onProgress?.(`Creating atom "${metadata.name}"…`);
-    const { hash, termId } = await createIdentityAtom(metadata, depositTrust, receiver, onProgress);
-    let tid = termId ?? (await getAtomTermIdFromTxHash(hash, dataHex));
-    if (!tid) tid = candidate;
-    return { termId: tid, createdTxHash: hash };
+    try {
+        const { hash, termId } = await createIdentityAtom(metadata, depositTrust, receiver, onProgress);
+        let tid = termId ?? (await getAtomTermIdFromTxHash(hash, dataHex));
+        if (!tid) tid = candidate;
+        return { termId: tid, createdTxHash: hash };
+    } catch (e) {
+        if (errorLooksLikeAtomAlreadyExists(e)) {
+            const ready =
+                (await isTermCreatedOnChain(candidate)) ||
+                (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 22, delayMs: 400 }));
+            if (ready) {
+                onProgress?.(`Atom "${metadata.name}" already exists — reusing it.`);
+                return { termId: candidate };
+            }
+        }
+        throw e;
+    }
 }
 
 /**
  * Create a semantic triple from three text labels (or existing term ids as 0x + 64 hex).
  * Hex ids that exist on-chain reuse those atoms (no creation tx). Text labels resolve/create atoms as needed, then the triple.
- * Wallets that do not batch may prompt once per transaction — fewer signatures when term ids already exist.
+ * Missing atoms are anchored via {@link batchEnsureAtomTermIds} — **one** batched createAtoms tx when multiple legs are needed (Skill demo-friendly).
  */
 export async function createTripleFromLabels(
     subjectRef: string,
@@ -1243,7 +1725,8 @@ export async function createTripleFromLabels(
     onProgress?: (log: string) => void
 ): Promise<{
     atomTxHashes: `0x${string}`[];
-    tripleHash: `0x${string}`;
+    /** Omitted when the triple was already registered — nothing new to broadcast. */
+    tripleHash?: `0x${string}`;
     tripleTermId: Hex;
     subjectId: `0x${string}`;
     predicateId: `0x${string}`;
@@ -1251,39 +1734,76 @@ export async function createTripleFromLabels(
 }> {
     const atomTxHashes: `0x${string}`[] = [];
 
-    onProgress?.('Resolving subject atom…');
-    const s = await resolveAtomReferenceToTermId(subjectRef, depositTrust, receiver, onProgress);
-    if (s.createdTxHash) atomTxHashes.push(s.createdTxHash);
+    const jobs: AtomRefJob[] = [
+        { ref: subjectRef, depositTrust },
+        { ref: predicateRef, depositTrust },
+        { ref: objectRef, depositTrust },
+    ];
+    onProgress?.('Resolving atoms (batched create when needed)…');
+    const { termMap, atomBatchTxHash } = await batchEnsureAtomTermIds(jobs, receiver, onProgress);
+    if (atomBatchTxHash) atomTxHashes.push(atomBatchTxHash);
 
-    onProgress?.('Resolving predicate atom…');
-    const p = await resolveAtomReferenceToTermId(predicateRef, depositTrust, receiver, onProgress);
-    if (p.createdTxHash) atomTxHashes.push(p.createdTxHash);
+    const sk = atomRefJobKey(subjectRef, depositTrust);
+    const pk = atomRefJobKey(predicateRef, depositTrust);
+    const ok = atomRefJobKey(objectRef, depositTrust);
+    const sTerm = termMap.get(sk);
+    const pTerm = termMap.get(pk);
+    const oTerm = termMap.get(ok);
+    if (!sTerm || !pTerm || !oTerm) {
+        throw new Error('Could not resolve subject, predicate, and object atoms for this claim.');
+    }
 
-    onProgress?.('Resolving object atom…');
-    const o = await resolveAtomReferenceToTermId(objectRef, depositTrust, receiver, onProgress);
-    if (o.createdTxHash) atomTxHashes.push(o.createdTxHash);
+    const tripleTermIdCalc = calculateTripleId(sTerm, pTerm, oTerm);
+    if (await isTermCreatedOnChain(tripleTermIdCalc)) {
+        onProgress?.('Claim already on-chain — skipping duplicate create.');
+        return {
+            atomTxHashes,
+            tripleTermId: tripleTermIdCalc,
+            subjectId: sTerm,
+            predicateId: pTerm,
+            objectId: oTerm,
+        };
+    }
 
     onProgress?.('Creating triple (claim)…');
-    const tripleHash = await createSemanticTriple(
-        s.termId,
-        p.termId,
-        o.termId,
-        depositTrust,
-        receiver,
-        onProgress,
-        true
-    );
-    const fromReceipt = await getTripleTermIdFromTxHash(tripleHash);
-    const tripleTermId = (fromReceipt ??
-        calculateTripleId(s.termId, p.termId, o.termId)) as Hex;
-    return {
-        atomTxHashes,
-        tripleHash,
-        tripleTermId,
-        subjectId: s.termId,
-        predicateId: p.termId,
-        objectId: o.termId,
-    };
+    try {
+        const tripleHash = await createSemanticTriple(
+            sTerm,
+            pTerm,
+            oTerm,
+            depositTrust,
+            receiver,
+            onProgress,
+            true,
+        );
+        const fromReceipt = await getTripleTermIdFromTxHash(tripleHash);
+        const tripleTermId = (fromReceipt ?? tripleTermIdCalc) as Hex;
+        return {
+            atomTxHashes,
+            tripleHash,
+            tripleTermId,
+            subjectId: sTerm,
+            predicateId: pTerm,
+            objectId: oTerm,
+        };
+    } catch (e) {
+        if (errorLooksLikeTripleAlreadyExists(e)) {
+            const ready =
+                (await isTermCreatedOnChain(tripleTermIdCalc)) ||
+                (await waitUntilTermCreatedOnChain(tripleTermIdCalc, { maxAttempts: 22, delayMs: 400 }));
+            if (ready) {
+                onProgress?.('Claim registered concurrently — treating as success.');
+                return {
+                    atomTxHashes,
+                    tripleTermId: tripleTermIdCalc,
+                    subjectId: sTerm,
+                    predicateId: pTerm,
+                    objectId: oTerm,
+                };
+            }
+        }
+        throw e;
+    }
 }
 
 export const createIdentityAtom = async (metadata: any, depositAmount: string, receiver: string, onProgress?: (log: string) => void): Promise<{ hash: `0x${string}`; termId?: `0x${string}` }> => {
@@ -1300,7 +1820,7 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
 
     try {
         onProgress?.("Verifying Protocol Approval...");
-        const approved = await getProxyApprovalStatus(receiver, { readRetries: 5, readDelayMs: 300 });
+        const approved = await getProxyApprovalStatus(receiver, { readRetries: 2, readDelayMs: 120 });
         if (!approved) {
             onProgress?.("Awaiting Protocol Handshake...");
             await grantProxyApproval(receiver);
@@ -1357,6 +1877,173 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
         throw error;
     }
 };
+
+export type CreateAtomBatchLeg = { dataHex: `0x${string}`; assetsWei: bigint };
+
+export type AtomRefJob = { ref: string; depositTrust: string };
+
+export function atomRefJobKey(ref: string, depositTrust: string): string {
+    return `${ref.trim()}\0${depositTrust.trim()}`;
+}
+
+/**
+ * FeeProxy.createAtoms with multiple data payloads — one wallet signature for all new atoms in `legs`.
+ */
+export async function createIdentityAtomsBatch(
+    legs: CreateAtomBatchLeg[],
+    receiver: string,
+    onProgress?: (log: string) => void,
+): Promise<`0x${string}`> {
+    if (!legs.length) throw new Error('No atoms to create.');
+    const checksumReceiver = getAddress(receiver);
+    const provider = getProvider();
+    if (!provider) throw new Error('Wallet not connected');
+    const walletClient = createWalletClient({
+        chain: intuitionChain,
+        transport: custom(provider),
+        account: checksumReceiver,
+    });
+
+    const data = legs.map((l) => l.dataHex);
+    const assets = legs.map((l) => l.assetsWei);
+    const totalDeposit = assets.reduce((a, b) => a + b, 0n);
+    const atomCount = BigInt(legs.length);
+
+    let atomCost: bigint;
+    try {
+        atomCost = (await publicClient.readContract({
+            address: FEE_PROXY_ADDRESS as `0x${string}`,
+            abi: FEE_PROXY_ABI,
+            functionName: 'getAtomCost',
+        } as any)) as bigint;
+    } catch {
+        atomCost = parseEther('0.15');
+    }
+    if (atomCost < parseEther('0.15')) atomCost = parseEther('0.15');
+
+    const multiVaultCost = atomCost * atomCount + totalDeposit;
+    let totalCost: bigint;
+    try {
+        totalCost = (await publicClient.readContract({
+            address: FEE_PROXY_ADDRESS as `0x${string}`,
+            abi: FEE_PROXY_ABI,
+            functionName: 'getTotalCreationCost',
+            args: [atomCount, totalDeposit, multiVaultCost],
+        } as any)) as bigint;
+    } catch {
+        totalCost = (multiVaultCost * 115n) / 100n;
+    }
+
+    onProgress?.(`Preparing ${legs.length} atom anchor(s)…`);
+    onProgress?.(`Total value: ${formatEther(totalCost)} ${CURRENCY_SYMBOL}`);
+
+    const proxyOk = await getProxyApprovalStatus(checksumReceiver, { readRetries: 2, readDelayMs: 120 });
+    if (!proxyOk) {
+        onProgress?.('Approving FeeProxy…');
+        await grantProxyApproval(checksumReceiver);
+    }
+
+    let request: any;
+    try {
+        const simulation = await publicClient.simulateContract({
+            address: FEE_PROXY_ADDRESS as `0x${string}`,
+            abi: FEE_PROXY_ABI,
+            functionName: 'createAtoms',
+            account: checksumReceiver,
+            args: [checksumReceiver, data, assets, BigInt(LINEAR_CURVE_ID)],
+            value: totalCost,
+        } as any);
+        request = simulation.request;
+    } catch (e: any) {
+        const parsed = parseProtocolError(e);
+        throw new Error(parsed || 'Atom batch simulation failed');
+    }
+
+    onProgress?.('Confirm atom batch in wallet…');
+    const hash = await walletClient.writeContract(request);
+    onProgress?.(`Broadcasting atom batch… ${hash.slice(0, 10)}…`);
+    window.dispatchEvent(new Event('local-tx-updated'));
+    try {
+        await publicClient.waitForTransactionReceipt({ hash });
+        onProgress?.('Atom batch confirmed.');
+    } catch (waitErr: any) {
+        console.warn('ATOM_BATCH_RECEIPT_TIMEOUT:', waitErr);
+    }
+    return hash;
+}
+
+export type BatchEnsureAtomTermIdsResult = {
+    termMap: Map<string, `0x${string}`>;
+    /** Present when at least one new atom leg was submitted in a batched createAtoms tx. */
+    atomBatchTxHash?: `0x${string}`;
+};
+
+/**
+ * Resolve many label/address refs: one batched `createAtoms` for all missing payloads, then a map ref→termId.
+ */
+export async function batchEnsureAtomTermIds(
+    jobs: AtomRefJob[],
+    receiver: string,
+    onProgress?: (log: string) => void,
+): Promise<BatchEnsureAtomTermIdsResult> {
+    const out = new Map<string, `0x${string}`>();
+    if (!jobs.length) return { termMap: out };
+
+    const seen = new Set<string>();
+    const orderedUnique: AtomRefJob[] = [];
+    for (const j of jobs) {
+        const k = atomRefJobKey(j.ref, j.depositTrust);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        orderedUnique.push(j);
+    }
+
+    type Bucket = { dataHex: `0x${string}`; assetsWei: bigint; keys: string[] };
+    const byDataHex = new Map<string, Bucket>();
+
+    for (const j of orderedUnique) {
+        const k = atomRefJobKey(j.ref, j.depositTrust);
+        const peek = await peekAtomTermId(j.ref, j.depositTrust);
+        if (peek.status === 'existing') {
+            out.set(k, peek.termId);
+            continue;
+        }
+        const dh = peek.dataHex.toLowerCase();
+        let bucket = byDataHex.get(dh);
+        if (!bucket) {
+            bucket = { dataHex: peek.dataHex, assetsWei: peek.assetsWei, keys: [] };
+            byDataHex.set(dh, bucket);
+        } else if (peek.assetsWei > bucket.assetsWei) {
+            bucket.assetsWei = peek.assetsWei;
+        }
+        bucket.keys.push(k);
+    }
+
+    const legs: CreateAtomBatchLeg[] = Array.from(byDataHex.values()).map((b) => ({
+        dataHex: b.dataHex,
+        assetsWei: b.assetsWei,
+    }));
+
+    let atomBatchTxHash: `0x${string}` | undefined;
+    if (legs.length > 0) {
+        try {
+            atomBatchTxHash = await createIdentityAtomsBatch(legs, receiver, onProgress);
+        } catch (e) {
+            if (!errorLooksLikeAtomAlreadyExists(e)) throw e;
+            onProgress?.('Atom batch reported duplicates — confirming anchors on-chain…');
+        }
+        for (const b of byDataHex.values()) {
+            const tid = await getProtocolAtomIdFromAtomData(b.dataHex);
+            const ok = await waitUntilTermCreatedOnChain(tid, { maxAttempts: 28, delayMs: 320 });
+            if (!ok) {
+                throw new Error(`Atom ${b.dataHex.slice(0, 12)}… did not appear on-chain — wait and retry.`);
+            }
+            for (const k of b.keys) out.set(k, tid);
+        }
+    }
+
+    return { termMap: out, atomBatchTxHash };
+}
 
 /** Total TRUST to send: FeeProxy.getTotalCreationCost for one atom + deposit (includes IntuRank fees). */
 export const getAtomCreationCost = async (metadata: any, depositAmount: string): Promise<bigint> => {
@@ -1422,7 +2109,7 @@ export const estimateAtomGas = async (account: string, metadata: any, depositAmo
 
 /**
  * Returns the minimum deposit (assets) required for claim/triple creation.
- * Uses CURVE_OFFSET (0.5 TRUST) as the protocol minimum for the bonding curve.
+ * Uses CURVE_OFFSET (client floor for bonding curve min deposit) as the protocol minimum.
  */
 export const getMinClaimDeposit = async (): Promise<string> => {
     return formatEther(CURVE_OFFSET);
@@ -1497,6 +2184,7 @@ export const validateTripleAtomsExist = async (subjectId: string, predicateId: s
     const missing: string[] = [];
     for (const { id, role } of ids) {
         try {
+            if (isProtocolSingletonTermId(id)) continue;
             const termId = padTermId(id);
             let exists = false;
             try {
@@ -1582,7 +2270,7 @@ export const createSemanticTriple = async (subjectId: string, predicateId: strin
         onProgress?.(`Handshake Cost: ${formatEther(valueToSend)} ${CURRENCY_SYMBOL}`);
 
         onProgress?.("Verifying Protocol Approval...");
-        const proxyOk = await getProxyApprovalStatus(checksumReceiver, { readRetries: 5, readDelayMs: 300 });
+        const proxyOk = await getProxyApprovalStatus(checksumReceiver, { readRetries: 2, readDelayMs: 120 });
         if (!proxyOk) {
             onProgress?.("Awaiting Protocol Handshake...");
             await grantProxyApproval(checksumReceiver);
@@ -1606,7 +2294,12 @@ export const createSemanticTriple = async (subjectId: string, predicateId: strin
             console.warn("SIMULATION_FAILED:", simulationError);
             const parsed = parseProtocolError(simulationError);
             const upper = parsed.toUpperCase();
-            if (upper.includes("REVERTED") || upper.includes("BALANCE") || upper.includes("FEE")) {
+            if (
+                upper.includes("REVERTED") ||
+                upper.includes("BALANCE") ||
+                upper.includes("FEE") ||
+                /already exists on-chain/i.test(parsed)
+            ) {
                 throw new Error(parsed);
             }
             throw simulationError;
@@ -1621,11 +2314,123 @@ export const createSemanticTriple = async (subjectId: string, predicateId: strin
         console.error('createSemanticTriple failed:', error?.message || error);
         const parsed = parseProtocolError(error);
         const upper = parsed.toUpperCase();
-        if (upper.includes("REVERTED") || upper.includes("BALANCE") || upper.includes("FEE")) {
+        if (
+            upper.includes("REVERTED") ||
+            upper.includes("BALANCE") ||
+            upper.includes("FEE") ||
+            /already exists on-chain/i.test(parsed)
+        ) {
             throw new Error(parsed);
         }
         throw error;
     }
+};
+
+export type SemanticTripleBatchInput = {
+  subjectId: string;
+  predicateId: string;
+  objectId: string;
+  assetsWei: bigint;
+};
+
+/**
+ * Single-transaction claim write batch via FeeProxy.createTriples.
+ * All ids must be valid bytes32 term ids (existing atoms/terms).
+ */
+export const createSemanticTriplesBatch = async (
+  triples: SemanticTripleBatchInput[],
+  receiver: string,
+  onProgress?: (log: string) => void
+): Promise<`0x${string}`> => {
+  if (!triples.length) throw new Error('No triples to submit.');
+  const checksumReceiver = getAddress(receiver);
+  const provider = getProvider();
+  if (!provider) throw new Error('Wallet not connected');
+
+  const subjectIds = triples.map((t) => padTermId(t.subjectId));
+  const predicateIds = triples.map((t) => padTermId(t.predicateId));
+  const objectIds = triples.map((t) => padTermId(t.objectId));
+  const assets = triples.map((t) => t.assetsWei);
+  const totalDeposit = assets.reduce((a, b) => a + b, 0n);
+  const tripleCount = BigInt(triples.length);
+
+  for (const a of assets) {
+    if (a < CURVE_OFFSET) {
+      throw new Error(
+        `Minimum deposit per claim is ${formatEther(CURVE_OFFSET)} TRUST. One or more rows are below minimum.`
+      );
+    }
+  }
+
+  const walletClient = createWalletClient({
+    chain: intuitionChain,
+    transport: custom(provider),
+    account: checksumReceiver,
+  });
+
+  let tripleCost: bigint;
+  try {
+    tripleCost = (await publicClient.readContract({
+      address: FEE_PROXY_ADDRESS as `0x${string}`,
+      abi: FEE_PROXY_ABI,
+      functionName: 'getTripleCost',
+    } as any)) as bigint;
+  } catch {
+    tripleCost = parseEther('0.15');
+  }
+  if (tripleCost < parseEther('0.15')) tripleCost = parseEther('0.15');
+
+  const multiVaultCost = tripleCost * tripleCount + totalDeposit;
+  let totalCost: bigint;
+  try {
+    totalCost = (await publicClient.readContract({
+      address: FEE_PROXY_ADDRESS as `0x${string}`,
+      abi: FEE_PROXY_ABI,
+      functionName: 'getTotalCreationCost',
+      args: [tripleCount, totalDeposit, multiVaultCost],
+    } as any)) as bigint;
+  } catch {
+    totalCost = (multiVaultCost * 115n) / 100n;
+  }
+
+  onProgress?.(`Preparing ${triples.length} claim writes…`);
+  onProgress?.(`Total value: ${formatEther(totalCost)} ${CURRENCY_SYMBOL}`);
+
+  for (let i = 0; i < triples.length; i++) {
+    const t = triples[i]!;
+    const { ok, missing } = await validateTripleAtomsExist(t.subjectId, t.predicateId, t.objectId);
+    if (!ok) {
+      throw new Error(
+        `Triple row ${i + 1}: atom(s) not on-chain yet — ${missing.join(', ')}. Wait for sync or verify IDs.`
+      );
+    }
+  }
+
+  const proxyOk = await getProxyApprovalStatus(checksumReceiver, { readRetries: 2, readDelayMs: 120 });
+  if (!proxyOk) {
+    onProgress?.('Approving FeeProxy…');
+    await grantProxyApproval(checksumReceiver);
+  }
+
+  let request: any;
+  try {
+    const simulation = await publicClient.simulateContract({
+      address: FEE_PROXY_ADDRESS as `0x${string}`,
+      abi: FEE_PROXY_ABI,
+      functionName: 'createTriples',
+      account: checksumReceiver,
+      args: [checksumReceiver, subjectIds, predicateIds, objectIds, assets, BigInt(LINEAR_CURVE_ID)],
+      value: totalCost,
+    } as any);
+    request = simulation.request;
+  } catch (e: any) {
+    const parsed = parseProtocolError(e);
+    throw new Error(parsed || 'Batch simulation failed');
+  }
+
+  const hash = await walletClient.writeContract(request);
+  window.dispatchEvent(new Event('local-tx-updated'));
+  return hash;
 };
 
 export const switchNetworkManual = async () => switchNetwork();
@@ -1692,4 +2497,9 @@ export const disconnectWallet = () => {
   activeProvider = null;
   if (typeof window !== 'undefined') localStorage.setItem(DISCONNECT_FLAG_KEY, '1');
 };
-export const getProtocolConfig = async () => ({ minDeposit: '0.5' });
+/**
+ * Returns the protocol `minDeposit` (TRUST). For now this mirrors
+ * `CURVE_OFFSET` — when we wire the on-chain `getGeneralConfig()` read this
+ * function can query the chain. Lowered to 0.1 for testing-friendly stakes.
+ */
+export const getProtocolConfig = async () => ({ minDeposit: formatEther(CURVE_OFFSET) });

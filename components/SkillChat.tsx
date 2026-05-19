@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
-import { Terminal, Send, Loader2, CheckCircle2, Zap, User, Bot, XCircle, ExternalLink, ShieldCheck, Layers, ChevronsDown } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import {
+    Terminal,
+    Send,
+    Loader2,
+    CheckCircle2,
+    Zap,
+    User,
+    Bot,
+    XCircle,
+    ExternalLink,
+    ShieldCheck,
+    Layers,
+    ChevronsDown,
+    AlertTriangle,
+} from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { getAddress, isAddress, isHex } from 'viem';
+import { getAddress, isAddress, isHex, parseEther } from 'viem';
 import {
   broadcastTransaction,
   intuitionChain,
@@ -21,14 +36,17 @@ import {
   getTripleTermIdFromTxHash,
   createTripleFromLabels,
   looksLikeBytes32TermId,
+  inferFeeProxyActionFromCalldata,
 } from '../services/web3';
 import {
     CURRENCY_SYMBOL,
     FEE_PROXY_ADDRESS,
+    MULTI_VAULT_ADDRESS,
     getGeminiApiKey,
     getGroqApiKey,
     getOpenAiApiKey,
     CHAIN_ID,
+    NETWORK_NAME,
 } from '../constants';
 import { INTUITION_SKILL_FULL_SYSTEM_PROMPT } from '../services/intuitionSkillPrompt';
 import { generateSkillChatCompletion, formatSkillLlmError } from '../services/skillLlm';
@@ -39,13 +57,17 @@ import {
   formatSkillJsonForDisplay,
 } from '../services/skillTxJson';
 import { maybeFetchSkillLiveContext } from '../services/skillLiveContext';
+import { buildSkillWriteRoutingAppendix } from '../services/skillUserIntentRouting';
 import { logSkillEvent } from '../services/skillTelemetry';
 import { toast } from './Toast';
 import { playClick, playHover } from '../services/audio';
+import { notifyProtocolXpEarned } from '../services/protocolXp';
 
 type TxBroadcastOutcome = 'pending' | 'success' | 'rejected' | 'failed';
 
 interface Message {
+    /** Stable key for list animations & persistence (added v2). */
+    id: string;
     role: 'user' | 'assistant';
     content: string;
     /** Which backend answered this assistant message (Skill: Groq → Gemini → OpenAI). */
@@ -58,6 +80,19 @@ interface Message {
     txTermId?: string;
     /** Extra atom txs when running createTripleFromLabels */
     txAtomHashes?: string[];
+    /** Shown when JSON looked like a tx but cannot be signed (e.g. shell placeholders). */
+    txBlockedReason?: string;
+}
+
+function newSkillMessageId(): string {
+    try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+    } catch {
+        /* ignore */
+    }
+    return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function isUserRejectionError(err: unknown): boolean {
@@ -91,6 +126,171 @@ function normalizeSkillAction(raw: unknown): string {
         .trim()
         .toLowerCase()
         .replace(/[-_\s]/g, '');
+}
+
+/** Upstream skill docs use `operation`; models sometimes omit `action` on raw { to, data, value } blocks. */
+function coalesceActionFields(parsed: Record<string, unknown>): unknown {
+    for (const key of ['action', 'operation', 'type'] as const) {
+        const v = parsed[key];
+        if (v == null) continue;
+        if (String(v).trim() === '') continue;
+        return v;
+    }
+    return undefined;
+}
+
+function isTripleFromLabelsIntent(intent: { action?: unknown } | null | undefined): boolean {
+    if (!intent || typeof intent !== 'object') return false;
+    return normalizeSkillAction(coalesceActionFields(intent as Record<string, unknown>)) === 'triplefromlabels';
+}
+
+/**
+ * Canonical action string for preflight, proxy approval, XP, and review labels.
+ * Fills missing `action` when FeeProxy calldata is present.
+ */
+function resolveSkillTxAction(intent: Record<string, unknown> | null | undefined): string {
+    if (!intent) return '';
+    const raw = String(coalesceActionFields(intent) ?? '').trim();
+    if (raw) {
+        const n = normalizeSkillAction(raw);
+        if (n === 'createatom' || n === 'createatoms') return 'createAtoms';
+        if (n === 'createtriple') return 'createTriple';
+        if (n === 'createtriples') return 'createTriples';
+        if (n === 'deposit') return 'deposit';
+        if (n === 'triplefromlabels') return 'tripleFromLabels';
+        return raw;
+    }
+    const to = intent.to;
+    const data = intent.data;
+    if (typeof to === 'string' && typeof data === 'string' && isAddress(to) && isHex(data)) {
+        if (to.toLowerCase() === FEE_PROXY_ADDRESS.toLowerCase()) {
+            const inf = inferFeeProxyActionFromCalldata(data);
+            if (inf) return inf;
+        }
+    }
+    return '';
+}
+
+function skillTxActionDisplayLabel(intent: Record<string, unknown> | null | undefined): string {
+    if (!intent) return 'Protocol transaction';
+    if (isTripleFromLabelsIntent(intent)) return 'Triple (claim)';
+    const a = resolveSkillTxAction(intent);
+    if (a === 'createAtoms') return 'Create atom(s)';
+    if (a === 'createTriples') return 'Create claim(s)';
+    if (a === 'deposit') return 'Vault deposit';
+    if (a === 'tripleFromLabels') return 'Triple (claim)';
+    if (a) return a;
+    return 'Protocol transaction';
+}
+
+/** Merge parsed JSON so UI / executeTx always see a stable `action` when inferrable. */
+function enrichTxIntentFromParsed(parsed: Record<string, unknown>): Record<string, unknown> {
+    const base = { ...parsed };
+    const hasExplicit = coalesceActionFields(base) != null;
+    if (!hasExplicit) {
+        const to = base.to;
+        const data = base.data;
+        if (typeof to === 'string' && typeof data === 'string' && isAddress(to) && isHex(data)) {
+            if (to.toLowerCase() === FEE_PROXY_ADDRESS.toLowerCase()) {
+                const inf = inferFeeProxyActionFromCalldata(data);
+                if (inf) return { ...base, action: inf };
+            }
+        }
+        return base;
+    }
+    const canonical = resolveSkillTxAction(base);
+    if (canonical && String(base.action ?? '').trim() !== canonical) {
+        return { ...base, action: canonical };
+    }
+    return base;
+}
+
+/** LLMs echo shell tutorials with `<calldata>` or MultiVault `to` — unusable for Sign & broadcast. */
+function skillCalldataInvalidReason(data: string): string | null {
+    const s = data.trim();
+    if (!s.startsWith('0x')) return '`data` must be hex starting with 0x (not a shell placeholder).';
+    if (/[<>`]/.test(s)) {
+        return '`data` still contains template characters. Use the **`createAtom`** / **`createTriple`** JSON from the IntuRank instructions (real hex only for advanced FeeProxy `to`/`data`).';
+    }
+    if (!isHex(s)) return '`data` is not valid hexadecimal calldata.';
+    if (s.length < 10) return '`data` is too short to be contract calldata.';
+    const nibbles = s.slice(2);
+    if (nibbles.length % 2 !== 0) return '`data` hex has odd length (incomplete bytes).';
+    return null;
+}
+
+/**
+ * Raw `{ to, data, value }` from the model — reject before showing a misleading review card.
+ */
+function getRawSkillBroadcastValidationError(intent: Record<string, unknown>): string | null {
+    if (intent.txBuiltIn) return null;
+    if (isTripleFromLabelsIntent(intent)) return null;
+
+    const toRaw = intent.to;
+    const dataRaw = intent.data;
+    const hasTo = typeof toRaw === 'string' && toRaw.trim() !== '';
+    const hasData = typeof dataRaw === 'string' && dataRaw.trim() !== '';
+    const hasValue = intent.value != null && String(intent.value).trim() !== '';
+
+    if (!hasTo && !hasData && !hasValue) return null;
+
+    if (hasValue && (!hasTo || !hasData)) {
+        return 'Transaction JSON has `value` but is missing a valid `to` address or `data` hex.';
+    }
+    if ((hasTo && !hasData) || (!hasTo && hasData)) {
+        return 'Transaction JSON needs both `to` and `data` for Sign & broadcast.';
+    }
+
+    const to = String(toRaw).trim();
+    const data = String(dataRaw).trim();
+    if (!isAddress(to)) return '`to` is not a valid checksummable address.';
+
+    const chainRaw = intent.chainId;
+    if (chainRaw != null && String(chainRaw).trim() !== '') {
+        const cid = parseInt(String(chainRaw), 10);
+        if (!Number.isNaN(cid) && cid !== CHAIN_ID) {
+            return `JSON chainId is ${cid}; this app only signs chain ${CHAIN_ID}.`;
+        }
+    }
+
+    const calldataErr = skillCalldataInvalidReason(data);
+    if (calldataErr) return calldataErr;
+
+    if (to.toLowerCase() === MULTI_VAULT_ADDRESS.toLowerCase()) {
+        return (
+            'This JSON targets **MultiVault** directly. IntuRank signs **FeeProxy** transactions. Ask for a `createAtom` JSON ' +
+            '(name + `depositTrust`: **' +
+            String(CHAIN_ID) +
+            '**) — not shell/`cast` steps or MultiVault `to` — or a complete FeeProxy `to` from the network section of the prompt.'
+        );
+    }
+
+    return null;
+}
+
+/**
+ * Models paste upstream shell walkthroughs into ```json — $MULTIVAULT, 0x$CALLDATA, $(echo …).
+ * That is never signable; catch it before we silently omit the review card.
+ */
+function skillJsonFenceLooksLikeShellTutorial(rawFenceInner: string): boolean {
+    const s = rawFenceInner.trim();
+    if (/\$\([a-zA-Z]/.test(s)) return true;
+    if (/\$MULTIVAULT|\$CALLDATA|\$VALUE|\$ATOM|\$DEPOSIT|\$CURVE|\$RPC|\$GRAPHQL|\$IPFS|\$URI/i.test(s)) return true;
+    if (/:\s*"\$\{/.test(s)) return true;
+    if (/0x\$/.test(s)) return true;
+    if (/"\$[A-Za-z_]/.test(s)) return true;
+    if (/<calldata|<callData|0x<\w/i.test(s)) return true;
+    return false;
+}
+
+function parsedRecordLooksLikeShellTemplate(parsed: Record<string, unknown>): boolean {
+    const blob = ['to', 'data', 'value']
+        .map((k) => (parsed[k] == null ? '' : String(parsed[k])))
+        .join('\n');
+    if (!blob.trim()) return false;
+    if (/\$[A-Za-z_][A-Za-z0-9_]*|\$\(/.test(blob)) return true;
+    if (/<calldata|<callData|0x</i.test(blob)) return true;
+    return false;
 }
 
 /** Triple vault deposit — matches protocol prompt; LLMs often hallucinate "10". */
@@ -146,6 +346,97 @@ function isPlaceholderAtomLabel(label: string): boolean {
     return bad.has(s);
 }
 
+/** Bad JSON still looks like an atom-creation tutorial (MultiVault / &lt;calldata&gt; / shell) — safe to try createAtom rescue. */
+function looksLikeFailedAtomTutorial(parsed: Record<string, unknown>, rawJsonFence: string): boolean {
+    const act = normalizeSkillAction(coalesceActionFields(parsed));
+    if (act === 'createtriple' || act === 'triplefromlabels') return false;
+    if (skillJsonFenceLooksLikeShellTutorial(rawJsonFence) || parsedRecordLooksLikeShellTemplate(parsed)) return true;
+    const data = String(parsed.data ?? '');
+    const to = String(parsed.to ?? '').trim().toLowerCase();
+    if (to === MULTI_VAULT_ADDRESS.toLowerCase() && data.trim() !== '') return true;
+    if (/<calldata|<callData/i.test(data)) return true;
+    if (/0x</i.test(data) && /[^0-9a-f\s]/i.test(data.replace(/^0x/i, ''))) return true;
+    return false;
+}
+
+function extractLikelyAtomLabelForRescue(userMsg: string, responseText: string, parsed: Record<string, unknown>): string | null {
+    const direct = strFromParsed(parsed, 'label', 'atomLabel', 'name', 'title');
+    if (!isPlaceholderAtomLabel(direct)) return direct.trim();
+
+    const pinName = responseText.match(/"name"\s*:\s*"([^"]{1,120})"/);
+    if (pinName?.[1] && !isPlaceholderAtomLabel(pinName[1])) return stripMarkdownInlineDecorators(pinName[1].trim());
+
+    const named = responseText.match(/(?:named|called)\s+["']([^"']{2,120})["']/i);
+    if (named?.[1] && !isPlaceholderAtomLabel(named[1])) return stripMarkdownInlineDecorators(named[1].trim());
+
+    const headline = responseText.match(/(?:atom|entity)\s*[:(]?\s*["']([^"']{2,120})["']/i);
+    if (headline?.[1] && !isPlaceholderAtomLabel(headline[1])) return stripMarkdownInlineDecorators(headline[1].trim());
+
+    const colonTitle = responseText.match(/(?:creating\s+an?\s+atom|atom)\s*:\s*["']([^"']{2,120})["']/i);
+    if (colonTitle?.[1] && !isPlaceholderAtomLabel(colonTitle[1])) return stripMarkdownInlineDecorators(colonTitle[1].trim());
+
+    const firstLine = userMsg.split('\n')[0]?.trim() ?? userMsg;
+    const um = firstLine.match(
+        /(?:create|add|mint|make)\s+(?:an?\s+)?atom(?:\s+called|\s+named)?\s*[,:]?\s*["']?([^"'\n,]{2,80})/i,
+    );
+    if (um?.[1] && !isPlaceholderAtomLabel(um[1].trim())) return stripMarkdownInlineDecorators(um[1].trim());
+
+    const q = firstLine.match(/^["']([^"']{2,80})["']\s*$/);
+    if (q?.[1] && !isPlaceholderAtomLabel(q[1])) return stripMarkdownInlineDecorators(q[1].trim());
+
+    return null;
+}
+
+function rescueDepositTrust(parsed: Record<string, unknown>, responseText: string): string {
+    const raw = strFromParsed(parsed, 'depositTrust', 'deposit');
+    if (raw && /^\d*\.?\d+$/.test(raw)) {
+        const n = Number.parseFloat(raw);
+        if (n >= 0.5 && n <= 1e6) return raw;
+    }
+    const m = responseText.match(/(\d+\.?\d*)\s*(?:TRUST|₸|〒)/i);
+    if (m && Number.parseFloat(m[1]) >= 0.5) return m[1];
+    return '0.5';
+}
+
+async function tryRescueBuiltInCreateAtomAfterBadSkillJson(
+    wallet: string,
+    userMsg: string,
+    responseText: string,
+    rawJsonFence: string,
+    parsed: Record<string, unknown>,
+): Promise<{ intent: Record<string, unknown>; note: string } | null> {
+    if (!looksLikeFailedAtomTutorial(parsed, rawJsonFence)) return null;
+    const labelRaw = extractLikelyAtomLabelForRescue(userMsg, responseText, parsed);
+    if (!labelRaw) return null;
+    const depositTrust = rescueDepositTrust(parsed, responseText);
+    try {
+        const built = await buildCreateAtomTxIntent(wallet, labelRaw, depositTrust);
+        const onChainName = normalizeAtomLabel(labelRaw);
+        logSkillEvent({
+            level: 'info',
+            event: 'skill.chat.tx_intent_rescued_create_atom',
+            detail: { label_len: onChainName.length },
+        });
+        return {
+            intent: {
+                action: 'createAtoms',
+                to: built.to,
+                data: built.data,
+                value: built.valueWei.toString(),
+                chainId: String(CHAIN_ID),
+                description: `Create atom "${onChainName}"`,
+                txBuiltIn: true,
+                builtinLabel: onChainName,
+                builtinDepositTrust: depositTrust,
+                builtinDataHex: built.dataHex,
+            },
+            note: '\n\n_(**Sign & broadcast** below uses IntuRank’s real **`createAtom`** encoding. The JSON in the reply was a non-executable template.)_',
+        };
+    } catch {
+        return null;
+    }
+}
+
 function extractErrorText(error: unknown): string {
     if (typeof error === 'string') return error;
     if (error && typeof error === 'object') {
@@ -170,6 +461,7 @@ const SKILL_CHAT_MAX_MESSAGES = 48;
 
 const DEFAULT_SKILL_MESSAGES: Message[] = [
     {
+        id: 'skill-seed-welcome',
         role: 'assistant',
         content:
             "Hi. I run on the full upstream Intuition skill package (SKILL.md, GraphQL reference, schemas, workflows, deposit/redeem batch ops, simulation, fees) plus IntuRank-specific routing. Ask deep protocol questions or tell me what to create (atom or a claim like “Alice / trusts / Bob” with a 0.5 TRUST deposit). I reply in your language when I can. Connect your wallet when you are ready to Sign & broadcast. Before your first on-chain create, use Enable fee proxy in the bar if it appears (one time).",
@@ -251,11 +543,15 @@ function AssistantMessageBody({ content }: { content: string }) {
         const resolved = resolveJsonBodyFromAssistantResponse(content, m);
         const display = resolved ? formatSkillJsonForDisplay(resolved) : '';
         parts.push(
-            <details key={key++} open className="mt-3 rounded-xl border border-white/10 bg-black/30 text-left">
-                <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-slate-500 font-sans hover:text-slate-300 [&::-webkit-details-marker]:hidden flex items-center gap-2">
-                    <span className="text-intuition-primary/90">▸</span> Technical details (JSON)
+            <details
+                key={key++}
+                open
+                className="mt-3 rounded-2xl border border-white/[0.09] bg-black/25 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[box-shadow,border-color] duration-300 open:border-intuition-primary/25 open:shadow-[inset_0_1px_0_rgba(34,211,238,0.08),0_12px_40px_rgba(0,0,0,0.35)] [&[open]_summary_.skill-json-chevron]:rotate-90"
+            >
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl px-3.5 py-2.5 font-sans text-xs font-medium text-slate-500 transition-colors hover:bg-white/[0.03] hover:text-slate-200 [&::-webkit-details-marker]:hidden">
+                    <span className="skill-json-chevron inline-block text-intuition-primary/90 transition-transform duration-200">▸</span> Technical details (JSON)
                 </summary>
-                <pre className="max-h-[min(360px,55vh)] overflow-auto border-t border-white/5 p-3 text-[10px] leading-relaxed text-slate-300 font-mono whitespace-pre-wrap [overflow-wrap:anywhere]">
+                <pre className="max-h-[min(360px,55vh)] overflow-auto border-t border-white/[0.06] p-3.5 text-[10px] leading-relaxed text-slate-300 font-mono whitespace-pre-wrap [overflow-wrap:anywhere] rounded-b-2xl">
                     {display || (
                         <span className="text-slate-500 italic font-sans">
                             No JSON in this block — the model may have skipped the payload or used a non-standard fence. Ask again for a
@@ -291,10 +587,14 @@ function loadSkillChatMessages(): Message[] {
                 typeof (m as Message).content === 'string'
         ) as Message[];
         if (cleaned.length === 0) return DEFAULT_SKILL_MESSAGES;
-        return cleaned.slice(-SKILL_CHAT_MAX_MESSAGES).map((m) =>
+        return cleaned.slice(-SKILL_CHAT_MAX_MESSAGES).map((m) => {
             /* A stale "pending" from a previous session disables Sign & broadcast; clear it. */
-            m.txOutcome === 'pending' ? { ...m, txOutcome: undefined, txError: undefined } : m
-        );
+            const cleared =
+                m.txOutcome === 'pending' ? { ...m, txOutcome: undefined, txError: undefined } : m;
+            const existingId = typeof (cleared as { id?: unknown }).id === 'string' ? (cleared as { id: string }).id : '';
+            const id = existingId.length > 0 ? existingId : newSkillMessageId();
+            return { ...cleared, id };
+        });
     } catch {
         return DEFAULT_SKILL_MESSAGES;
     }
@@ -312,6 +612,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
     const stickToBottomRef = useRef(true);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+    const reduceMotion = useReducedMotion();
 
     const checkScrollPosition = useCallback(() => {
         const el = scrollRef.current;
@@ -393,19 +694,28 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
 
         const userMsg = input.trim();
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        setMessages((prev) => [...prev, { id: newSkillMessageId(), role: 'user', content: userMsg }]);
         setLoading(true);
 
         try {
             if (!getGeminiApiKey() && !getGroqApiKey() && !getOpenAiApiKey()) {
+                const assistantMessageId = newSkillMessageId();
                 setMessages((prev) => [
                     ...prev,
                     {
+                        id: assistantMessageId,
                         role: 'assistant',
                         content:
                             'Add `VITE_GROQ_API_KEY` (preferred) and/or `VITE_GEMINI_API_KEY` and/or `VITE_OPENAI_API_KEY` to `.env.local` to use the agent.',
                     },
                 ]);
+                if (address) {
+                    notifyProtocolXpEarned({
+                        address,
+                        reasonKey: 'skill_chat',
+                        dedupeKey: assistantMessageId,
+                    });
+                }
                 return;
             }
 
@@ -418,6 +728,12 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 }
             } catch (e) {
                 logSkillEvent({ level: 'warn', event: 'skill.chat.live_context_error', error: e });
+            }
+
+            const routingAppendix = buildSkillWriteRoutingAppendix(userMsg);
+            if (routingAppendix) {
+                promptUserMsg = `${promptUserMsg}${routingAppendix}`;
+                logSkillEvent({ level: 'debug', event: 'skill.chat.write_routing_appended' });
             }
 
             const { text: responseText, provider } = await generateSkillChatCompletion({
@@ -446,14 +762,17 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
             }
             if (jsonBlockBody != null) jsonBlockBody = jsonBlockBody.trim();
             let txIntent: any = null;
+            let txBlockedReason: string | undefined;
+            let skillParsedForRescue: Record<string, unknown> | null = null;
             let contentAppend = '';
             if (jsonBlockBody) {
                 if (looksLikeGraphQLFencedAsJson(jsonBlockBody)) {
                     /* Model put GraphQL in a json fence; skip tx pipeline — answer text is still shown. */
                 } else try {
                     const parsed = parseSkillTxJsonBlock(jsonBlockBody);
-                    const act = normalizeSkillAction(parsed.action);
-                    if (act === 'createatom') {
+                    skillParsedForRescue = parsed as Record<string, unknown>;
+                    const act = normalizeSkillAction(coalesceActionFields(parsed));
+                    if (act === 'createatom' || act === 'createatoms') {
                         if (!address) {
                             contentAppend =
                                 '\n\n_(Connect your wallet and send the same message again to build the transaction.)_';
@@ -510,7 +829,48 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                             }
                         }
                     } else {
-                        txIntent = parsed;
+                        const parsedRec = parsed as Record<string, unknown>;
+                        const shell =
+                            skillJsonFenceLooksLikeShellTutorial(jsonBlockBody) ||
+                            parsedRecordLooksLikeShellTemplate(parsedRec);
+                        if (shell) {
+                            txIntent = null;
+                            txBlockedReason =
+                                'This JSON block is from a **shell walkthrough** (placeholders like $MULTIVAULT, 0x$CALLDATA, or $(…)). Those are not real addresses or calldata — the app cannot open a wallet for them.\n\n' +
+                                `Ask again for **only** one \`createAtom\` JSON: \`"action": "createAtom"\`, \`label\`, \`depositTrust\`, \`chainId": "${CHAIN_ID}"\` — no numbered steps, no \`curl\`/\`cast\`, no \`$\` variables.`;
+                            logSkillEvent({
+                                level: 'warn',
+                                event: 'skill.chat.tx_intent_shell_template',
+                                detail: { chars: jsonBlockBody.length },
+                            });
+                        } else {
+                            const enriched = enrichTxIntentFromParsed(parsedRec);
+                            const toS = typeof enriched.to === 'string' ? enriched.to.trim() : '';
+                            const dataS = typeof enriched.data === 'string' ? enriched.data.trim() : '';
+                            if (!toS || !dataS) {
+                                txIntent = null;
+                                const partial =
+                                    Boolean(toS || dataS) ||
+                                    (enriched.value != null && String(enriched.value).trim() !== '');
+                                if (partial) {
+                                    txBlockedReason =
+                                        'This JSON cannot be signed: a raw transaction needs a real FeeProxy **`to`** address and **`data`** hex. For creating an atom, use the **`createAtom`** shape (`label`, `depositTrust`) instead of MultiVault/shell output.';
+                                }
+                            } else {
+                                const rawErr = getRawSkillBroadcastValidationError(enriched);
+                                if (rawErr) {
+                                    logSkillEvent({
+                                        level: 'warn',
+                                        event: 'skill.chat.tx_intent_invalid',
+                                        detail: { reason: rawErr.slice(0, 220) },
+                                    });
+                                    txIntent = null;
+                                    txBlockedReason = rawErr;
+                                } else {
+                                    txIntent = enriched;
+                                }
+                            }
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to parse or build tx intent', e);
@@ -520,19 +880,52 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 }
             }
 
+            if (!txIntent && txBlockedReason && address && skillParsedForRescue && jsonBlockBody) {
+                const rescued = await tryRescueBuiltInCreateAtomAfterBadSkillJson(
+                    address,
+                    userMsg,
+                    responseText,
+                    jsonBlockBody,
+                    skillParsedForRescue,
+                );
+                if (rescued) {
+                    txIntent = rescued.intent;
+                    txBlockedReason = undefined;
+                    contentAppend += rescued.note;
+                }
+            }
+
+            const assistantMessageId = newSkillMessageId();
             setMessages((prev) => [
                 ...prev,
-                { role: 'assistant', content: responseText + contentAppend, txIntent, llmProvider: provider },
+                {
+                    id: assistantMessageId,
+                    role: 'assistant',
+                    content: responseText + contentAppend,
+                    txIntent,
+                    txBlockedReason,
+                    llmProvider: provider,
+                },
             ]);
+            if (address) {
+                notifyProtocolXpEarned({
+                    address,
+                    reasonKey: 'skill_chat',
+                    dedupeKey: assistantMessageId,
+                });
+            }
             logSkillEvent({
                 level: 'info',
                 event: 'skill.chat.message_saved',
-                detail: { has_tx_intent: Boolean(txIntent) },
+                detail: { has_tx_intent: Boolean(txIntent), has_tx_blocked: Boolean(txBlockedReason) },
             });
         } catch (error: unknown) {
             console.error('Skill LLM error:', error);
             logSkillEvent({ level: 'error', event: 'skill.chat.llm_failed', error });
-            setMessages((prev) => [...prev, { role: 'assistant', content: formatSkillLlmError(error) }]);
+            setMessages((prev) => [
+                ...prev,
+                { id: newSkillMessageId(), role: 'assistant', content: formatSkillLlmError(error) },
+            ]);
         } finally {
             setLoading(false);
         }
@@ -549,17 +942,17 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
         logSkillEvent({
             level: 'info',
             event: 'skill.tx.start',
-            detail: { action: String(intent?.action ?? ''), message_index: messageIndex },
+            detail: { action: resolveSkillTxAction(intent as Record<string, unknown>), message_index: messageIndex },
         });
 
         const cid = parseInt(String(intent.chainId ?? CHAIN_ID), 10);
         if (cid !== CHAIN_ID) {
-            toast.error(`Switch wallet to Intuition Mainnet (chain ${CHAIN_ID})`);
+            toast.error(`Switch wallet to ${NETWORK_NAME} (chain ${CHAIN_ID})`);
             return;
         }
 
         /** Triple pipeline: create missing atoms (sequential txs) then triple. No single calldata. */
-        if (String(intent?.action ?? '') === 'tripleFromLabels') {
+        if (isTripleFromLabelsIntent(intent)) {
             try {
                 await switchNetwork();
                 const approved = await getProxyApprovalStatus(address);
@@ -601,11 +994,25 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     address,
                     (msg) => toast.info(msg)
                 );
-                toast.success("Triple broadcast confirmed.");
+                if (result.tripleHash) {
+                  toast.success('Triple broadcast confirmed.');
+                  notifyProtocolXpEarned({
+                    address,
+                    reasonKey: 'skill_triple',
+                    txHash: result.tripleHash,
+                    depositTrustWei: parseEther(String(intent.depositTrust ?? '0.5')),
+                  });
+                } else {
+                  toast.success('This claim already exists on-chain — open it below (no duplicate tx).');
+                }
                 logSkillEvent({
                     level: 'info',
                     event: 'skill.tx.success',
-                    detail: { action: 'tripleFromLabels', tx_hash_prefix: String(result.tripleHash).slice(0, 12) },
+                    detail: {
+                        action: 'tripleFromLabels',
+                        tx_hash_prefix: (result.tripleHash ?? result.tripleTermId).slice(0, 12),
+                        skipped_duplicate: !result.tripleHash,
+                    },
                 });
                 window.dispatchEvent(new Event('local-tx-updated'));
                 setMessages((prev) =>
@@ -616,7 +1023,8 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                   txOutcome: "success" as const,
                                   txHash: result.tripleHash,
                                   txTermId: String(result.tripleTermId),
-                                  txAtomHashes: result.atomTxHashes.map(String),
+                                  txAtomHashes:
+                                    result.atomTxHashes.length > 0 ? result.atomTxHashes.map(String) : undefined,
                                   txError: undefined,
                               }
                             : msgItem
@@ -666,7 +1074,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
             return;
         }
 
-        const action = String(intent?.action ?? '');
+        const action = resolveSkillTxAction(intent as Record<string, unknown>);
         const toLc = to.toLowerCase();
         const targetsFeeProxy = toLc === FEE_PROXY_ADDRESS.toLowerCase();
         // createAtoms / createTriples / deposit via FeeProxy require MultiVault operator approval for the fee proxy.
@@ -731,6 +1139,43 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
         try {
             const hash = await broadcastTransaction(address, to as `0x${string}`, valueWei, dataRaw as `0x${string}`);
             toast.success("Transaction broadcasted!");
+            let depositTrustWei: bigint | null = null;
+            if (action === 'deposit') {
+              depositTrustWei = valueWei;
+            } else {
+              const depRaw = intent?.builtinDepositTrust ?? intent?.depositTrust;
+              if (typeof depRaw === 'string' && depRaw.trim()) {
+                try {
+                  depositTrustWei = parseEther(depRaw.trim());
+                } catch {
+                  depositTrustWei = null;
+                }
+              }
+            }
+            if (targetsFeeProxy) {
+              if (action === 'deposit') {
+                notifyProtocolXpEarned({
+                  address,
+                  reasonKey: 'market_acquire',
+                  txHash: hash,
+                  depositTrustWei: depositTrustWei ?? undefined,
+                });
+              } else if (action === 'createAtoms') {
+                notifyProtocolXpEarned({
+                  address,
+                  reasonKey: 'skill_atom',
+                  txHash: hash,
+                  depositTrustWei: depositTrustWei ?? undefined,
+                });
+              } else if (action === 'createTriples') {
+                notifyProtocolXpEarned({
+                  address,
+                  reasonKey: 'skill_triple',
+                  txHash: hash,
+                  depositTrustWei: depositTrustWei ?? undefined,
+                });
+              }
+            }
             logSkillEvent({
                 level: 'info',
                 event: 'skill.tx.success',
@@ -811,17 +1256,17 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
 
     return (
         <div
-            className={`flex flex-col h-full min-h-0 max-h-full w-full min-w-0 bg-[#0b0d12] border border-white/[0.08] rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.45)] overflow-hidden ring-1 ring-white/[0.04] ${className}`}
+            className={`flex flex-col h-full min-h-0 max-h-full w-full min-w-0 overflow-hidden rounded-3xl border border-white/[0.09] bg-gradient-to-b from-[#10131a] via-[#0b0d12] to-[#060708] shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.04)_inset] ring-1 ring-white/[0.05] ${className}`}
         >
             {/* Header — standard chat toolbar */}
-            <header className="shrink-0 flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4 border-b border-white/[0.06] bg-[#0f1117]">
-                <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-intuition-primary/15 text-intuition-primary border border-intuition-primary/25">
-                        <Terminal size={17} strokeWidth={2} aria-hidden />
+            <header className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0f1117]/80 px-3 py-3 backdrop-blur-xl sm:px-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-intuition-primary/30 bg-gradient-to-br from-intuition-primary/25 to-intuition-primary/5 text-intuition-primary shadow-[0_8px_24px_rgba(34,211,238,0.12)]">
+                        <Terminal size={18} strokeWidth={2} aria-hidden />
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-sm font-semibold text-white font-sans tracking-tight leading-tight">Skill agent</span>
-                        <span className="text-[11px] text-slate-500 font-sans leading-tight mt-0.5">Intuition Mainnet · chain {CHAIN_ID}</span>
+                        <span className="text-[11px] text-slate-500 font-sans leading-tight mt-0.5">{NETWORK_NAME} · chain {CHAIN_ID}</span>
                     </div>
                 </div>
                 <button
@@ -838,18 +1283,18 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                         toast.info('Chat cleared');
                     }}
                     onMouseEnter={playHover}
-                    className="shrink-0 text-xs font-medium text-slate-400 hover:text-white font-sans rounded-lg px-2.5 py-1.5 border border-transparent hover:border-white/10 hover:bg-white/[0.04] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/40"
+                    className="shrink-0 rounded-full border border-transparent px-3.5 py-2 font-sans text-xs font-medium text-slate-400 transition-all hover:border-white/10 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/40 active:scale-[0.98]"
                 >
                     Clear chat
                 </button>
             </header>
 
             {address && (
-                <div className="shrink-0 border-b border-white/[0.06] px-3 py-2 sm:px-4 bg-[#08090c]">
+                <div className="shrink-0 border-b border-white/[0.06] bg-[#08090c]/90 px-3 py-2.5 backdrop-blur-md sm:px-4">
                     {protocolReady === null ? (
                         <p className="text-xs text-slate-500 font-sans">Checking permissions</p>
                     ) : protocolReady ? (
-                        <div className="flex items-center gap-2 text-xs text-emerald-400/95 font-sans">
+                        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2 text-xs font-sans text-emerald-300/95 shadow-[0_0_24px_rgba(16,185,129,0.08)]">
                             <ShieldCheck size={14} className="shrink-0" />
                             <span>IntuRank fee proxy is enabled.</span>
                         </div>
@@ -878,7 +1323,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                 }}
                                 disabled={enablingProtocol}
                                 onMouseEnter={playHover}
-                                className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-semibold text-sm rounded-lg border border-amber-300/80"
+                                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/80 bg-amber-500 px-4 py-2.5 text-sm font-semibold text-black shadow-[0_8px_28px_rgba(245,158,11,0.28)] transition-transform hover:bg-amber-400 disabled:opacity-50 active:scale-[0.98]"
                             >
                                 {enablingProtocol ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                                 Enable fee proxy
@@ -896,24 +1341,59 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     role="log"
                     aria-relevant="additions"
                     aria-label="Skill conversation"
-                    className="min-h-0 flex-1 min-w-0 overflow-y-auto overflow-x-clip overscroll-y-contain px-3 py-4 sm:px-4 sm:py-5 space-y-4 bg-[#060708] scroll-smooth [scrollbar-width:thin] [scrollbar-color:rgba(100,116,139,0.35)_transparent]"
+                    className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip overscroll-y-contain scroll-smooth bg-[#060708]/50 px-3 py-4 [scrollbar-color:rgba(100,116,139,0.35)_transparent] [scrollbar-width:thin] sm:px-4 sm:py-6"
                 >
+                <div className="flex flex-col gap-5">
+                <AnimatePresence initial={false} mode="sync">
                 {messages.map((m, i) => {
                     const otherTxPending = messages.some((mm, idx) => mm.txOutcome === 'pending' && idx !== i);
                     return (
-                    <div key={i} className={`flex w-full min-w-0 ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in duration-200`}>
+                    <motion.div
+                        key={m.id}
+                        initial={
+                            reduceMotion
+                                ? false
+                                : m.role === 'user'
+                                  ? { opacity: 0, x: 36, scale: 0.94, filter: 'blur(4px)' }
+                                  : { opacity: 0, x: -36, scale: 0.94, filter: 'blur(4px)' }
+                        }
+                        animate={{
+                            opacity: 1,
+                            x: 0,
+                            scale: 1,
+                            filter: 'blur(0px)',
+                        }}
+                        exit={
+                            reduceMotion
+                                ? { opacity: 0, transition: { duration: 0.12 } }
+                                : {
+                                      opacity: 0,
+                                      scale: 0.96,
+                                      y: -10,
+                                      filter: 'blur(2px)',
+                                      transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+                                  }
+                        }
+                        transition={{
+                            type: 'spring',
+                            stiffness: 380,
+                            damping: 28,
+                            mass: 0.88,
+                        }}
+                        className={`flex w-full min-w-0 ${m.role === 'user' ? 'justify-end' : 'justify-start'} space-y-0`}
+                    >
                         <div
                             className={`flex gap-2.5 sm:gap-3 w-full min-w-0 ${m.role === 'user' ? 'flex-row-reverse max-w-[min(100%,28rem)] ml-auto' : 'max-w-[min(100%,40rem)]'}`}
                         >
                             <div
-                                className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-full ${m.role === 'user' ? 'bg-intuition-primary/20 text-intuition-primary' : 'bg-white/[0.06] text-slate-300 border border-white/[0.08]'}`}
+                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${m.role === 'user' ? 'border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/30 to-intuition-primary/10 text-intuition-primary shadow-[0_6px_20px_rgba(34,211,238,0.15)]' : 'border border-white/[0.1] bg-white/[0.06] text-slate-300 backdrop-blur-sm'}`}
                                 aria-hidden
                             >
                                 {m.role === 'user' ? <User size={15} strokeWidth={2} /> : <Bot size={15} strokeWidth={2} />}
                             </div>
                             <div className="min-w-0 flex-1 space-y-4">
                                 <div
-                                    className={`px-3.5 py-3 sm:px-4 sm:py-3.5 max-w-full min-w-0 rounded-2xl ${m.role === 'user' ? 'rounded-br-md bg-intuition-primary/[0.14] border border-intuition-primary/25 text-white' : 'rounded-bl-md bg-[#12151c] border border-white/[0.07] text-slate-200'} shadow-sm`}
+                                    className={`min-w-0 max-w-full rounded-3xl px-4 py-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.22)] backdrop-blur-md sm:px-4 sm:py-4 ${m.role === 'user' ? 'rounded-br-2xl border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/22 to-intuition-primary/[0.08] text-white' : 'rounded-bl-2xl border border-white/[0.08] bg-[#12151c]/85 text-slate-200'}`}
                                 >
                                     {m.role === 'assistant' ? (
                                         <div className="text-[13px] leading-[1.65] text-slate-300 font-sans">
@@ -940,10 +1420,39 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                         </div>
                                     )}
                                 </div>
-                                {m.txIntent && (
+                                {m.role === 'assistant' && m.txBlockedReason && !m.txIntent && (
                                     <div
+                                        className="w-full max-w-full min-w-0 space-y-3 rounded-3xl border border-amber-500/40 bg-gradient-to-b from-amber-950/55 via-amber-950/25 to-black/80 p-4 shadow-[0_0_40px_rgba(245,158,11,0.14)] ring-1 ring-amber-400/20 backdrop-blur-md sm:p-5"
+                                        role="status"
+                                        aria-label="Transaction cannot be signed"
+                                    >
+                                        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-amber-200 font-sans">
+                                            <AlertTriangle size={20} className="shrink-0 text-amber-400" />
+                                            <span>Why there is no Sign &amp; broadcast</span>
+                                        </div>
+                                        <p className="text-[13px] leading-relaxed text-slate-200 font-sans whitespace-pre-wrap [overflow-wrap:anywhere]">
+                                            {m.txBlockedReason}
+                                        </p>
+                                        <p className="text-[11px] leading-relaxed text-slate-500 font-sans border-t border-white/10 pt-3">
+                                            Example prompt: “Output <span className="text-slate-400">only</span> the{' '}
+                                            <code className="text-cyan-200/90">createAtom</code> JSON for{' '}
+                                            <span className="text-white font-semibold">Video Calls</span>, depositTrust 0.5 — no
+                                            shell steps.”
+                                        </p>
+                                    </div>
+                                )}
+                                {m.txIntent && (
+                                    <motion.div
+                                        initial={reduceMotion ? false : { opacity: 0, y: 22, scale: 0.97 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{
+                                            type: 'spring',
+                                            stiffness: 380,
+                                            damping: 28,
+                                            mass: 0.85,
+                                        }}
                                         className={[
-                                            'w-full max-w-full min-w-0 rounded-2xl border transition-[min-height,padding,box-shadow] duration-500 ease-out backdrop-blur-sm',
+                                            'w-full max-w-full min-w-0 rounded-3xl border transition-[min-height,padding,box-shadow] duration-500 ease-out backdrop-blur-md',
                                             !m.txOutcome &&
                                                 'bg-gradient-to-b from-amber-950/50 to-black/80 border-amber-500/40 p-5 sm:p-6 space-y-5 shadow-[0_0_48px_rgba(245,158,11,0.12)] ring-1 ring-amber-400/15',
                                             m.txOutcome === 'pending' &&
@@ -958,7 +1467,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                             .filter(Boolean)
                                             .join(' ')}
                                     >
-                                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm font-semibold font-sans min-w-0">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 font-sans text-sm font-semibold min-w-0">
                                             {m.txOutcome === 'success' &&
                                                 <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />}
                                             {m.txOutcome === 'rejected' &&
@@ -989,75 +1498,75 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                         </div>
 
                                         {(m.txOutcome === undefined || m.txOutcome === 'pending') && (
-                                            <div className="rounded-xl bg-black/35 border border-white/10 p-4 text-xs sm:text-sm text-slate-400 font-sans space-y-3">
-                                                {m.txIntent.action === 'tripleFromLabels' ? (
+                                            <div className="rounded-2xl border border-white/[0.1] bg-black/40 p-3 font-sans text-xs text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm sm:p-4 sm:text-sm">
+                                                {isTripleFromLabelsIntent(m.txIntent) ? (
                                                     <>
-                                                        <p className="text-xs text-violet-200/95 font-medium font-sans flex items-center gap-2">
+                                                        <p className="mb-3 flex items-center gap-2 rounded-xl bg-violet-500/10 px-3 py-2 text-xs font-medium text-violet-200/95 border border-violet-500/20">
                                                             <Layers size={14} className="shrink-0" />
                                                             Triple (claim)
                                                         </p>
-                                                        <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                                                        <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
                                                             {tripleUiResolutionLine(
                                                                 String(m.txIntent.subjectLabel ?? ''),
                                                                 String(m.txIntent.predicateLabel ?? ''),
                                                                 String(m.txIntent.objectLabel ?? '')
                                                             )}
                                                         </p>
-                                                        <div className="space-y-2 text-[11px] sm:text-xs">
-                                                            <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                <span className="text-slate-500">Subject</span>
-                                                                <span className="text-white font-bold text-right break-all">{m.txIntent.subjectLabel}</span>
+                                                        <div className="grid gap-2 text-[11px] sm:text-xs">
+                                                            <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Subject</span>
+                                                                <span className="text-right font-bold text-white break-all">{m.txIntent.subjectLabel}</span>
                                                             </div>
-                                                            <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                <span className="text-slate-500">Predicate</span>
-                                                                <span className="text-white font-bold text-right break-all">{m.txIntent.predicateLabel}</span>
+                                                            <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Predicate</span>
+                                                                <span className="text-right font-bold text-white break-all">{m.txIntent.predicateLabel}</span>
                                                             </div>
-                                                            <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                <span className="text-slate-500">Object</span>
-                                                                <span className="text-white font-bold text-right break-all">{m.txIntent.objectLabel}</span>
+                                                            <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Object</span>
+                                                                <span className="text-right font-bold text-white break-all">{m.txIntent.objectLabel}</span>
                                                             </div>
-                                                            <div className="flex justify-between gap-4">
-                                                                <span className="text-slate-500">Deposit (triple)</span>
-                                                                <span className="text-white font-bold">{m.txIntent.depositTrust} {CURRENCY_SYMBOL}</span>
+                                                            <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-intuition-primary/25 bg-intuition-primary/[0.06] px-3 py-2.5">
+                                                                <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Deposit</span>
+                                                                <span className="text-right font-bold text-intuition-primary/95">{m.txIntent.depositTrust} {CURRENCY_SYMBOL}</span>
                                                             </div>
                                                         </div>
-                                                        <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                                                        <p className="mt-3 text-xs leading-relaxed text-slate-500">
                                                             You may need to approve more than one transaction in order. That is normal.
                                                         </p>
                                                     </>
                                                 ) : (
                                                     <>
                                                         {m.txIntent.txBuiltIn && (
-                                                            <p className="text-xs text-cyan-300/90 font-medium font-sans mb-1">
+                                                            <p className="mb-3 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs font-medium text-cyan-200/95">
                                                                 New atom (built in-app)
                                                             </p>
                                                         )}
-                                                        <div className="space-y-2">
-                                                            <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                <span className="text-slate-500">Action</span>
-                                                                <span className="text-white font-bold">{m.txIntent.action}</span>
+                                                        <div className="grid gap-2">
+                                                            <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Action</span>
+                                                                <span className="text-right font-bold text-white">{skillTxActionDisplayLabel(m.txIntent)}</span>
                                                             </div>
                                                             {m.txIntent.txBuiltIn && m.txIntent.builtinLabel != null && (
                                                                 <>
-                                                                    <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                        <span className="text-slate-500">Atom</span>
-                                                                        <span className="text-white font-bold text-right break-all">{m.txIntent.builtinLabel}</span>
+                                                                    <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                        <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Atom</span>
+                                                                        <span className="text-right font-bold text-white break-all">{m.txIntent.builtinLabel}</span>
                                                                     </div>
-                                                                    <div className="flex justify-between gap-4 border-b border-white/5 pb-2">
-                                                                        <span className="text-slate-500">Deposit</span>
-                                                                        <span className="text-white font-bold">
+                                                                    <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+                                                                        <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Deposit</span>
+                                                                        <span className="text-right font-bold text-white">
                                                                             {m.txIntent.builtinDepositTrust} {CURRENCY_SYMBOL}
                                                                         </span>
                                                                     </div>
                                                                 </>
                                                             )}
                                                             {m.txIntent.value != null && (
-                                                                <div className="flex justify-between gap-4 pt-1">
-                                                                    <span className="text-slate-500">Total send</span>
-                                                                    <span className="text-white font-bold">
+                                                                <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-amber-400/35 bg-amber-500/[0.08] px-3 py-2.5">
+                                                                    <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200/90">Total</span>
+                                                                    <span className="text-right font-bold text-amber-100">
                                                                         {(Number(m.txIntent.value) / 1e18).toFixed(4)} {CURRENCY_SYMBOL}
                                                                         {m.txIntent.txBuiltIn && (
-                                                                            <span className="text-slate-500 text-[10px] font-normal"> (fee + deposit)</span>
+                                                                            <span className="mt-0.5 block text-[10px] font-normal text-amber-200/70">Fee + deposit</span>
                                                                         )}
                                                                     </span>
                                                                 </div>
@@ -1090,30 +1599,34 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                     />
                                                 </div>
                                                 <p className="text-xs text-amber-100/90 font-sans leading-relaxed [overflow-wrap:anywhere]">
-                                                    {m.txIntent?.action === 'tripleFromLabels'
-                                                        ? 'Approve each prompt in your wallet in order.'
+                                                    {isTripleFromLabelsIntent(m.txIntent)
+                                                        ? 'Approve atom batch if prompted (one signature for all new anchors), then the claim.'
                                                         : 'Approve or reject in your wallet.'}
                                                 </p>
                                             </div>
                                         )}
 
                                         {m.txOutcome === 'success' && (
-                                            <div className="rounded-xl bg-black/40 border border-emerald-500/25 p-4 space-y-4">
+                                            <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-black/45 p-4 backdrop-blur-sm">
                                                 <p className="text-xs font-semibold text-emerald-400/95 font-sans">
                                                     Done
                                                 </p>
                                                 <p className="text-sm text-slate-300 font-sans leading-relaxed">
-                                                    Your transaction is on-chain.
+                                                    {isTripleFromLabelsIntent(m.txIntent) && !m.txHash && m.txTermId
+                                                        ? 'Nothing new to mint — this claim was already on-chain.'
+                                                        : 'Your transaction is on-chain.'}
                                                 </p>
                                                 {m.txAtomHashes && m.txAtomHashes.length > 0 && (
                                                     <p className="text-xs text-slate-500 font-sans leading-relaxed">
-                                                        Also signed {m.txAtomHashes.length} atom transaction{m.txAtomHashes.length > 1 ? 's' : ''}. See the explorer for details.
+                                                        {m.txAtomHashes.length === 1
+                                                            ? 'Atoms anchored in one batched transaction — see explorer.'
+                                                            : `Signed ${m.txAtomHashes.length} atom transactions — see explorer for details.`}
                                                     </p>
                                                 )}
                                                 {m.txHash ? (
                                                     <div className="space-y-2">
                                                         <span className="text-xs font-medium text-slate-500 block font-sans">
-                                                            {m.txIntent?.action === 'tripleFromLabels' ? 'Triple transaction' : 'Transaction'}
+                                                            {isTripleFromLabelsIntent(m.txIntent) ? 'Triple transaction' : 'Transaction'}
                                                         </span>
                                                         <p
                                                             className="text-[11px] font-mono text-slate-200 break-all"
@@ -1123,7 +1636,11 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs font-sans text-slate-500">Hash unavailable.</p>
+                                                    <p className="text-xs font-sans text-slate-500">
+                                                        {isTripleFromLabelsIntent(m.txIntent) && m.txTermId
+                                                            ? 'No transaction hash — claim already existed (use Open claim).'
+                                                            : 'Hash unavailable.'}
+                                                    </p>
                                                 )}
                                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1">
                                                     {m.txHash && (
@@ -1131,7 +1648,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                             href={`${intuitionChain.blockExplorers.default.url}/tx/${m.txHash}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="inline-flex items-center justify-center gap-2 px-5 py-3 border-2 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 font-semibold text-sm rounded-xl transition-colors font-sans"
+                                                            className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500/55 px-5 py-3 font-sans text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/10"
                                                         >
                                                             <ExternalLink size={16} /> Explorer
                                                         </a>
@@ -1139,10 +1656,10 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                     {m.txTermId && (
                                                         <Link
                                                             to={`/markets/${m.txTermId}`}
-                                                            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm rounded-xl shadow-[0_0_24px_rgba(16,185,129,0.25)] transition-colors font-sans"
+                                                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-sans text-sm font-bold text-black shadow-[0_10px_36px_rgba(16,185,129,0.35)] transition-transform hover:bg-emerald-400 active:scale-[0.99]"
                                                         >
                                                             <ExternalLink size={16} />
-                                                            {m.txIntent?.action === 'tripleFromLabels' ? 'Open claim' : 'Open atom'}
+                                                            {isTripleFromLabelsIntent(m.txIntent) ? 'Open claim' : 'Open atom'}
                                                         </Link>
                                                     )}
                                                 </div>
@@ -1162,7 +1679,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                         )}
 
                                         {!m.txOutcome && !address && m.txIntent && (
-                                            <p className="text-xs text-amber-100/95 font-sans leading-relaxed border border-amber-500/25 rounded-lg px-3 py-2 bg-amber-950/40">
+                                            <p className="rounded-2xl border border-amber-500/30 bg-amber-950/45 px-3.5 py-2.5 text-xs font-sans leading-relaxed text-amber-100/95 backdrop-blur-sm">
                                                 Connect your wallet (top of the app) to unlock <span className="font-semibold">Sign &amp; broadcast</span>.
                                             </p>
                                         )}
@@ -1186,25 +1703,46 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                           ? 'Another wallet request is pending'
                                                           : 'Sign and broadcast'
                                                 }
-                                                className={`w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-all rounded-lg border border-amber-300/90 hover:border-white disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_24px_rgba(245,158,11,0.3)] font-sans ${!address || otherTxPending ? 'opacity-60' : ''}`}
+                                                className={`font-sans w-full inline-flex items-center justify-center gap-2.5 rounded-2xl border border-amber-200/90 bg-gradient-to-b from-amber-400 to-amber-500 px-6 py-4 text-sm font-bold text-black shadow-[0_12px_40px_rgba(245,158,11,0.38)] transition-all hover:from-amber-300 hover:to-amber-400 hover:shadow-[0_14px_44px_rgba(245,158,11,0.45)] disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99] ${!address || otherTxPending ? 'opacity-60' : ''}`}
                                             >
                                                 <CheckCircle2 size={20} /> Sign &amp; broadcast
                                             </button>
                                         )}
-                                    </div>
+                                    </motion.div>
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                     );
                 })}
                 {loading && (
-                    <div className="flex justify-start w-full min-w-0" aria-live="polite" aria-busy="true">
-                        <div className="flex gap-2.5 sm:gap-3 items-center min-w-0 max-w-[min(100%,40rem)] text-slate-400 text-sm font-sans">
-                            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.06] border border-white/[0.08] text-slate-400" aria-hidden>
+                    <motion.div
+                        key="skill-chat-thinking"
+                        initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={
+                            reduceMotion
+                                ? { opacity: 0, transition: { duration: 0.1 } }
+                                : {
+                                      opacity: 0,
+                                      y: 6,
+                                      scale: 0.99,
+                                      transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+                                  }
+                        }
+                        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                        className="flex min-w-0 justify-start"
+                        aria-live="polite"
+                        aria-busy="true"
+                    >
+                        <div className="flex min-w-0 max-w-[min(100%,40rem)] items-center gap-3 font-sans text-sm text-slate-400">
+                            <div
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.06] text-slate-400 backdrop-blur-sm"
+                                aria-hidden
+                            >
                                 <Bot size={15} strokeWidth={2} />
                             </div>
-                            <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-white/[0.07] bg-[#12151c] px-4 py-2.5 shadow-sm">
+                            <div className="flex items-center gap-2 rounded-3xl rounded-bl-2xl border border-white/[0.09] bg-[#12151c]/90 px-4 py-3 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-md">
                                 <span className="text-[13px] text-slate-400">Thinking</span>
                                 <span className="flex gap-1" aria-hidden>
                                     {[0, 1, 2].map((dot) => (
@@ -1217,8 +1755,10 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </motion.div>
                 )}
+                </AnimatePresence>
+                </div>
                 </div>
 
                 {showJumpToLatest && (
@@ -1236,8 +1776,8 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
             </div>
 
             {/* Composer — fixed footer, standard enter-to-send */}
-            <div className="shrink-0 px-3 pt-2 pb-3 sm:px-4 sm:pb-4 bg-[#0a0c10] border-t border-white/[0.08]">
-                <div className="relative flex items-end gap-2">
+            <div className="shrink-0 border-t border-white/[0.08] bg-[#0a0c10]/95 px-3 pb-3 pt-2.5 backdrop-blur-xl sm:px-4 sm:pb-4">
+                <div className="relative flex items-end gap-2 rounded-2xl border border-white/[0.08] bg-[#12151c]/50 py-1.5 pl-2 pr-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] focus-within:border-intuition-primary/40 focus-within:ring-2 focus-within:ring-intuition-primary/20">
                     <label htmlFor="skill-chat-input" className="sr-only">
                         Message to Skill agent
                     </label>
@@ -1256,17 +1796,24 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                         rows={1}
                         placeholder="Message…"
                         autoComplete="off"
-                        className="w-full min-h-[48px] max-h-[200px] resize-none rounded-xl border border-white/[0.1] bg-[#12151c] py-3 pl-3.5 pr-[3.25rem] text-sm text-white font-sans leading-relaxed placeholder:text-slate-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] transition-shadow focus:border-intuition-primary/45 focus:outline-none focus:ring-2 focus:ring-intuition-primary/25"
+                        className="min-h-[48px] max-h-[200px] w-full resize-none rounded-xl border-0 bg-transparent py-2.5 pl-2 pr-14 font-sans text-sm leading-relaxed text-white caret-intuition-primary placeholder:text-slate-500 focus:outline-none focus:ring-0"
                     />
-                    <button
+                    <motion.button
                         type="button"
                         onClick={() => void handleSend()}
                         disabled={!input.trim() || loading}
                         aria-label="Send message"
-                        className="absolute right-1.5 bottom-1.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-intuition-primary/25 text-intuition-primary hover:bg-intuition-primary/40 disabled:pointer-events-none disabled:opacity-35 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/50"
+                        whileTap={
+                            reduceMotion || !input.trim() || loading ? undefined : { scale: 0.88 }
+                        }
+                        whileHover={
+                            reduceMotion || !input.trim() || loading ? undefined : { scale: 1.06 }
+                        }
+                        transition={{ type: 'spring', stiffness: 520, damping: 26, mass: 0.45 }}
+                        className="absolute bottom-1.5 right-1.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-intuition-primary to-cyan-500 text-black shadow-[0_8px_28px_rgba(34,211,238,0.35)] hover:brightness-110 disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#12151c]"
                     >
-                        <Send size={17} strokeWidth={2} aria-hidden />
-                    </button>
+                        <Send size={17} strokeWidth={2.25} className="drop-shadow-sm" aria-hidden />
+                    </motion.button>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 px-0.5">
                     <p className="text-[10px] text-slate-600 font-sans select-none">
@@ -1278,7 +1825,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                         {' '}new line
                     </p>
                 </div>
-                <div className="mt-2.5 flex flex-wrap gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                <div className="mt-2.5 flex snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible pb-1 scrollbar-none [-webkit-overflow-scrolling:touch]">
                     {[
                         { short: 'Create an atom', full: 'Create an atom called IntuRank Sandbox with 0.5 TRUST deposit' },
                         { short: 'Alice trusts Bob', full: 'Create a triple: subject Alice, predicate trusts, object Bob, deposit 0.5 TRUST' },
@@ -1290,7 +1837,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                             type="button"
                             title={suggestion.full}
                             onClick={() => setInput(suggestion.full)}
-                            className="shrink-0 px-2.5 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.14] text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors rounded-lg font-sans max-w-[220px] truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/35"
+                            className="max-w-[220px] shrink-0 snap-start truncate rounded-full border border-white/[0.1] bg-white/[0.05] px-4 py-2 font-sans text-[11px] font-medium text-slate-400 shadow-sm transition-all hover:border-intuition-primary/30 hover:bg-intuition-primary/10 hover:text-slate-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/40"
                         >
                             {suggestion.short}
                         </button>

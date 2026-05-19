@@ -17,12 +17,20 @@ export const toast = {
   success: (msg: string) => emitToast('success', msg),
   error: (msg: string) => emitToast('error', msg),
   info: (msg: string) => emitToast('info', msg),
-  dismissAll: () => { clearListeners.forEach((fn) => fn()); },
+  dismissAll: () => {
+    queueMicrotask(() => {
+      clearListeners.forEach((fn) => fn());
+    });
+  },
 };
 
 const emitToast = (type: ToastType, message: string) => {
   const id = Math.random().toString(36).substring(2, 9);
-  toastListeners.forEach(listener => listener({ id, type, message }));
+  const payload: ToastMessage = { id, type, message };
+  // Defer so we never call ToastContainer#setState synchronously from another component's render path.
+  queueMicrotask(() => {
+    toastListeners.forEach((listener) => listener(payload));
+  });
 };
 
 export const ToastContainer: React.FC = () => {

@@ -37,7 +37,7 @@ PORT=3001
 
 ## Production: Deploy on Coolify (recommended if self-hosting)
 
-[Coolify](https://coolify.io) can run the same stack as before: one long-lived service with `npm start`, plus `ENABLE_EMAIL_WORKER=true` so the API and background worker share one process (see `server/index.js`).
+[Coolify](https://coolify.io) can run the same stack as before: one long-lived service with `npm start`, plus `ENABLE_EMAIL_WORKER=true` so the API and background worker share one process (see `server/index.js`). The worker **only starts if Ensend vars are set**; leave `ENABLE_EMAIL_WORKER` unset or `false` to disable background sends (API still serves `/health`, subscribe routes, etc.).
 
 ### 1. Create an application
 

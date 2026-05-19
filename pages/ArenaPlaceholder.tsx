@@ -1,25 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, ArrowLeft, Sparkles, Swords } from 'lucide-react';
-import { playClick, playHover } from '../services/audio';
+import { playArenaUiClick, playArenaUiHover } from '../services/audio';
 
-/** Shown at `/climb` when `VITE_ARENA_ENABLED` is not true — full Arena UI stays behind the flag. */
+/**
+ * Shown at `/climb` when the full Arena is not displayed:
+ * - `VITE_ARENA_ENABLED` is not `true`, or
+ * - `VITE_ARENA_PLACEHOLDER=true` (mask WIP; route and nav still point here).
+ */
 const ArenaPlaceholder: React.FC = () => {
   return (
-    <div className="min-h-[calc(100dvh-5rem)] flex flex-col items-center justify-center px-4 py-12 md:py-20 relative overflow-hidden font-mono">
-      <div className="pointer-events-none absolute inset-0 bg-[#030508]" />
+    <div className="relative min-h-[calc(100dvh-5rem)] flex flex-col items-center justify-center px-4 py-12 md:py-20 overflow-x-hidden font-mono w-full isolate">
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[#030508]" />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 opacity-[0.06]"
         style={{
-          backgroundImage:
-            'linear-gradient(rgba(34,211,238,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.04) 1px, transparent 1px)',
+          backgroundImage: `
+            linear-gradient(rgba(0,243,255,0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,243,255,0.35) 1px, transparent 1px)
+          `,
           backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse at center, black 0%, transparent 75%)',
         }}
       />
-      <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-[min(100%,520px)] rounded-full bg-cyan-500/15 blur-[100px]" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-56 w-56 rounded-full bg-fuchsia-600/12 blur-[90px]" />
 
-      <div className="relative z-10 w-full max-w-xl animate-in fade-in zoom-in-95 duration-500">
+      <div className="relative z-10 w-full flex flex-col items-center justify-center min-h-[inherit]">
+      <div className="relative w-full max-w-xl animate-in fade-in zoom-in-95 duration-500">
         <div className="rounded-3xl border-2 border-cyan-500/35 bg-gradient-to-b from-[#0a1018] via-[#060a10] to-[#0c0614] p-10 md:p-14 text-center shadow-[0_0_80px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-white/5">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.35em] text-amber-200/95 mb-8">
             <Sparkles size={12} className="text-amber-300" />
@@ -44,8 +51,8 @@ const ArenaPlaceholder: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-950/80 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:border-slate-500 hover:text-white transition-colors"
             >
               <ArrowLeft size={16} />
@@ -53,22 +60,23 @@ const ArenaPlaceholder: React.FC = () => {
             </Link>
             <Link
               to="/markets"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-cyan-500/50 bg-cyan-500/15 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100 hover:bg-cyan-500/25 transition-colors shadow-[0_0_24px_rgba(34,211,238,0.15)]"
             >
               Markets
             </Link>
             <Link
               to="/skill-playground"
-              onClick={playClick}
-              onMouseEnter={playHover}
+              onClick={playArenaUiClick}
+              onMouseEnter={playArenaUiHover}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-fuchsia-500/35 bg-fuchsia-950/30 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-fuchsia-200/90 hover:border-fuchsia-400/50 transition-colors"
             >
               Intuition Skill
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

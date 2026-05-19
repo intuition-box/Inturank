@@ -24,6 +24,12 @@ Copy `.env.example` to `.env.local` and set values as needed:
 
 **Intuition Skill Playground:** With a connected wallet on **Intuition Mainnet (chain 1155)** and `VITE_GEMINI_API_KEY` set, open **Intel → Skill Playground** or go to `/#/skill-playground`. The in-app agent proposes unsigned transactions (`to`, `data`, `value`); you review and **Sign & Broadcast** through your wallet—the same pattern as the CLI Skill workflow below.
 
+### Product roadmap (Arena and trust funnels)
+
+Phased priorities (outcomes × metrics) and the Arena UX checklist live in [`services/intuRankProductSpec.ts`](services/intuRankProductSpec.ts). **Trust picks** open in the Arena at **`/#/climb?list=trust-your-tools&onboard=1`** (`/hub/trust-tools` redirects there so the flow stays on one page). Arena share URLs use **`/#/climb?list=<id>`** (`listId` still accepted as an alias). Optional return nudge: **`ref=graph`** on the same URL.
+
+**What syncs where (today):** positions, atoms, triples, and TRUST you put through the protocol live **on-chain / in the indexer**. Some IntuRank UX (Arena batch queue before submit, starred list IDs, skill chat history, activity XP ledger) still uses **browser storage** so it does not follow the user across devices until we add a backend or move more state on-chain.
+
 ---
 
 # Intuition Skill Tutorial

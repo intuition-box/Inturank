@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Activity, Search, RefreshCw, ChevronDown, ListFilter, Terminal, Wifi, ShieldCheck, Zap, Brain, TrendingDown, TrendingUp, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAccount } from 'wagmi';
-import { getGlobalActivity, getActivityOnMyMarkets, getActivityBySenderIds, getUserPositions, getUserHistory, getCurveLabel, type PositionActivityNotification } from '../services/graphql';
+import { getIntuRankNetworkActivity, getActivityOnMyMarkets, getActivityBySenderIds, getUserPositions, getUserIntuRankRoutedHistory, getCurveLabel, type PositionActivityNotification } from '../services/graphql';
 import ActivityRow from '../components/ActivityRow';
 import { playClick, playHover } from '../services/audio';
 import { formatEther } from 'viem';
 import { getFollowedIdentities } from '../services/follows';
-import { resolveENS, toAddress, isGraphResolvableAddress } from '../services/web3';
+import { toAddress, isGraphResolvableAddress } from '../services/web3';
+import { resolveFollowIdentityToAddress } from '../services/tns';
 import { CurrencySymbol } from '../components/CurrencySymbol';
 import { formatMarketValue, formatDisplayedShares } from '../services/analytics';
 import {
@@ -104,13 +105,13 @@ const Feed: React.FC = () => {
                 : 'No recent activity detected.';
 
             const prompt = `
-                Here are recent market activities on a trust graph: [${summary}]
+                Here are recent IntuRank-routed graph activities (deposits/redemptions via the app's fee routing): [${summary}]
                 Write ONE short sentence in plain English describing the overall trend or what stands out (e.g. volume, buys vs sells, notable names).
                 Rules: sentence case, max 22 words, no ALL CAPS, no sci-fi jargon, no emojis, no quotes around the sentence.
             `;
 
             const { text } = await generateSimpleLlmCompletion(prompt);
-            setAresPulse(text.trim() || 'Recent activity is flowing normally across the network.');
+            setAresPulse(text.trim() || 'Recent IntuRank-routed activity looks steady.');
         } catch (e) {
             setAresPulse('Couldn’t generate a summary right now. The feed below is up to date.');
         } finally {
@@ -136,7 +137,7 @@ const Feed: React.FC = () => {
 
         try {
             const currentOffset = reset ? 0 : offset;
-            const data = await getGlobalActivity(PAGE_SIZE, currentOffset);
+            const data = await getIntuRankNetworkActivity(PAGE_SIZE, currentOffset);
             
             setEvents(prev => {
                 const combined = reset ? data.items : [...prev, ...data.items];
@@ -172,7 +173,7 @@ const Feed: React.FC = () => {
         setLoadingMore(true);
         const nextOffset = offset + PAGE_SIZE;
         try {
-            const data = await getGlobalActivity(PAGE_SIZE, nextOffset);
+            const data = await getIntuRankNetworkActivity(PAGE_SIZE, nextOffset);
             setEvents(prev => {
                 const combined = [...prev, ...data.items];
                 const uniqueMap = new Map();
@@ -229,29 +230,29 @@ const Feed: React.FC = () => {
             setPersonalLoading(true);
             setOwnLoading(true);
             try {
-                const [positions, historyFromGraph] = await Promise.all([
+                const [positions, graphIntuRankHistory] = await Promise.all([
                     getUserPositions(walletAddress),
-                    getUserHistory(walletAddress).catch(() => []),
+                    getUserIntuRankRoutedHistory(walletAddress).catch(() => []),
                 ]);
                 const vaultIds = (positions || []).map((p: any) => p.vault?.term_id).filter(Boolean);
                 const follows = getFollowedIdentities(walletAddress);
 
                 // Run holdings and follow activity in parallel for faster refresh
                 const [holdings, followActivity] = await Promise.all([
-                    getActivityOnMyMarkets(walletAddress, vaultIds, 40),
+                    getActivityOnMyMarkets(walletAddress, vaultIds, 40, { onlyIntuRankRouted: true }),
                     (async () => {
                         if (follows.length === 0) return [];
                         const senderIds = await Promise.all(
                             follows.map(async (f) => {
                                 const addr = toAddress(f.identityId);
                                 if (addr) return addr;
-                                const resolved = await resolveENS(f.identityId);
+                                const resolved = await resolveFollowIdentityToAddress(f.identityId);
                                 if (!resolved) return null;
                                 return toAddress(resolved) || (isGraphResolvableAddress(resolved) ? resolved : null);
                             })
                         );
                         const validIds = senderIds.filter((id): id is string => isGraphResolvableAddress(id));
-                        return validIds.length > 0 ? getActivityBySenderIds(validIds, 30) : [];
+                        return validIds.length > 0 ? getActivityBySenderIds(validIds, 30, { onlyIntuRankRouted: true }) : [];
                     })(),
                 ]);
 
@@ -272,7 +273,7 @@ const Feed: React.FC = () => {
                 merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
                 setPersonalItems(merged);
 
-                const combinedHistory: Transaction[] = [...local, ...(historyFromGraph || [])];
+                const combinedHistory: Transaction[] = [...local, ...(graphIntuRankHistory || [])];
                 const historyMap = new Map<string, Transaction>();
                 combinedHistory.forEach((tx) => {
                     if (!tx?.id) return;
@@ -306,8 +307,8 @@ const Feed: React.FC = () => {
                             <p className={PAGE_HERO_EYEBROW}>Activity</p>
                             <h1 className={PAGE_HERO_TITLE}>Live feed</h1>
                             <p className={`${PAGE_HERO_BODY} max-w-2xl font-sans`}>
-                                Trades, deposits, and new claims across the network—plus your holdings, follows, and wallet
-                                history in the sidebar.
+                                Deposits and exits that flowed through IntuRank’s routing contracts—plus{' '}
+                                <span className="text-slate-200 font-semibold">your holdings, follows, and wallet moves</span> when they match the same routed pattern. Raw protocol traffic that never touched IntuRank’s router won’t appear here by design.
                             </p>
                         </div>
                     </div>
@@ -362,8 +363,7 @@ const Feed: React.FC = () => {
                                     <Zap size={14} className="text-intuition-secondary shrink-0" /> For your wallet
                                 </div>
                                 <p className="text-[12px] text-slate-500 font-sans leading-snug">
-                                    Holdings, people you follow, and your own trades. Refreshes when you open the page; use email
-                                    alerts to get notices when you’re away.
+                                    IntuRank-routed fills on vaults you hold, follows you watch, plus your own routed txs. Alerts email still considers full graph activity elsewhere.
                                 </p>
                             </div>
                         </div>
@@ -389,7 +389,7 @@ const Feed: React.FC = () => {
                             )}
                             {walletAddress && !personalLoading && holdingsItems.length === 0 && (
                                 <div className="px-4 py-4 text-sm font-sans text-slate-500 text-center">
-                                    No recent activity on your claims yet.
+                                    No IntuRank-routed activity on your claims yet.
                                 </div>
                             )}
                             {walletAddress && holdingsItems.slice(0, 15).map((n) => {
@@ -705,7 +705,7 @@ const Feed: React.FC = () => {
             {/* Activity Feed Container */}
             <div className="relative min-h-[600px] z-10">
                 <div className="flex items-center gap-2 text-slate-400 text-sm font-sans font-medium mb-6 px-1">
-                    <Wifi size={14} className="text-intuition-success shrink-0 animate-pulse" aria-hidden /> All activity
+                    <Wifi size={14} className="text-intuition-success shrink-0 animate-pulse" aria-hidden /> IntuRank activity
                 </div>
 
                 {loading && events.length === 0 ? (
@@ -722,7 +722,7 @@ const Feed: React.FC = () => {
                         <Zap size={64} className="text-slate-800 mb-8 opacity-40 group-hover:text-intuition-danger transition-colors" />
                         <div className="text-center space-y-2">
                             <span className="text-base font-sans font-semibold text-slate-300 group-hover:text-white transition-colors">No matches</span>
-                            <p className="text-sm text-slate-500 font-sans">Try another wallet, name, or claim.</p>
+                            <p className="text-sm text-slate-500 font-sans">Broaden search or check back once more players route stakes through IntuRank.</p>
                         </div>
                     </div>
                 ) : (

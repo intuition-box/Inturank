@@ -3,16 +3,22 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect, useConnect, useConfig } from 'wagmi';
 import { getWalletClient } from '@wagmi/core';
-import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Github, Plus, Shield, ExternalLink, BookOpen, MessageSquare, Twitter, Send, Coins, HeartPulse, FileText, ChevronsRight, BadgeCheck, Volume2, VolumeX, Swords, Cpu } from 'lucide-react';
+import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
 import { switchNetwork, disconnectWallet, setWagmiConnection, setOpenConnectModalRef } from '../services/web3';
-import { APP_VERSION, APP_VERSION_DISPLAY, CHAIN_ID } from '../constants';
-import { playHover, playClick, getSoundEnabled, setSoundEnabled } from '../services/audio';
+import { APP_VERSION_DISPLAY, CHAIN_ID } from '../constants';
+import { playHover, playClick } from '../services/audio';
 import Logo from './Logo';
 import NotificationBar from './NotificationBar';
 import { toast } from './Toast';
 import { setEmailFailureHandler, maybeSendDailyDigest } from '../services/emailNotifications';
 import { mergeFollowsFromServer } from '../services/follows';
 import ProfileBadgeWidget from './ProfileBadgeWidget';
+import ArenaBatchFab from './ArenaBatchFab';
+import { WalletMenuMusicToggle } from './WalletMenuMusicToggle';
+import { ARENA_BATCH_MODE } from '../constants';
+import { isNavPathActive } from '../services/navActive';
+import { useEffectiveChainId } from '../hooks/useEffectiveChainId';
+import SiteFooter from './SiteFooter';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,17 +31,28 @@ const MAIN_NAV_ITEMS: Array<{
   label: string;
   path: string;
   icon: React.ReactNode;
-  variant?: 'gold';
+  /** Stand-out pricing / trust flows vs default cyan */
+  variant?: 'gold' | 'arena';
+  /** Small chip (e.g. HOT) — shown on icon when rail collapsed + after label when expanded */
+  badge?: 'hot';
+  /** Passed to router `Link` (e.g. scroll contest floor on Home). */
+  linkState?: Record<string, unknown>;
+  /** When set, tab is active on any of these pathnames (see Arena: `/` entry + `/climb` play). */
+  activePaths?: string[];
 }> = [
-  { label: 'MARKETS', path: '/markets', icon: <TrendingUp size={18} strokeWidth={2} /> },
-  { label: 'PORTFOLIO', path: '/portfolio', icon: <Users size={18} strokeWidth={2} /> },
-  { label: 'THE ARENA', path: '/climb', icon: <Activity size={18} strokeWidth={2} /> },
-  { label: 'SEND TRUST', path: '/send-trust', icon: <Send size={18} strokeWidth={2} />, variant: 'gold' },
-  { label: 'PROFILE', path: '/account', icon: <UserCircle size={18} strokeWidth={2} /> },
-  { label: 'INTUITION_SKILL', path: '/skill-playground', icon: <Cpu size={18} strokeWidth={2} /> },
+  {
+    label: 'The Arena',
+    path: '/climb',
+    icon: <Activity size={18} strokeWidth={2} />,
+    variant: 'arena',
+    badge: 'hot',
+  },
+  { label: 'Markets', path: '/markets', icon: <TrendingUp size={18} strokeWidth={2} /> },
+  { label: 'Portfolio', path: '/portfolio', icon: <Users size={18} strokeWidth={2} /> },
+  { label: 'Send Trust', path: '/send-trust', icon: <Send size={18} strokeWidth={2} />, variant: 'gold' },
+  { label: 'Profile', path: '/account', icon: <UserCircle size={18} strokeWidth={2} /> },
+  { label: 'Skill agent', path: '/skill-playground', icon: <Cpu size={18} strokeWidth={2} /> },
 ];
-
-const VERSUS_NAV_ITEMS = [{ label: 'BATTLEGROUND', path: '/climb', icon: <Swords size={18} strokeWidth={2} /> }];
 
 const EXPLORE_NAV_ITEMS: Array<{
   label: string;
@@ -43,36 +60,15 @@ const EXPLORE_NAV_ITEMS: Array<{
   icon: React.ReactNode;
   external?: boolean;
 }> = [
-  { label: 'ACTIVITY', path: '/feed', icon: <Globe size={18} strokeWidth={2} /> },
-  { label: 'DOCUMENTATION', path: '/documentation', icon: <FileText size={18} strokeWidth={2} /> },
-  { label: 'LEADERBOARD', path: '/stats', icon: <BarChart2 size={18} strokeWidth={2} /> },
-  { label: 'GET TRUST', path: TRUST_SWAP_URL, icon: <Coins size={18} strokeWidth={2} />, external: true },
+  { label: 'Activity', path: '/feed', icon: <Globe size={18} strokeWidth={2} /> },
+  { label: 'Documentation', path: '/documentation', icon: <FileText size={18} strokeWidth={2} /> },
+  { label: 'Leaderboard', path: '/stats', icon: <BarChart2 size={18} strokeWidth={2} /> },
+  { label: 'Get Trust', path: TRUST_SWAP_URL, icon: <Coins size={18} strokeWidth={2} />, external: true },
 ];
 
 const MONITOR_NAV_ITEMS = [{ label: 'System health', path: '/health', icon: <HeartPulse size={18} strokeWidth={2} /> }];
 
-const ALL_MOBILE_NAV_ITEMS = [...MAIN_NAV_ITEMS, ...VERSUS_NAV_ITEMS, ...EXPLORE_NAV_ITEMS, ...MONITOR_NAV_ITEMS];
-
-const MediumIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42zM24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75c.66 0 1.19 2.58 1.19 5.75z" />
-  </svg>
-);
-
-const DiscordIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-  </svg>
-);
-
-const IntuitionTargetLogo = () => (
-  <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover/powered:scale-110 transition-transform duration-700">
-    <circle cx="30" cy="30" r="28" stroke="#00f3ff" strokeWidth="1" strokeOpacity="0.2" />
-    <circle cx="30" cy="30" r="20" stroke="#00f3ff" strokeWidth="1" strokeOpacity="0.4" />
-    <circle cx="30" cy="30" r="12" stroke="#00f3ff" strokeWidth="2" />
-    <circle cx="30" cy="30" r="4" fill="#00f3ff" />
-  </svg>
-);
+const ALL_MOBILE_NAV_ITEMS = [...MAIN_NAV_ITEMS, ...EXPLORE_NAV_ITEMS, ...MONITOR_NAV_ITEMS];
 
 interface NavItemProps {
   to: string;
@@ -80,10 +76,13 @@ interface NavItemProps {
   icon: React.ReactNode;
   active: boolean;
   onClick: () => void;
-  /** Gold accent for Send Trust — distinct from cyan primary nav */
-  variant?: 'default' | 'gold' | 'success';
+  /** Gold = Send Trust; arena = magenta “hero” Arena row */
+  variant?: 'default' | 'gold' | 'success' | 'arena';
+  /** Pill on icon when collapsed; repeats next to label when rail expands */
+  badge?: 'hot';
   /** Opens in new tab (e.g. Get Trust swap) — uses <a>, not router Link */
   external?: boolean;
+  linkState?: Record<string, unknown>;
 }
 
 const NavItem = memo(function NavItem({
@@ -93,9 +92,12 @@ const NavItem = memo(function NavItem({
   active,
   onClick,
   variant = 'default',
+  badge,
   external = false,
+  linkState,
 }: NavItemProps) {
   const isGold = variant === 'gold';
+  const isArena = variant === 'arena';
   const isSuccess = variant === 'success';
   const motionEasing = 'motion-safe:[transition-timing-function:cubic-bezier(0.33,1,0.68,1)]';
   const baseMotion =
@@ -103,16 +105,20 @@ const NavItem = memo(function NavItem({
     motionEasing;
   const activeCls = isGold
     ? 'text-black bg-intuition-warning border-intuition-warning shadow-[0_0_16px_rgba(250,204,21,0.55)] ring-1 ring-amber-400/50 motion-safe:duration-500 hover:shadow-[0_0_28px_rgba(250,204,21,0.5)] motion-safe:group-hover/item:-translate-y-px'
-    : isSuccess
-      ? 'text-black bg-intuition-success border-intuition-success shadow-[0_0_16px_rgba(0,255,157,0.5)] ring-1 ring-intuition-success/45 motion-safe:duration-500 hover:shadow-[0_0_28px_rgba(0,255,157,0.45)] motion-safe:group-hover/item:-translate-y-px'
-      : 'text-black bg-intuition-primary border-intuition-primary shadow-[0_0_14px_rgba(0,243,255,0.45)] ring-1 ring-intuition-primary/45 motion-safe:duration-500 hover:shadow-[0_0_32px_rgba(0,243,255,0.38)] motion-safe:group-hover/item:-translate-y-px';
+    : isArena
+      ? 'text-white bg-gradient-to-br from-[#ff2470] via-intuition-secondary to-[#d4145a] border-intuition-secondary shadow-[0_0_22px_rgba(255,30,109,0.55)] ring-1 ring-fuchsia-400/50 motion-safe:duration-500 hover:shadow-[0_0_32px_rgba(255,30,109,0.52)] hover:brightness-105 motion-safe:group-hover/item:-translate-y-px'
+      : isSuccess
+        ? 'text-black bg-intuition-success border-intuition-success shadow-[0_0_16px_rgba(0,255,157,0.5)] ring-1 ring-intuition-success/45 motion-safe:duration-500 hover:shadow-[0_0_28px_rgba(0,255,157,0.45)] motion-safe:group-hover/item:-translate-y-px'
+        : 'text-black bg-intuition-primary border-intuition-primary shadow-[0_0_14px_rgba(0,243,255,0.45)] ring-1 ring-intuition-primary/45 motion-safe:duration-500 hover:shadow-[0_0_32px_rgba(0,243,255,0.38)] motion-safe:group-hover/item:-translate-y-px';
   const idleCls = isGold
     ? 'text-amber-200/95 border border-amber-500/40 bg-gradient-to-br from-amber-950/55 to-black/60 hover:text-amber-50 hover:border-amber-400/85 hover:from-amber-500/15 hover:via-amber-400/8 hover:to-black/50 hover:shadow-[0_0_22px_rgba(250,204,21,0.28),inset_0_1px_0_0_rgba(255,255,255,0.05)] motion-safe:group-hover/item:-translate-y-px'
-    : isSuccess
-      ? 'text-intuition-success border border-intuition-success/40 bg-gradient-to-br from-intuition-success/8 to-intuition-success/[0.03] hover:text-intuition-success hover:border-intuition-success/80 hover:from-intuition-success/16 hover:via-white/[0.04] hover:to-intuition-success/8 hover:shadow-[0_0_22px_rgba(0,255,157,0.28),inset_0_1px_0_0_rgba(255,255,255,0.04)] motion-safe:group-hover/item:-translate-y-px'
+    : isArena
+      ? 'text-fuchsia-50/95 border border-intuition-secondary/55 bg-gradient-to-br from-intuition-secondary/22 via-[#2a0818]/85 to-black/70 hover:text-white hover:border-fuchsia-400/90 hover:from-intuition-secondary/32 hover:via-[#401028]/95 hover:to-black/60 hover:shadow-[0_0_24px_rgba(255,30,109,0.35),inset_0_1px_0_0_rgba(255,255,255,0.06)] motion-safe:group-hover/item:-translate-y-px'
+      : isSuccess
+        ? 'text-intuition-success border border-intuition-success/40 bg-gradient-to-br from-intuition-success/8 to-intuition-success/[0.03] hover:text-intuition-success hover:border-intuition-success/80 hover:from-intuition-success/16 hover:via-white/[0.04] hover:to-intuition-success/8 hover:shadow-[0_0_22px_rgba(0,255,157,0.28),inset_0_1px_0_0_rgba(255,255,255,0.04)] motion-safe:group-hover/item:-translate-y-px'
       : 'text-slate-400/95 border border-white/[0.07] bg-gradient-to-br from-white/[0.07] to-white/[0.02] hover:text-white hover:border-intuition-primary/55 hover:from-intuition-primary/14 hover:via-white/[0.05] hover:to-intuition-primary/10 hover:shadow-[0_0_0_1px_rgba(0,243,255,0.2),0_6px_32px_rgba(0,243,255,0.16),inset_0_1px_0_0_rgba(255,255,255,0.07)] motion-safe:group-hover/item:-translate-y-px';
 
-  const cls = `group/item relative z-0 flex items-center overflow-hidden gap-0 group-hover/sidebar:gap-2.5 group-focus-within/sidebar:gap-2.5 justify-center group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start px-2 group-hover/sidebar:px-4 group-focus-within/sidebar:px-4 sm:group-hover/sidebar:px-5 sm:group-focus-within/sidebar:px-5 py-2.5 min-h-[44px] text-[10px] font-black tracking-[0.25em] font-mono rounded-xl sm:rounded-full border min-w-0 will-change-transform active:scale-[0.99] ${baseMotion} ${
+  const cls = `group/item relative z-0 flex items-center overflow-hidden gap-0 group-hover/sidebar:gap-2.5 group-focus-within/sidebar:gap-2.5 justify-center group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start px-2 group-hover/sidebar:px-4 group-focus-within/sidebar:px-4 sm:group-hover/sidebar:px-5 sm:group-focus-within/sidebar:px-5 py-2.5 min-h-[44px] text-[11px] font-semibold tracking-wide font-sans normal-case rounded-xl sm:rounded-full border min-w-0 will-change-transform active:scale-[0.99] ${baseMotion} ${
     active ? activeCls : idleCls
   }`;
 
@@ -124,20 +130,26 @@ const NavItem = memo(function NavItem({
   const sheenVia =
     isGold
       ? 'from-transparent via-amber-200/25 to-transparent'
-      : isSuccess
-        ? 'from-transparent via-emerald-200/22 to-transparent'
-        : 'from-transparent via-white/20 to-transparent';
+      : isArena
+        ? 'from-transparent via-fuchsia-200/30 to-transparent'
+        : isSuccess
+          ? 'from-transparent via-emerald-200/22 to-transparent'
+          : 'from-transparent via-white/20 to-transparent';
 
   const iconT =
     'transition-[transform,filter] duration-400 motion-reduce:transition-none motion-reduce:duration-0 ' + motionEasing;
 
   const iconHoverIdle = isGold
     ? 'text-amber-200/95 group-hover/item:scale-110 group-hover/item:text-amber-50'
-    : isSuccess
-      ? 'text-intuition-success group-hover/item:scale-110 group-hover/item:drop-shadow-[0_0_10px_rgba(0,255,157,0.4)]'
-      : 'text-slate-400 group-hover/item:scale-110 group-hover/item:text-intuition-primary group-hover/item:drop-shadow-[0_0_10px_rgba(0,243,255,0.45)]';
+    : isArena
+      ? 'text-fuchsia-200 group-hover/item:scale-110 group-hover/item:text-white group-hover/item:drop-shadow-[0_0_12px_rgba(255,30,109,0.55)]'
+      : isSuccess
+        ? 'text-intuition-success group-hover/item:scale-110 group-hover/item:drop-shadow-[0_0_10px_rgba(0,255,157,0.4)]'
+        : 'text-slate-400 group-hover/item:scale-110 group-hover/item:text-intuition-primary group-hover/item:drop-shadow-[0_0_10px_rgba(0,243,255,0.45)]';
 
-  const iconActive = 'text-black group-hover/item:scale-105 group-hover/item:drop-shadow-sm';
+  const iconActive = isArena
+    ? 'text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.35)] group-hover/item:scale-105'
+    : 'text-black group-hover/item:scale-105 group-hover/item:drop-shadow-sm';
 
   const inner = (
     <>
@@ -148,15 +160,26 @@ const NavItem = memo(function NavItem({
           />
         </span>
       )}
-      <span
-        className={`shrink-0 flex items-center justify-center w-5 relative z-[2] [&>svg]:shrink-0 ${iconT} ${
-          active ? iconActive : iconHoverIdle
-        }`}
-      >
-        {icon}
+      <span className="relative shrink-0 flex items-center justify-center w-5 z-[2]">
+        {badge === 'hot' ? (
+          <span
+            className="pointer-events-none absolute -top-2 -right-2 z-[4] rounded px-1 py-0.5 bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_10px_rgba(255,30,109,0.55)] motion-reduce:hidden"
+            aria-hidden
+          >
+            HOT
+          </span>
+        ) : null}
+        <span className={`flex items-center justify-center [&>svg]:shrink-0 ${iconT} ${active ? iconActive : iconHoverIdle}`}>
+          {icon}
+        </span>
       </span>
-      <span className="whitespace-nowrap overflow-hidden text-left max-w-0 opacity-0 motion-reduce:transition-none transition-[max-width,opacity] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] group-hover/sidebar:max-w-[13rem] xl:group-hover/sidebar:max-w-[15rem] group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-[13rem] xl:group-focus-within/sidebar:max-w-[15rem] group-focus-within/sidebar:opacity-100 flex-1 min-w-0 relative z-[2]">
-        {label}
+      <span className="whitespace-nowrap overflow-hidden text-left max-w-0 opacity-0 motion-reduce:transition-none transition-[max-width,opacity] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] group-hover/sidebar:max-w-[13rem] xl:group-hover/sidebar:max-w-[15rem] group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-[13rem] xl:group-focus-within/sidebar:max-w-[15rem] group-focus-within/sidebar:opacity-100 flex-1 min-w-0 relative z-[2] flex flex-wrap items-center gap-1.5">
+        <span>{label}</span>
+        {badge === 'hot' ? (
+          <span className="inline-flex shrink-0 items-center rounded border border-white/35 bg-black/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-fuchsia-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+            Hot
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -178,7 +201,7 @@ const NavItem = memo(function NavItem({
   }
 
   return (
-    <Link to={to} title={label} onClick={handleActivate} onMouseEnter={playHover} className={cls}>
+    <Link to={to} state={linkState} title={label} onClick={handleActivate} onMouseEnter={playHover} className={cls}>
       {inner}
     </Link>
   );
@@ -188,13 +211,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
-  const [soundEnabled, setSoundEnabledState] = useState(() => getSoundEnabled());
 
   const { openConnectModal } = useConnectModal();
   const wagmiConfig = useConfig();
   // useAccount in wagmi v2 does not support `select`; passing { select } still returns the full account object,
   // which made `walletAddress` an object and broke `.slice()` in ProfileBadgeWidget etc.
-  const { address: walletAddress, isConnected, chainId = 0 } = useAccount();
+  const { address: walletAddress, isConnected } = useAccount();
+  const chainId = useEffectiveChainId();
   const { disconnect } = useDisconnect();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -283,7 +306,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setWagmiConnection(null, null);
     disconnectWallet();
     setIsWalletDropdownOpen(false);
-    toast.info("NEURAL_LINK_TERMINATED");
+    toast.info('Wallet disconnected');
   };
 
   const handleCopyAddress = (e: React.MouseEvent) => {
@@ -292,7 +315,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (walletAddress) {
       navigator.clipboard.writeText(walletAddress);
       setIsWalletDropdownOpen(false);
-      toast.success("IDENT_HASH_COPIED");
+      toast.success('Address copied');
     }
   };
 
@@ -309,10 +332,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const pathname = location.pathname;
 
-  const isActive = useCallback((path: string) => {
-    if (path === '/' && pathname !== '/') return false;
-    return pathname.startsWith(path);
-  }, [pathname]);
+  const isActive = useCallback((path: string) => isNavPathActive(path, pathname), [pathname]);
 
   const closeSidebarNav = useCallback(() => {
     setIsMenuOpen(false);
@@ -364,7 +384,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             aria-label="Primary navigation"
           >
             <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-2 pb-2 border-b border-white/5">
-              <p className="text-[10px] font-mono text-intuition-primary uppercase tracking-[0.28em] font-black">
+              <p className="text-[10px] font-mono text-intuition-primary normal-case tracking-wide font-semibold">
                 Main
               </p>
             </div>
@@ -374,33 +394,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 to={item.path}
                 label={item.label}
                 icon={item.icon}
-                active={isActive(item.path)}
+                active={
+                  item.activePaths?.length ? item.activePaths.includes(pathname) : isActive(item.path)
+                }
                 onClick={closeSidebarNav}
-                variant={item.variant}
+                variant={item.variant ?? 'default'}
+                badge={item.badge}
+                linkState={item.linkState}
               />
             ))}
           </nav>
 
           <div ref={intelRef} className="space-y-4 flex flex-col min-h-0">
-            <nav className="space-y-2" aria-label="Versus">
-              <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-3 pb-1">
-                <p className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.25em] font-black">Versus</p>
-              </div>
-              {VERSUS_NAV_ITEMS.map((item) => (
-                <NavItem
-                  key={`${item.path}-${item.label}`}
-                  to={item.path}
-                  label={item.label}
-                  icon={item.icon}
-                  active={isActive(item.path)}
-                  onClick={closeSidebarNav}
-                />
-              ))}
-            </nav>
-
             <nav className="space-y-2" aria-label="Explore">
               <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-3 pb-1">
-                <p className="text-[10px] font-mono text-slate-400 uppercase tracking-[0.25em] font-black">Explore</p>
+                <p className="text-[10px] font-mono text-slate-400 normal-case tracking-wide font-semibold">Explore</p>
               </div>
               {EXPLORE_NAV_ITEMS.map((item) => (
                 <NavItem
@@ -418,7 +426,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             <nav className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-2" aria-label="Monitor">
               <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-2 pb-1">
-                <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.25em] font-black">Monitor</p>
+                <p className="text-[10px] font-mono text-slate-500 normal-case tracking-wide font-semibold">Monitor</p>
               </div>
               {MONITOR_NAV_ITEMS.map((item) => (
                 <NavItem
@@ -494,15 +502,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="px-4 pl-5 pt-4 pb-10 space-y-2 max-w-[100vw] bg-black">
                   {ALL_MOBILE_NAV_ITEMS.map((item, index) => {
                     const ext = 'external' in item && item.external;
-                    const mobileCls = `relative flex items-center gap-3 min-w-0 pl-5 pr-5 py-4 border-2 text-[9px] sm:text-[10px] font-black font-mono tracking-widest transition-all rounded-2xl animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both ${
+                    const ap = 'activePaths' in item ? item.activePaths : undefined;
+                    const variant = 'variant' in item ? item.variant : undefined;
+                    const showHotBadge = 'badge' in item && item.badge === 'hot';
+                    const navActive = ap?.length ? ap.includes(pathname) : isActive(item.path);
+                    const mobileCls = `relative flex items-center gap-3 min-w-0 pl-5 pr-5 py-4 border-2 text-sm font-semibold font-sans normal-case tracking-normal transition-all rounded-2xl animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both ${
                       ext
                         ? 'text-intuition-success border-intuition-success/45 bg-intuition-success/8 hover:bg-intuition-success/15 hover:border-intuition-success'
-                        : isActive(item.path)
-                          ? item.variant === 'gold'
+                        : navActive
+                          ? variant === 'gold'
                             ? 'text-black bg-intuition-warning border-intuition-warning shadow-[0_0_20px_rgba(250,204,21,0.35)]'
-                            : 'text-black bg-intuition-primary border-intuition-primary'
-                          : item.variant === 'gold'
+                            : variant === 'arena'
+                              ? 'text-white bg-gradient-to-r from-[#ff2470] via-intuition-secondary to-[#d4145a] border-intuition-secondary shadow-[0_0_24px_rgba(255,30,109,0.45)]'
+                              : 'text-black bg-intuition-primary border-intuition-primary'
+                          : variant === 'gold'
                             ? 'text-amber-200 border-amber-500/45 bg-amber-950/35 hover:text-amber-50 hover:border-amber-400 hover:bg-amber-500/10'
+                            : variant === 'arena'
+                              ? 'text-fuchsia-100 border-intuition-secondary/55 bg-gradient-to-r from-intuition-secondary/20 to-black/50 hover:border-fuchsia-400/80 hover:from-intuition-secondary/30'
                             : 'text-slate-400 border-slate-900 hover:text-white bg-white/5'
                     }`;
                     const delay = { animationDelay: `${index * 45}ms` };
@@ -522,7 +538,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           className={mobileCls}
                         >
                           <span className="shrink-0 flex items-center justify-center w-5">{item.icon}</span>
-                          <span className="min-w-0 break-words uppercase">{item.label}</span>
+                          <span className="min-w-0 break-words">{item.label}</span>
                         </a>
                       );
                     }
@@ -530,15 +546,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Link
                         key={`${item.label}-${item.path}`}
                         to={item.path}
+                        state={'linkState' in item ? item.linkState : undefined}
                         onClick={close}
                         style={delay}
                         className={mobileCls}
                       >
-                        {isActive(item.path) && (
+                        {navActive && (
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-black rounded-r" />
                         )}
-                        <span className="shrink-0 flex items-center justify-center w-5">{item.icon}</span>
-                        <span className="min-w-0 break-words uppercase">{item.label}</span>
+                        <span className="relative shrink-0 flex items-center justify-center w-5">
+                          {showHotBadge ? (
+                            <span
+                              className="pointer-events-none absolute -right-2 -top-2 z-[1] rounded border border-white/40 bg-black/80 px-[3px] py-px text-[7px] font-black uppercase tracking-tight leading-none text-amber-100 shadow-[0_0_8px_rgba(251,113,133,0.6)]"
+                              aria-hidden
+                            >
+                              HOT
+                            </span>
+                          ) : null}
+                          {item.icon}
+                        </span>
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="min-w-0 flex-1 break-words">{item.label}</span>
+                          {showHotBadge ? (
+                            <span
+                              className="shrink-0 rounded-md border border-white/35 bg-black/35 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-100"
+                              aria-hidden
+                            >
+                              HOT
+                            </span>
+                          ) : null}
+                        </span>
                       </Link>
                     );
                   })}
@@ -552,9 +589,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       setIsMenuOpen(false);
                     }}
                     style={{ animationDelay: `${ALL_MOBILE_NAV_ITEMS.length * 45}ms` }}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 border-2 border-intuition-success text-intuition-success font-black font-mono text-[10px] tracking-widest rounded-full mt-6 hover:bg-intuition-success hover:text-black transition-all animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
+                    className="w-full flex items-center justify-center gap-3 px-5 py-4 border-2 border-intuition-success text-intuition-success font-semibold font-sans text-sm normal-case rounded-full mt-6 hover:bg-intuition-success hover:text-black transition-all animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                   >
-                    <Coins size={18} /> ACQUIRE_₸_TOKEN
+                    <Coins size={18} /> Get Trust
                   </a>
 
                   <button
@@ -564,52 +601,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     style={{
                       animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 1) * 45}ms`,
                     }}
-                    className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-intuition-secondary text-white font-black font-mono text-[10px] tracking-widest rounded-full shadow-xl mt-2 border-2 border-transparent active:scale-95 transition-transform animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
+                    className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-intuition-secondary text-white font-semibold font-sans text-sm normal-case rounded-full shadow-xl mt-2 border-2 border-transparent active:scale-95 transition-transform animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                   >
-                    <Plus size={18} /> NEW ATOM OR CLAIM
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !soundEnabled;
-                      setSoundEnabled(next);
-                      setSoundEnabledState(next);
-                      if (next) playClick();
-                    }}
-                    style={{
-                      animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
-                    }}
-                    className="w-full flex items-center justify-between gap-3 px-5 py-4 border-2 border-slate-700 text-slate-300 font-mono font-black text-[10px] tracking-widest rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
-                  >
-                    <span className="flex items-center gap-3">
-                      {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                      Sound effects
-                    </span>
-                    <span
-                      className={`inline-flex h-5 w-9 shrink-0 items-center rounded-sm border-2 transition-colors ${
-                        soundEnabled
-                          ? 'border-intuition-primary bg-intuition-primary/30'
-                          : 'border-slate-600 bg-slate-800'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 translate-x-0.5 rounded-sm bg-white transition-transform ${
-                          soundEnabled ? 'translate-x-4' : ''
-                        }`}
-                      />
-                    </span>
+                    <Plus size={18} /> New atom or claim
                   </button>
 
                   {walletAddress ? (
                     <button
+                      type="button"
                       onClick={handleDisconnect}
-style={{
-                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 3) * 45}ms`,
+                      style={{
+                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
                       }}
-                    className="w-full py-4 border-2 border-intuition-danger text-intuition-danger font-mono font-black text-[10px] tracking-widest bg-intuition-danger/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
+                      className="w-full py-4 border-2 border-intuition-danger text-intuition-danger font-sans font-semibold text-sm normal-case bg-intuition-danger/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                     >
-                      EXIT_SECURE_SESSION
+                      Disconnect wallet
                     </button>
                   ) : (
                     <button
@@ -619,11 +625,11 @@ style={{
                         openModal();
                       }}
                       style={{
-                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 3) * 45}ms`,
+                        animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 2) * 45}ms`,
                       }}
-                      className="w-full py-4 border-2 border-intuition-primary text-intuition-primary font-mono font-black text-[10px] tracking-widest bg-intuition-primary/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
+                      className="w-full py-4 border-2 border-intuition-primary text-intuition-primary font-sans font-semibold text-sm normal-case bg-intuition-primary/5 rounded-2xl mt-2 animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                     >
-                      ESTABLISH_NEURAL_LINK
+                      Connect wallet
                     </button>
                   )}
                 </div>
@@ -671,10 +677,10 @@ style={{
                   onToggleDropdown={toggleDropdown}
                   dropdownRef={dropdownRef}
                 >
-                  <div className="absolute right-0 mt-3 w-72 z-[110] rounded-3xl animate-dropdown-panel-in border border-intuition-primary/35 bg-[#03050d]/[0.97] shadow-[0_24px_60px_rgba(0,0,0,0.85),0_0_28px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/40">
-                      <div className="p-1.5 space-y-0.5 rounded-[1.35rem] bg-gradient-to-b from-white/[0.07] to-[#03050d]">
-                        <div className="px-4 py-3 border-b border-white/5 text-[9px] font-black font-mono text-slate-500 uppercase tracking-[0.3em] mb-1">
-                          Terminal Access
+                  <div className="absolute right-0 mt-3 w-72 z-[110] rounded-3xl animate-dropdown-panel-in border border-intuition-primary/35 bg-[#020308] shadow-[0_24px_60px_rgba(0,0,0,0.92),0_0_28px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-black/50">
+                      <div className="space-y-0.5 rounded-[1.35rem] bg-[#020308] p-1.5">
+                        <div className="px-4 py-3 border-b border-white/5 text-[11px] font-semibold font-sans text-slate-500 tracking-wide mb-1">
+                          Wallet
                         </div>
                     <a
                       href={TRUST_SWAP_URL}
@@ -685,52 +691,24 @@ style={{
                         setIsWalletDropdownOpen(false);
                       }}
                       onMouseEnter={playHover}
-                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-[10px] font-black font-mono text-intuition-success hover:bg-white/5 transition-colors uppercase tracking-widest"
+                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-sm font-semibold font-sans text-intuition-success hover:bg-white/5 transition-colors"
                     >
-                      <Coins size={14} /> GET_TRUST
+                      <Coins size={14} /> Get Trust
                     </a>
                     <button
                       onClick={handleCopyAddress}
                       onMouseEnter={playHover}
-                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-[10px] font-black font-mono text-slate-300 hover:bg-white/5 hover:text-intuition-primary transition-colors uppercase tracking-widest"
+                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-sm font-medium font-sans text-slate-300 hover:bg-white/5 hover:text-intuition-primary transition-colors"
                     >
-                      <Copy size={14} /> COPY_IDENT_HASH
+                      <Copy size={14} /> Copy address
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = !soundEnabled;
-                        setSoundEnabled(next);
-                        setSoundEnabledState(next);
-                        if (next) playClick();
-                      }}
-                      onMouseEnter={playHover}
-                      className="w-full flex items-center justify-between gap-4 px-4 py-4 text-left text-[10px] font-black font-mono text-slate-300 hover:bg-white/5 hover:text-intuition-primary transition-colors uppercase tracking-widest border-t border-white/5"
-                    >
-                      <span className="flex items-center gap-4">
-                        {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                        Sound effects
-                      </span>
-                      <span
-                        className={`inline-flex h-5 w-9 shrink-0 items-center rounded-sm border-2 transition-colors ${
-                          soundEnabled
-                            ? 'border-intuition-primary bg-intuition-primary/30'
-                            : 'border-slate-600 bg-slate-800'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 translate-x-0.5 rounded-sm bg-white transition-transform ${
-                            soundEnabled ? 'translate-x-4' : ''
-                          }`}
-                        />
-                      </span>
-                    </button>
+                    <WalletMenuMusicToggle variant="desktop-wallet" />
                     <button
                       onClick={handleDisconnect}
                       onMouseEnter={playHover}
-                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-[10px] font-black font-mono text-intuition-danger hover:bg-intuition-danger/10 transition-colors border-t border-white/5 uppercase tracking-widest"
+                      className="w-full flex items-center gap-4 px-4 py-4 text-left text-sm font-semibold font-sans text-intuition-danger hover:bg-intuition-danger/10 transition-colors border-t border-white/5"
                     >
-                      <LogOut size={14} /> TERMINATE_SYNC
+                      <LogOut size={14} /> Disconnect
                     </button>
                   </div>
                 </div>
@@ -756,8 +734,7 @@ style={{
           }`}
         >
           <div
-            key={location.pathname}
-            className={`animate-page-enter min-h-full min-w-0 w-full ${
+            className={`min-h-full min-w-0 w-full ${
               pathname === '/documentation' ? 'overflow-x-visible' : 'overflow-x-clip'
             }`}
           >
@@ -765,203 +742,9 @@ style={{
           </div>
         </main>
 
-        <footer className="border-t border-white/5 bg-[#020308] py-12 md:py-24 mt-auto z-20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-t from-intuition-primary/[0.04] to-transparent pointer-events-none" />
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-16 lg:gap-20 mb-12 md:mb-24 items-start">
-              <div className="md:col-span-2 space-y-10">
-                <div
-                  className="flex items-center gap-6 group cursor-pointer"
-                  onMouseEnter={playHover}
-                >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 border-2 border-intuition-primary rounded-3xl flex items-center justify-center text-intuition-primary group-hover:shadow-[0_0_55px_rgba(0,243,255,0.7)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-700 overflow-hidden p-2 sm:p-2.5 bg-gradient-to-br from-slate-900 via-black to-slate-950">
-                    <Logo className="w-full h-full max-h-[88%] max-w-[88%] object-contain" />
-                  </div>
-                  <span className="text-3xl sm:text-4xl md:text-5xl font-display font-black tracking-tight text-white group-hover:text-intuition-primary transition-all duration-500 uppercase text-glow-blue">
-                    INTU<span className="group-hover:text-white transition-colors">RANK</span>
-                  </span>
-                </div>
-                <p className="text-slate-200 font-mono text-sm leading-relaxed max-w-lg uppercase tracking-wider font-black opacity-80">
-                  Quantifying reputation as a tradable asset on the Intuition Network. Establishing
-                  the global source of truth via semantic dynamics.
-                </p>
-                <div className="flex flex-wrap gap-6">
-                  <a
-                    href="https://x.com/inturank"
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={playHover}
-                    className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group"
-                  >
-                    <Twitter size={24} className="group-hover:scale-110 transition-transform" />
-                  </a>
-                  <a
-                    href="https://github.com/intuition-box/INTURANK"
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={playHover}
-                    className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group"
-                  >
-                    <Github size={24} className="group-hover:scale-110 transition-transform" />
-                  </a>
-                  <a
-                    href="https://discord.gg/gz62ER2e7a"
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={playHover}
-                    className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group"
-                  >
-                    <DiscordIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  </a>
-                  <a
-                    href="https://t.me/inturank"
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={playHover}
-                    className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group"
-                  >
-                    <Send size={24} className="group-hover:scale-110 transition-transform" />
-                  </a>
-                  <a
-                    href="https://inturank.medium.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={playHover}
-                    className="w-14 h-14 bg-white/5 flex items-center justify-center rounded-2xl border border-white/10 text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group"
-                  >
-                    <MediumIcon className="w-7 h-7 group-hover:scale-110 transition-transform" />
-                  </a>
-                </div>
-              </div>
+        {ARENA_BATCH_MODE && <ArenaBatchFab />}
 
-              <div className="flex flex-col gap-5 min-w-0">
-                <h4 className="text-sm sm:text-base font-bold font-display text-intuition-primary tracking-wide leading-none">
-                  Explore
-                </h4>
-                <nav className="flex flex-col gap-3.5 font-sans text-[15px] sm:text-base text-slate-200 font-semibold leading-snug">
-                  <Link
-                    to="/markets"
-                    className="hover:text-intuition-primary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-primary/0 group-hover:text-intuition-primary transition-all -ml-5 group-hover:ml-0" />
-                    Markets
-                  </Link>
-                  <Link
-                    to="/feed"
-                    className="hover:text-intuition-primary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-primary/0 group-hover:text-intuition-primary transition-all -ml-5 group-hover:ml-0" />
-                    Activity
-                  </Link>
-                  <Link
-                    to="/stats"
-                    className="hover:text-intuition-primary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-primary/0 group-hover:text-intuition-primary transition-all -ml-5 group-hover:ml-0" />
-                    Leaderboard
-                  </Link>
-                  <Link
-                    to="/portfolio"
-                    className="hover:text-intuition-primary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-primary/0 group-hover:text-intuition-primary transition-all -ml-5 group-hover:ml-0" />
-                    Portfolio
-                  </Link>
-                </nav>
-              </div>
-
-              <div className="flex flex-col gap-5 min-w-0">
-                <h4 className="text-sm sm:text-base font-bold font-display text-intuition-secondary tracking-wide leading-none text-glow-red">
-                  Ecosystem
-                </h4>
-                <nav className="flex flex-col gap-3.5 font-sans text-[15px] sm:text-base text-slate-200 font-semibold leading-snug">
-                  <Link
-                    to="/documentation"
-                    className="hover:text-intuition-secondary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-secondary/0 group-hover:text-intuition-secondary transition-all -ml-5 group-hover:ml-0" />
-                    <span className="flex items-center gap-2 flex-wrap">
-                      Documentation <FileText size={16} className="opacity-80 shrink-0" />
-                    </span>
-                  </Link>
-                  <a
-                    href={TRUST_SWAP_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-intuition-success hover:text-white transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-success/0 group-hover:text-intuition-success transition-all -ml-5 group-hover:ml-0" />
-                    <span className="flex items-center gap-2 flex-wrap">
-                      Get Trust <ExternalLink size={16} className="opacity-90 shrink-0" />
-                    </span>
-                  </a>
-                  <a
-                    href="https://intuition.systems"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-intuition-secondary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-secondary/0 group-hover:text-intuition-secondary transition-all -ml-5 group-hover:ml-0" />
-                    <span className="flex items-center gap-2 flex-wrap">
-                      Intuition home <ExternalLink size={16} className="opacity-80 shrink-0" />
-                    </span>
-                  </a>
-                  <a
-                    href="https://docs.intuition.systems"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-intuition-secondary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-secondary/0 group-hover:text-intuition-secondary transition-all -ml-5 group-hover:ml-0" />
-                    <span className="flex items-center gap-2 flex-wrap">
-                      Intuition Docs <BookOpen size={16} className="opacity-80 shrink-0" />
-                    </span>
-                  </a>
-                  <a
-                    href="https://explorer.intuition.systems"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-intuition-secondary transition-colors flex items-center gap-3 min-h-[2.5rem] group"
-                  >
-                    <ChevronsRight size={18} className="shrink-0 text-intuition-secondary/0 group-hover:text-intuition-secondary transition-all -ml-5 group-hover:ml-0" />
-                    <span className="flex items-center gap-2 flex-wrap">
-                      Block explorer <Globe size={16} className="opacity-80 shrink-0" />
-                    </span>
-                  </a>
-                </nav>
-              </div>
-            </div>
-
-            <div className="pt-16 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 items-center justify-items-center gap-12">
-              <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest font-black text-center md:text-left justify-self-start">
-                v{APP_VERSION} · © 2025 IntuRank
-              </div>
-
-              <div className="flex flex-col items-center group/powered relative">
-                <span className="text-[11px] font-black font-mono text-slate-500 uppercase tracking-[0.8em] mb-4 group-hover/powered:text-white transition-all duration-500">
-                  Powered By
-                </span>
-                <a
-                  href="https://intuition.systems"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-8 no-underline"
-                >
-                  <IntuitionTargetLogo />
-                  <span className="text-3xl md:text-5xl lg:text-6xl font-display font-black tracking-[0.25em] text-white group-hover/powered:text-intuition-primary transition-all duration-700 uppercase text-glow-blue">
-                    INTUITION
-                  </span>
-                </a>
-                <div className="absolute -bottom-6 w-48 h-px bg-gradient-to-r from-transparent via-intuition-primary/40 to-transparent" />
-              </div>
-
-              <div className="flex items-center justify-center md:justify-end gap-3 text-[10px] font-black font-mono text-intuition-secondary uppercase tracking-[0.5em] text-glow-red justify-self-end">
-                <div className="w-2.5 h-2.5 bg-intuition-secondary shadow-[0_0_15px_#ff1e6d] motion-safe:animate-pulse" />
-                Live
-              </div>
-            </div>
-          </div>
-        </footer>
+        <SiteFooter />
       </div>
     </div>
   );

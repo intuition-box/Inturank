@@ -14,6 +14,7 @@ import {
 } from '../services/graphql';
 import {
   CURRENCY_SYMBOL,
+  DEFAULT_PROFILE_AVATAR_URL,
   SEASON_2_EPOCH_ID,
   SEASON_2_EPOCH_8_START,
   SEASON_2_EPOCH_8_END,
@@ -407,7 +408,7 @@ export const Season2LeaderboardPanel: React.FC<{
                 </Link>
                 {' · '}
                 <Link
-                  to="/#trending-atoms"
+                  to="/markets/atoms"
                   onClick={playClick}
                   className="text-intuition-primary/90 hover:text-cyan-200"
                 >
@@ -417,17 +418,13 @@ export const Season2LeaderboardPanel: React.FC<{
             )}
             {isHome && (
               <p className="font-sans text-xs text-slate-500">
-                <a
-                  href="#trending-atoms"
+                <Link
+                  to="/markets/atoms"
                   className="font-medium text-intuition-primary/90 hover:text-intuition-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    playClick();
-                    document.getElementById('trending-atoms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
+                  onClick={() => playClick()}
                 >
                   Trending
-                </a>
+                </Link>
               </p>
             )}
           </header>
@@ -744,7 +741,7 @@ export const Season2LeaderboardPanel: React.FC<{
                           <div className="flex items-center gap-2 sm:gap-3">
                             <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800 sm:h-12 sm:w-12">
                               <img
-                                src={e.account_image || `https://effigy.im/a/${e.account_id}.png`}
+                                src={e.account_image || DEFAULT_PROFILE_AVATAR_URL}
                                 alt=""
                                 className="w-full h-full object-cover"
                               />

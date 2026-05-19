@@ -32,12 +32,12 @@ const WalletOption = ({ name, description, icon: Icon, onClick, isConnecting, di
                 </div>
                 <div className="text-left min-w-0">
                     <div className="flex items-center gap-2">
-                        <h4 className="font-black text-white font-display text-lg tracking-tight uppercase group-hover:text-white">
-                            {isConnecting ? 'ESTABLISHING...' : name}
+                        <h4 className="font-bold text-white font-display text-lg tracking-tight normal-case group-hover:text-white">
+                            {isConnecting ? 'Connecting…' : name}
                         </h4>
                         {!disabled && !isConnecting && <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all text-white" />}
                     </div>
-                    <div className="text-[9px] font-black font-mono text-slate-500 uppercase tracking-widest group-hover:text-slate-300">
+                    <div className="text-[9px] font-medium font-sans text-slate-500 normal-case tracking-wide group-hover:text-slate-300">
                         {description}
                     </div>
                 </div>
@@ -91,11 +91,11 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
                 </div>
             </div>
             <div>
-                <h2 className="text-2xl font-black font-display text-white tracking-[0.2em] uppercase text-glow-red">
-                    Establish_Uplink
+                <h2 className="text-2xl font-bold font-display text-white tracking-tight normal-case text-glow-red">
+                    Connect wallet
                 </h2>
-                <div className="text-[9px] font-mono text-intuition-secondary/60 tracking-[0.4em] uppercase font-black flex items-center gap-2">
-                    <Network size={10} /> Neural_Interface_Selection
+                <div className="text-[10px] font-medium font-sans text-intuition-secondary/80 tracking-wide flex items-center gap-2">
+                    <Network size={10} /> Choose how to connect
                 </div>
             </div>
           </div>
@@ -109,14 +109,14 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
         </div>
 
         <div className="p-8 space-y-4 relative bg-[#080a12]/50">
-            <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-[0.5em] mb-6 flex items-center gap-3">
-                <Fingerprint size={14} className="text-intuition-primary" /> Select_Auth_Protocol
+            <div className="text-[10px] font-semibold font-sans text-slate-500 tracking-wide mb-6 flex items-center gap-3">
+                <Fingerprint size={14} className="text-intuition-primary" /> Connect a wallet
             </div>
 
             <div className="grid grid-cols-1 gap-4">
                 <WalletOption 
-                    name="Injected_Node" 
-                    description="MetaMask // Rabby // Brave" 
+                    name="Browser wallet" 
+                    description="MetaMask, Rabby, or Brave" 
                     icon={Cpu} 
                     onClick={() => { playClick(); setShowInjectedOptions((v) => !v); }}
                     isConnecting={false}
@@ -124,8 +124,8 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
                 />
                 
                 <WalletOption 
-                    name="Mobile_Relay" 
-                    description="WalletConnect v2 // QR Access" 
+                    name="Mobile wallet" 
+                    description="WalletConnect (scan QR code)" 
                     icon={Smartphone} 
                     onClick={() => handleConnect('walletconnect')}
                     isConnecting={isConnecting && activeConnector === 'walletconnect'}
@@ -133,8 +133,8 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
                 />
 
                 <WalletOption 
-                    name="Global_Sync" 
-                    description="Coinbase // Web3_Interface" 
+                    name="Coinbase Wallet" 
+                    description="Not available yet" 
                     icon={Globe} 
                     onClick={() => {}}
                     disabled={true}
@@ -144,34 +144,34 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
 
             {showInjectedOptions && (
               <div className="mt-6 space-y-3 border border-white/10 bg-black/60 p-4 clip-path-slant">
-                <div className="text-[9px] font-mono text-slate-500 uppercase tracking-[0.4em] mb-2">
-                  Select_Wallet_Client
+                <div className="text-[10px] font-medium font-sans text-slate-500 tracking-wide mb-2">
+                  Choose a browser wallet
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   <button
                     onClick={() => handleConnect('injected', 'metamask')}
-                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all"
+                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-xs font-semibold font-sans normal-case transition-all"
                   >
                     <span>MetaMask</span>
                     {isConnecting && activeConnector === 'injected' && <Loader2 size={14} className="animate-spin text-intuition-primary" />}
                   </button>
                   <button
                     onClick={() => handleConnect('injected', 'rabby')}
-                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all"
+                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-xs font-semibold font-sans normal-case transition-all"
                   >
                     <span>Rabby</span>
                     {isConnecting && activeConnector === 'injected' && <Loader2 size={14} className="animate-spin text-intuition-primary" />}
                   </button>
                   <button
                     onClick={() => handleConnect('injected', 'brave')}
-                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all"
+                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-xs font-semibold font-sans normal-case transition-all"
                   >
                     <span>Brave</span>
                     {isConnecting && activeConnector === 'injected' && <Loader2 size={14} className="animate-spin text-intuition-primary" />}
                   </button>
                   <button
                     onClick={() => handleConnect('injected', 'default')}
-                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-[10px] font-mono font-black uppercase tracking-[0.25em] transition-all"
+                    className="flex items-center justify-between px-4 py-3 bg-black border border-white/10 hover:border-intuition-primary text-xs font-semibold font-sans normal-case transition-all"
                   >
                     <span>Auto-Detect</span>
                     {isConnecting && activeConnector === 'injected' && <Loader2 size={14} className="animate-spin text-intuition-primary" />}
@@ -181,20 +181,20 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
             )}
             
             <div className="mt-8 p-6 bg-black border border-white/5 border-dashed clip-path-slant opacity-60">
-                <p className="text-[9px] font-mono text-slate-500 leading-relaxed uppercase tracking-widest text-center">
-                    {" >> "} Warning: Unauthorized access attempts will be logged to the primary chain ledger. Ensure your session credentials are valid before establishing link.
+                <p className="text-[10px] font-sans text-slate-500 leading-relaxed text-center normal-case">
+                    Only connect with wallets you trust. You will confirm transactions in your wallet app.
                 </p>
             </div>
         </div>
 
         {/* Footer */}
         <div className="p-5 bg-black border-t-2 border-intuition-secondary/20 flex items-center justify-between px-8">
-          <div className="flex items-center gap-3 text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+          <div className="flex items-center gap-3 text-[10px] font-medium font-sans text-slate-500 tracking-wide">
             <div className="w-2.5 h-2.5 rounded-full bg-intuition-success animate-pulse shadow-[0_0_10px_#00ff9d]"></div>
-            Mainnet_Handshake_Ready
+            Ready on mainnet
           </div>
-          <div className="text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">
-            Chain_ID: <span className="text-intuition-primary">{CHAIN_ID}</span>
+          <div className="text-[10px] font-medium font-sans text-slate-600 tracking-wide">
+            Chain ID <span className="text-intuition-primary">{CHAIN_ID}</span>
           </div>
         </div>
 

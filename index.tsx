@@ -1,6 +1,9 @@
 import React, { ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { purgeLegacyArenaXpLocalStorage } from './services/arenaXp';
+
+purgeLegacyArenaXpLocalStorage();
 
 // Suppress known third-party errors that can break the app (e.g. TronLink extension
 // setting tronlinkParams on a proxy that rejects it). Log but do not throw.

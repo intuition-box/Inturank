@@ -18,18 +18,23 @@ import {
   ExternalLink,
   Trophy,
   PlusCircle,
+  Radio,
   Send,
   Wallet,
   UserCircle,
   FileText,
   ArrowLeft,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { playClick, playHover } from '../services/audio';
 import {
   APP_VERSION,
   APP_VERSION_DISPLAY,
   ARENA_ENABLED,
+  ARENA_UI_VISIBLE,
+  ARENA_XP_PER_RANK_PICK,
   CHAIN_ID,
   CURRENCY_SYMBOL,
   EXPLORER_URL,
@@ -39,6 +44,16 @@ import {
   NETWORK_NAME,
   OFFSET_PROGRESSIVE_CURVE_ID,
   PAGE_HERO_TITLE,
+  PROTOCOL_XP_ADD_TO_LIST,
+  PROTOCOL_XP_ARENA_RANK_ADD_TO_LIST_MULT,
+  PROTOCOL_XP_CREATE_ATOM,
+  PROTOCOL_XP_CREATE_CLAIM,
+  PROTOCOL_XP_MARKET_ACQUIRE,
+  PROTOCOL_XP_SEND_TRUST,
+  PROTOCOL_XP_SEND_TRUST_MIN_TRUST_UNITS,
+  PROTOCOL_XP_SKILL_ATOM,
+  PROTOCOL_XP_SKILL_CHAT,
+  PROTOCOL_XP_SKILL_TRIPLE,
 } from '../constants';
 
 type SectionDef = {
@@ -55,6 +70,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'ares', navLabel: 'ARES layer', icon: Sparkles },
   { id: 'skill', navLabel: 'Intuition Skill', icon: Cpu },
   { id: 'leaderboards', navLabel: 'Leaderboards', icon: Trophy },
+  { id: 'activity-xp', navLabel: 'How XP works', icon: Zap },
   { id: 'create-flows', navLabel: 'Create & Send TRUST', icon: PlusCircle },
   { id: 'portfolio-profile', navLabel: 'Portfolio & profile', icon: Wallet },
   { id: 'guide', navLabel: 'How to use IntuRank', icon: Command },
@@ -92,6 +108,124 @@ function ProseLink({ href, children }: { href: string; children: React.ReactNode
   );
 }
 
+function MobileDocSectionJump({
+  sections,
+  activeId,
+  onSelect,
+}: {
+  sections: SectionDef[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const active = sections.find((s) => s.id === activeId) ?? sections[0];
+  const ActiveIcon = active.icon;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="lg:hidden mb-8 relative z-30">
+      <div className="rounded-2xl border border-intuition-primary/35 bg-gradient-to-br from-[#0a1018]/98 via-[#06080f]/95 to-black/90 p-[1px] shadow-[0_0_0_1px_rgba(0,243,255,0.08),0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <div className="rounded-[0.9rem] bg-[#05070c]/90 backdrop-blur-md p-4">
+          <p className="text-[11px] font-semibold text-intuition-primary/90 uppercase tracking-[0.22em] mb-3 flex items-center gap-2">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-intuition-primary shadow-[0_0_10px_rgba(0,243,255,0.9)]" />
+            Jump to section
+          </p>
+          <button
+            type="button"
+            id="doc-section-jump-trigger"
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-controls="doc-section-jump-list"
+            onClick={() => {
+              playClick();
+              setOpen((o) => !o);
+            }}
+            onMouseEnter={playHover}
+            className="w-full flex items-center gap-3 rounded-xl border border-intuition-primary/55 bg-black/65 px-4 py-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_24px_rgba(0,243,255,0.08)] motion-safe:transition-[border-color,box-shadow,transform] motion-safe:duration-200 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c]"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-intuition-primary/25 bg-intuition-primary/10">
+              <ActiveIcon
+                className="w-4 h-4 text-intuition-primary drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]"
+                aria-hidden
+              />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-white leading-snug truncate">{active.navLabel}</span>
+              <span className="block text-[10px] font-mono uppercase tracking-wider text-slate-500 mt-0.5">
+                {sections.length} sections
+              </span>
+            </span>
+            <ChevronDown
+              className={`w-5 h-5 shrink-0 text-slate-400 motion-safe:transition-transform motion-safe:duration-200 ${
+                open ? 'rotate-180 text-intuition-primary' : ''
+              }`}
+              aria-hidden
+            />
+          </button>
+
+          <div
+            id="doc-section-jump-list"
+            role="listbox"
+            aria-labelledby="doc-section-jump-trigger"
+            className={`mt-3 overflow-hidden rounded-xl border border-white/[0.09] bg-[#070a12]/95 shadow-[0_20px_48px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.05)] motion-safe:transition-[max-height,opacity] motion-safe:duration-300 motion-reduce:transition-none ${
+              open ? 'max-h-[min(65vh,22rem)] opacity-100' : 'max-h-0 opacity-0 pointer-events-none border-transparent shadow-none'
+            }`}
+          >
+            <ul className="max-h-[min(65vh,22rem)] overflow-y-auto overscroll-contain py-2 px-2 space-y-0.5">
+              {sections.map((s) => {
+                const Icon = s.icon;
+                const selected = s.id === activeId;
+                return (
+                  <li key={s.id} role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onMouseEnter={playHover}
+                      onClick={() => {
+                        onSelect(s.id);
+                        setOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm motion-safe:transition-[background,box-shadow,transform,color] motion-safe:duration-200 ${
+                        selected
+                          ? 'bg-gradient-to-r from-intuition-primary/22 via-intuition-primary/10 to-transparent text-white shadow-[inset_0_0_0_1px_rgba(0,243,255,0.35),0_0_24px_rgba(0,243,255,0.12)]'
+                          : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] active:scale-[0.99]'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-4 h-4 shrink-0 ${selected ? 'text-intuition-primary' : 'opacity-70'}`}
+                        aria-hidden
+                      />
+                      <span className="flex-1 min-w-0 leading-snug">{s.navLabel}</span>
+                      {selected && <Check className="w-4 h-4 shrink-0 text-intuition-primary" strokeWidth={2.5} aria-hidden />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Match DocSection scroll-mt (24 = 6rem) + small buffer so the active TOC tracks the reading line. */
 const SECTION_ACTIVATION_OFFSET_PX = 120;
 
@@ -103,6 +237,7 @@ function sectionTopInScrollContainer(el: HTMLElement, scrollRoot: HTMLElement): 
 }
 
 const Documentation: React.FC = () => {
+  const location = useLocation();
   const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
   const mainRef = useRef<HTMLDivElement>(null);
   /** While set, scroll-based highlighting is frozen so TOC clicks are not overwritten mid-smooth-scroll. */
@@ -196,6 +331,39 @@ const Documentation: React.FC = () => {
     };
   }, [syncActiveFromScroll]);
 
+  /** Scroll docs column (or window on mobile) to a section — shared by TOC clicks and deep links (`/documentation#activity-xp`). */
+  const applySectionScroll = useCallback((id: string, behavior: ScrollBehavior) => {
+    const target = document.getElementById(id);
+    if (!target) return false;
+
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const main = mainRef.current;
+    if (mq.matches && main) {
+      if (id === 'intro') {
+        main.scrollTo({ top: 0, behavior });
+      } else {
+        const y = sectionTopInScrollContainer(target, main) - DOC_ANCHOR_SCROLL_MARGIN_PX;
+        main.scrollTo({ top: Math.max(0, y), behavior });
+      }
+    } else if (id === 'intro') {
+      window.scrollTo({ top: 0, behavior });
+    } else {
+      target.scrollIntoView({ behavior, block: 'start' });
+    }
+    return true;
+  }, []);
+
+  /** Deep link / hash: jump to "How XP works" etc. without firing TOC click sound. */
+  useLayoutEffect(() => {
+    if (location.pathname !== '/documentation') return;
+    const raw = (location.hash || '').replace(/^#/, '').trim();
+    if (!raw || !SECTIONS.some((s) => s.id === raw)) return;
+    setActiveSection(raw);
+    requestAnimationFrame(() => {
+      applySectionScroll(raw, 'auto');
+    });
+  }, [location.pathname, location.hash, applySectionScroll]);
+
   const scrollTo = (id: string) => {
     playClick();
     const target = document.getElementById(id);
@@ -205,23 +373,7 @@ const Documentation: React.FC = () => {
     pendingSectionRef.current = id;
     setActiveSection(id);
 
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const main = mainRef.current;
-    // scrollIntoView scrolls every scrollable ancestor (including the window), which shifts the whole layout on desktop.
-    // Only the docs column should move: scroll the inner main explicitly.
-    // "Introduction" maps to #intro, but the hero (title + blurb) lives above that section. Scroll the column to top.
-    if (mq.matches && main) {
-      if (id === 'intro') {
-        main.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        const y = sectionTopInScrollContainer(target, main) - DOC_ANCHOR_SCROLL_MARGIN_PX;
-        main.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-      }
-    } else if (id === 'intro') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    applySectionScroll(id, 'smooth');
 
     let released = false;
     const releaseLock = () => {
@@ -234,6 +386,8 @@ const Documentation: React.FC = () => {
 
     scrollLockTimerRef.current = setTimeout(releaseLock, 700);
 
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const main = mainRef.current;
     const scrollEndTarget: HTMLElement | Window = mq.matches && main ? main : window;
     const onScrollEnd = () => {
       if (scrollLockTimerRef.current) clearTimeout(scrollLockTimerRef.current);
@@ -382,22 +536,8 @@ const Documentation: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:hidden mb-8 rounded-xl border border-white/10 bg-[#0a0c12] p-4">
-              <label htmlFor="doc-section-jump" className="block text-xs font-medium text-slate-500 mb-2">
-                Jump to section
-              </label>
-              <select
-                id="doc-section-jump"
-                value={activeSection}
-                onChange={(e) => scrollTo(e.target.value)}
-                className="w-full rounded-lg bg-black/60 border border-white/10 text-slate-200 text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-intuition-primary/50"
-              >
-                {SECTIONS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.navLabel}
-                  </option>
-                ))}
-              </select>
+            <div className="lg:hidden mb-8 max-w-[52rem]">
+              <MobileDocSectionJump sections={SECTIONS} activeId={activeSection} onSelect={scrollTo} />
             </div>
 
             <DocSection id="intro" title="Introduction">
@@ -672,6 +812,19 @@ const Documentation: React.FC = () => {
                 The chat needs the AI assistant to be enabled for this app (whoever runs IntuRank handles that on the server
                 or build). You can open the Playground and read replies without a wallet; connect on {NETWORK_NAME} (chain{' '}
                 {CHAIN_ID}) when you are ready to sign transactions and spend TRUST.
+              </p>
+              <p>
+                <strong className="text-slate-100 font-semibold">Activity XP</strong> (wallet connected): +{PROTOCOL_XP_SKILL_CHAT}{' '}
+                per assistant reply (daily cap). Signing a Skill-proposed <strong className="text-slate-200">atom</strong> adds
+                up to +{PROTOCOL_XP_SKILL_ATOM}; signing a <strong className="text-slate-200">triple</strong> adds up to +
+                {PROTOCOL_XP_SKILL_TRIPLE} — on-chain amounts scale with your vault deposit (see{' '}
+                <Link
+                  to="/documentation#activity-xp"
+                  className="text-intuition-primary hover:text-intuition-primary/90 underline-offset-2 hover:underline font-medium"
+                >
+                  How XP works
+                </Link>
+                ).
               </p>
               <p>
                 Typical actions include <strong className="text-slate-100 font-semibold">creating atoms</strong> (labels and
@@ -956,6 +1109,124 @@ const Documentation: React.FC = () => {
               </div>
             </DocSection>
 
+            <DocSection id="activity-xp" title="How XP works">
+              <p>
+                There are <strong className="text-slate-100 font-semibold">two kinds of XP</strong>.{' '}
+                <strong className="text-slate-100 font-semibold">Arena XP</strong> is what you get from playing the Arena — the fast voting flow on{' '}
+                <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>.{' '}
+                <strong className="text-slate-100 font-semibold">Activity XP</strong> is extra credit for things you do on-chain (markets, create flows, sending TRUST, Arena vault deposits, and Signal vouch batches). The app adds it when your wallet qualifies; numbers stay in sync with the little hints on each page.
+              </p>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                These amounts can change when the product updates; they all come from one place in the code so nothing drifts.
+              </p>
+
+              <div className="not-prose overflow-x-auto rounded-xl border border-white/10 bg-[#0a0d14] my-4">
+                <table className="w-full min-w-[280px] text-left text-sm text-slate-300">
+                  <thead>
+                    <tr className="border-b border-white/[0.08] text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      <th className="px-4 py-3 font-semibold">What you did</th>
+                      <th className="px-4 py-3 font-semibold">Typical max XP</th>
+                      <th className="px-4 py-3 font-semibold">In plain terms</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.06]">
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Voted in the Arena (Climb)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">≥ {ARENA_XP_PER_RANK_PICK}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Arena XP — not chain trading. You get more when you turn up the stake on your picks.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Bought into a market (deposit TRUST)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_MARKET_ACQUIRE}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with how much {CURRENCY_SYMBOL} you deposit on that buy. Dust-sized buys earn little or none; big buys earn up to this max.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Created an atom</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_ATOM}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with your vault deposit on create; protocol minimum alone usually isn’t enough for the full amount.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Created a claim (triple)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with triple deposit; small deposits earn a fraction of this max.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Added something to a list</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_ADD_TO_LIST}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with list triple deposit (often the protocol floor unless you raise it).
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Arena · stance batch (vault deposit)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_ADD_TO_LIST}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Same <strong className="text-slate-400 font-semibold">add-to-list</strong> category when you submit ranked picks: deposit-scaled, then the gross is multiplied by{' '}
+                        <strong className="text-slate-400 font-semibold">×{PROTOCOL_XP_ARENA_RANK_ADD_TO_LIST_MULT}</strong> so it stacks fairly with arena pick XP on the same flow.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Signal · Vouch batch (FeeProxy createTriples)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — treated like <strong className="text-slate-400 font-semibold">created a claim</strong>. One transaction can mint several “vouches for” triples; the deposit basis is the{' '}
+                        <strong className="text-slate-400 font-semibold">sum</strong> of per-vouch vault deposits, then the usual create-claim scaling and daily cap apply.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Chatted with Skill agent</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_CHAT}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — each assistant reply while your wallet is connected (deduped per message). Capped per day.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Used Skill to create an atom (signed)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_ATOM}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with vault deposit on that Skill-signed atom; small deposits earn a fraction of this max. Separate from the generic “Created an atom” row (Create flow).
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Used Skill to publish a triple (signed)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_TRIPLE}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — scales with the triple deposit (label pipeline or FeeProxy createTriples from Skill). Higher cap than Skill atom; tiny deposits earn little or none.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-slate-200">Sent TRUST (wallet to wallet)</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SEND_TRUST}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
+                        Activity XP — only if this send is <strong className="text-slate-400 font-semibold">{PROTOCOL_XP_SEND_TRUST_MIN_TRUST_UNITS} TRUST or more</strong> in one go. Daily caps still apply. Not the same as buying market shares.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="not-prose rounded-xl border border-white/[0.06] bg-[#080a12]/90 p-4 sm:p-5 text-[13px] leading-relaxed text-slate-400 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Keeping it honest</p>
+                <p>
+                  Activity XP is meant to reward real use, not scripted spam. In the app we combine three simple rules: you need a{' '}
+                  <strong className="text-slate-200">meaningful-sized TRUST deposit</strong> before anything counts; between that floor and a reference size your XP{' '}
+                  <strong className="text-slate-200">ramps up smoothly</strong> toward the max in the table; and each row also has a{' '}
+                  <strong className="text-slate-200">daily ceiling</strong> (UTC midnight) so endless tiny repeats stop paying off.
+                </p>
+                <p className="text-slate-500 text-xs">
+                  Exact floors, reference sizes, and caps live in <code className="bg-white/5 px-1 rounded text-slate-400">constants.ts</code> next to the XP numbers — tune them as the product evolves.
+                </p>
+              </div>
+            </DocSection>
+
             <DocSection id="create-flows" title="Create atom, Send TRUST, and Arena">
               <h3 className="text-base font-semibold text-slate-100 mt-0 mb-3 flex items-center gap-2">
                 <PlusCircle className="w-5 h-5 text-intuition-primary shrink-0" aria-hidden />
@@ -970,8 +1241,8 @@ const Documentation: React.FC = () => {
                 search-backed atom pickers, use a <strong className="text-slate-100 font-semibold">quick SDK string</strong>{' '}
                 path to broadcast a simple atom from text and deposit, or open{' '}
                 <strong className="text-slate-100 font-semibold">advanced pathways</strong>{' '}
-                for <strong className="text-slate-100 font-semibold">CONSTRUCT_ATOM</strong> and{' '}
-                <strong className="text-slate-100 font-semibold">ESTABLISH_SYNAPSE</strong> (manual triple) flows with explicit
+                for <strong className="text-slate-100 font-semibold">advanced atom creation</strong> and{' '}
+                <strong className="text-slate-100 font-semibold">manual triple</strong> flows with explicit
                 term IDs and deposits. Review screens estimate fees, enforce minimum deposits where the protocol requires
                 them, and may validate that referenced atoms exist before you confirm.
               </p>
@@ -997,14 +1268,16 @@ const Documentation: React.FC = () => {
                 TRUST reserve for future gas on {NETWORK_NAME}. Sending to yourself is blocked. After broadcast,
                 you get a confirmation with a link to the transaction on the explorer. This is{' '}
                 <strong className="text-slate-100 font-semibold">not</strong> a MultiVault deposit: it does not open or close
-                a market position by itself.
+                a market position by itself. For <strong className="text-slate-100 font-semibold">activity XP</strong>, the app
+                only counts sends of <strong className="text-slate-100 font-semibold">{PROTOCOL_XP_SEND_TRUST_MIN_TRUST_UNITS} TRUST or more</strong> in one go (
+                <strong className="text-slate-100 font-semibold">+{PROTOCOL_XP_SEND_TRUST} XP</strong>).
               </p>
 
               <h3 className="text-base font-semibold text-slate-100 mt-8 mb-3 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-intuition-secondary shrink-0" aria-hidden />
                 Arena (Climb)
               </h3>
-              {ARENA_ENABLED ? (
+              {ARENA_UI_VISIBLE ? (
                 <p>
                   <strong className="text-slate-100 font-semibold">The Arena</strong> (
                   <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>, nav{' '}
@@ -1022,10 +1295,45 @@ const Documentation: React.FC = () => {
               ) : (
                 <p>
                   <strong className="text-slate-100 font-semibold">The Arena</strong> route (
-                  <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>) is only fully live
-                  when this deployment has turned the feature on. Otherwise the nav may still show{' '}
-                  <strong className="text-slate-100 font-semibold">THE ARENA</strong>, but you may see a coming-soon screen
-                  until the operator enables it.
+                  <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>) may show a
+                  coming-soon screen when the feature is not enabled, or when{' '}
+                  <code className="text-xs bg-white/5 px-1 py-0.5 rounded text-slate-300">VITE_ARENA_PLACEHOLDER=true</code>{' '}
+                  masks the work-in-progress UI. The nav can still list{' '}
+                  <strong className="text-slate-100 font-semibold">THE ARENA</strong> while the full surface is hidden.
+                </p>
+              )}
+
+              <h3 className="text-base font-semibold text-slate-100 mt-8 mb-3 flex items-center gap-2">
+                <Radio className="w-5 h-5 text-cyan-300 shrink-0" aria-hidden />
+                Signal — Pulse &amp; Vouch
+              </h3>
+              {ARENA_UI_VISIBLE ? (
+                <>
+                  <p>
+                    <strong className="text-slate-100 font-semibold">Signal</strong> is the Arena tab for quick social graph actions without picking a themed list first. It has two sub-lanes:{' '}
+                    <strong className="text-slate-100 font-semibold">Pulse</strong> and{' '}
+                    <strong className="text-slate-100 font-semibold">Vouch</strong>.
+                  </p>
+                  <p>
+                    <strong className="text-slate-100 font-semibold">Pulse</strong> surfaces identity atoms as <strong className="text-slate-200">tag cards</strong> (third-person predicates like “has tag”, “trusts”, etc.).
+                    Tabs group the rail: <strong className="text-slate-200">Hot</strong> is the editorial spotlight;{' '}
+                    <strong className="text-slate-200">Crowd</strong> is the full curated portal list (same order you configured in the app);{' '}
+                    <strong className="text-slate-200">Yours</strong> is atoms you pin; <strong className="text-slate-200">My stakes</strong> lists every triple where your wallet already has a position, with controls to queue the opposite stance{' '}
+                    (new on-chain deposit via the conviction cart) or unstake from the vault.{' '}
+                    Tapping <strong className="text-slate-200">Support</strong> or <strong className="text-slate-200">Oppose</strong> queues a stance for that vault triple (local queue — no wallet yet). Queued stances are summarized in the footer; the on-chain batch for those stances is still rolling out — until then, plan in Signal and execute larger Arena list batches from the main grid when you need vault deposits and XP.
+                  </p>
+                  <p>
+                    <strong className="text-slate-100 font-semibold">Vouch</strong> is for named identities (e.g. <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">.eth</code> /{' '}
+                    <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">.trust</code>). You queue who you want to vouch for;{' '}
+                    <strong className="text-slate-200">Submit (1 tx)</strong> calls FeeProxy <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">createTriples</code> with predicate{' '}
+                    <strong className="text-slate-200">vouches for</strong>, your account atom as subject, and a per-row vault deposit. Successful submits earn{' '}
+                    <strong className="text-slate-200">activity XP</strong> under the same rules as creating a claim ( basis = sum of deposits in that transaction). Daily caps still apply.
+                  </p>
+                </>
+              ) : (
+                <p>
+                  When the Arena UI is visible, <strong className="text-slate-100 font-semibold">Signal</strong> appears as a tab on{' '}
+                  <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>: Pulse for identity tag cards and stance queueing, Vouch for batched “vouches for” claims.
                 </p>
               )}
 
@@ -1049,6 +1357,7 @@ const Documentation: React.FC = () => {
                     to="/climb"
                     onClick={playClick}
                     className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white"
+                    title={ARENA_UI_VISIBLE ? undefined : 'Route may show coming-soon'}
                   >
                     Arena <ChevronRight className="w-4 h-4" />
                   </Link>
@@ -1224,7 +1533,7 @@ const Documentation: React.FC = () => {
                     Intuition Skill Playground
                   </Link>{' '}
                   under Intel for Gemini-assisted transactions
-                  {ARENA_ENABLED ? (
+                  {ARENA_UI_VISIBLE ? (
                     <>
                       {', and '}
                       <Link to="/climb" onClick={playClick} className="text-intuition-primary hover:underline font-medium">

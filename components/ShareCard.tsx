@@ -52,10 +52,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
         link.href = image;
         link.download = `inturank-pnl-${assetName.toLowerCase()}-${Date.now()}.png`;
         link.click();
-        toast.success("NEURAL_FRAME_SAVED");
+        toast.success("Image saved");
      } catch (err) {
         console.error(err);
-        toast.error("IMAGE_GENERATION_FAILED");
+        toast.error("Couldn’t save image");
      } finally {
         setIsCapturing(false);
      }

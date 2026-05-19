@@ -1,19 +1,39 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { getWalletBalance, getShareBalanceEffective, getQuoteRedeem, resolveENS, reverseResolveENS, toAddress } from '../services/web3';
-import { getUserPositions, getUserHistory, getVaultsByIds, getUserActivityStats, getUserIdTransactionCount, getCurveLabel } from '../services/graphql';
-import { User, PieChart as PieIcon, Activity, Zap, Shield, TrendingUp, Layers, RefreshCw, Search, ArrowRight, AlertTriangle, Database, Wallet, Loader2, Fingerprint, Activity as PulseIcon, UserPlus, UserMinus, Mail, Copy, ChevronRight, Trash2 } from 'lucide-react';
+import { getWalletBalance, getShareBalancesBatch, resolveENS, toAddress } from '../services/web3';
+import { resolveProfileSearchInput, walletDisplayMeta, rememberTrustNameForProfile, TRUST_DISPLAY_UPDATED_EVENT, canonicalTrustFullName } from '../services/tns';
+import {
+  getUserPositions,
+  getPortfolioPositionsWithValue,
+  getUserHistory,
+  getVaultsByIds,
+  getUserActivityStats,
+  getUserIdTransactionCount,
+  getCurveLabel,
+  resolveMetadata,
+} from '../services/graphql';
+import { User, PieChart as PieIcon, Activity, Zap, Shield, TrendingUp, Layers, RefreshCw, Search, ArrowRight, AlertTriangle, Database, Wallet, Loader2, Fingerprint, Activity as PulseIcon, UserPlus, UserMinus, Mail, Copy, ChevronRight, Trash2, Share2, X } from 'lucide-react';
 import { formatEther, isAddress, getAddress } from 'viem';
 import { Transaction } from '../types';
-import { calculateCategoryExposure, calculateSentimentBias, formatMarketValue, formatDisplayedShares } from '../services/analytics';
+import {
+  calculateCategoryExposure,
+  calculateSentimentBias,
+  formatMarketValue,
+  formatDisplayedShares,
+  safeParseUnits,
+  calculateAgentPrice,
+  formatMaskedWalletAddress,
+  formatWalletHeadlineForUi,
+} from '../services/analytics';
 import {
   CURRENCY_SYMBOL,
+  DEFAULT_PROFILE_AVATAR_URL,
   DISTRUST_ATOM_ID,
   LINEAR_CURVE_ID,
-  OFFSET_PROGRESSIVE_CURVE_ID,
   PAGE_HERO_EYEBROW,
   PAGE_HERO_TITLE,
   PAGE_HERO_BODY,
@@ -26,6 +46,11 @@ import { isFollowing, addFollow, removeFollow, setFollowEmailAlerts, type Follow
 // import BadgesSection from '../components/BadgesSection';
 import { getEmailSubscription, removeEmailSubscription, setEmailAlertFrequency, type EmailAlertFrequency } from '../services/emailNotifications';
 import { useEmailNotify } from '../contexts/EmailNotifyContext';
+import ProfileShareCard from '../components/ProfileShareCard';
+import IntuRankXpBadge from '../components/IntuRankXpBadge';
+import { getProtocolXpTotal, PROTOCOL_XP_UPDATED_EVENT } from '../services/protocolXp';
+import { fetchArenaXpRecordForWallet } from '../services/arenaXp';
+import { arenaPickCreditXp } from '../services/arenaPickCredit';
 
 const COLORS = ['#00f3ff', '#00ff9d', '#ff0055', '#facc15', '#94a3b8'];
 
@@ -48,12 +73,11 @@ const labelSm =
 const labelMuted =
   'font-sans text-[10px] font-medium text-slate-400 antialiased tracking-tight [text-rendering:geometricPrecision]';
 const statDisplay =
-  'font-display text-4xl font-black tracking-tight text-white antialiased [text-rendering:geometricPrecision] [text-shadow:none]';
+  'font-display text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white antialiased [text-rendering:geometricPrecision] [text-shadow:none]';
 
 const POSITIONS_PER_PAGE = 10;
-/** Unbounded `Promise.all` on large holder accounts hammers RPC + can hang the page before `setLoading(false)`. */
-const PROFILE_LIVE_CHECK_CAP = 200;
-const LIVE_VERIFY_BATCH = 8;
+/** Hard cap so a wedged RPC cannot leave "Loading positions…" forever. */
+const PROFILE_FETCH_BUDGET_MS = 52_000;
 
 const PublicProfile: React.FC = () => {
   const { address: addressParam = '' } = useParams<{ address: string }>();
@@ -71,9 +95,11 @@ const PublicProfile: React.FC = () => {
   }, [addressParam]);
 
   const activeProfileFetchFor = useRef<string | null>(null);
+  /** Bumps on each profile load so abandoned requests never skip `setLoading(false)` for the active fetch. */
+  const profileFetchGenerationRef = useRef(0);
   const { address: connectedAddress } = useAccount();
   const { openEmailNotify, isEmailNotifyOpen } = useEmailNotify();
-  const [ensName, setEnsName] = useState<string | null>(null);
+  const [profileAlias, setProfileAlias] = useState<{ primaryLabel: string; isNamed: boolean } | null>(null);
   const [followEntry, setFollowEntry] = useState<FollowEntry | null>(null);
   const [positions, setPositions] = useState<any[]>([]);
   const [history, setHistory] = useState<Transaction[]>([]);
@@ -89,6 +115,7 @@ const PublicProfile: React.FC = () => {
   const [isResolving, setIsResolving] = useState(false);
   const [subscription, setSubscription] = useState<{ email: string; nickname?: string; subscribedAt?: number; alertFrequency?: EmailAlertFrequency } | null>(null);
   const [positionsPage, setPositionsPage] = useState(1);
+  const [showProfileShareModal, setShowProfileShareModal] = useState(false);
 
   const isOwnProfile = !!address && !!connectedAddress && address.toLowerCase() === connectedAddress.toLowerCase();
   /** Param present in URL but not a valid 0x address (e.g. typos, truncated paste). */
@@ -99,6 +126,30 @@ const PublicProfile: React.FC = () => {
     const start = (positionsPage - 1) * POSITIONS_PER_PAGE;
     return positions.slice(start, start + POSITIONS_PER_PAGE);
   }, [positions, positionsPage]);
+
+  const displayHeadline = useMemo(
+    () => (address ? formatWalletHeadlineForUi(profileAlias, address) : ''),
+    [profileAlias, address],
+  );
+  const maskedWalletDisplay = useMemo(() => (address ? formatMaskedWalletAddress(address) : ''), [address]);
+  const profileShareUrl = useMemo(() => {
+    if (!address || typeof window === 'undefined') return '';
+    return `${window.location.origin}/profile/${address}`;
+  }, [address]);
+
+  /** Mirrors hero badges — share card trader tier. */
+  const traderStatusLabel = useMemo(() => {
+    if (activeHoldingsCount > 50) return 'Elite trader';
+    if (activeHoldingsCount > 10) return 'Pro trader';
+    return 'Explorer';
+  }, [activeHoldingsCount]);
+
+  const [protocolXpTotal, setProtocolXpTotal] = useState(0);
+  /** Arena XP for the address being viewed — pulled from indexer (`fetchArenaXpRecordForWallet`),
+   * with an optional floor from the connected wallet's local pick credit if it's the same address. */
+  const [arenaXpTotal, setArenaXpTotal] = useState(0);
+  /** False until the first indexer fetch for this profile finishes (matches Arena / RankedList XP badge). */
+  const [arenaGraphReady, setArenaGraphReady] = useState(false);
 
   const refreshSubscription = useCallback((addr: string | null) => {
     if (!addr) {
@@ -120,7 +171,7 @@ const PublicProfile: React.FC = () => {
 
   useEffect(() => {
     if (address) {
-      setEnsName(null);
+      setProfileAlias(null);
       setPositions([]);
       setHistory([]);
       setVolumeData([]);
@@ -146,6 +197,56 @@ const PublicProfile: React.FC = () => {
   }, [address]);
 
   useEffect(() => {
+    setShowProfileShareModal(false);
+  }, [address]);
+
+  useEffect(() => {
+    if (!address || typeof window === 'undefined') {
+      setProtocolXpTotal(0);
+      return;
+    }
+    const refresh = () => setProtocolXpTotal(getProtocolXpTotal(address));
+    refresh();
+    window.addEventListener(PROTOCOL_XP_UPDATED_EVENT, refresh as EventListener);
+    return () => window.removeEventListener(PROTOCOL_XP_UPDATED_EVENT, refresh as EventListener);
+  }, [address]);
+
+  /**
+   * Resolve Arena XP for this profile. Indexer is the source of truth; for the connected wallet
+   * we floor at local pick credit so freshly confirmed picks aren't invisible while the indexer syncs.
+   */
+  useEffect(() => {
+    if (!address) {
+      setArenaGraphReady(false);
+      setArenaXpTotal(0);
+      return;
+    }
+    setArenaGraphReady(false);
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        const rec = await fetchArenaXpRecordForWallet(address);
+        if (cancelled) return;
+        const local = isOwnProfile ? arenaPickCreditXp(address) : 0;
+        setArenaXpTotal(Math.max(rec.xp ?? 0, local));
+      } catch {
+        if (cancelled) return;
+        const local = isOwnProfile ? arenaPickCreditXp(address) : 0;
+        setArenaXpTotal(local);
+      } finally {
+        if (!cancelled) setArenaGraphReady(true);
+      }
+    };
+    void sync();
+    const onChain = () => void sync();
+    window.addEventListener('inturank-arena-onchain-updated', onChain);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('inturank-arena-onchain-updated', onChain);
+    };
+  }, [address, isOwnProfile]);
+
+  useEffect(() => {
     if (positionsPage > totalPositionPages) setPositionsPage(totalPositionPages);
   }, [positionsPage, totalPositionPages]);
 
@@ -163,169 +264,313 @@ const PublicProfile: React.FC = () => {
     }
   }, [connectedAddress, address, followEntry?.emailAlerts]);
 
+  useEffect(() => {
+    if (!address) {
+      setProfileAlias(null);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      walletDisplayMeta(address)
+        .then((meta) => {
+          if (!cancelled) setProfileAlias(meta);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            try {
+              setProfileAlias({ primaryLabel: getAddress(address as `0x${string}`), isNamed: false });
+            } catch {
+              setProfileAlias(null);
+            }
+          }
+        });
+    };
+    load();
+    const onTrust = (ev: Event) => {
+      const d = (ev as CustomEvent<{ address?: string }>).detail;
+      if (d?.address && address && d.address.toLowerCase() === address.toLowerCase()) load();
+    };
+    window.addEventListener(TRUST_DISPLAY_UPDATED_EVENT, onTrust);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(TRUST_DISPLAY_UPDATED_EVENT, onTrust);
+    };
+  }, [address]);
+
   const fetchUserData = async (addr: string) => {
+    const gen = ++profileFetchGenerationRef.current;
     activeProfileFetchFor.current = addr;
     setLoading(true);
+
+    const stale = () =>
+      gen !== profileFetchGenerationRef.current || activeProfileFetchFor.current !== addr;
+
     try {
-      reverseResolveENS(addr).then((name) => {
-        if (activeProfileFetchFor.current === addr) setEnsName(name);
-      });
-      const bal = await getWalletBalance(addr);
-      if (activeProfileFetchFor.current !== addr) return;
-      setEthBalance(Number(bal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }));
 
-      // High-precision parallel fetch (all from Intuition graph / chain)
-      const [graphPositions, chainHistory, activityStats, graphTxCount] = await Promise.all([
-          getUserPositions(addr).catch(() => []),
-          getUserHistory(addr).catch(() => []),
-          getUserActivityStats(addr).catch(() => ({ txCount: 0, holdingsCount: 0 })),
-          getUserIdTransactionCount(addr).catch(() => 0)
-      ]);
-      if (activeProfileFetchFor.current !== addr) return;
-      
-      const uniqueVaultIds = Array.from(new Set([
-          ...graphPositions.map((p: any) => p.vault?.term_id?.toLowerCase()),
-          ...chainHistory.map(tx => tx.vaultId?.toLowerCase())
-      ])).filter(Boolean) as string[];
+      await Promise.race([
+        (async () => {
+          const bal = await getWalletBalance(addr);
+          if (stale()) return;
+          setEthBalance(Number(bal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }));
 
-      const metadata = await getVaultsByIds(uniqueVaultIds).catch(() => []);
-      if (activeProfileFetchFor.current !== addr) return;
+          // Prefer positions_with_value (Hasura: theoretical_value, sorted) — same fast path as Portfolio;
+          // skips hundreds of getShares/previewRedeem RPCs per profile load.
+          const [positionsWithValueRaw, chainHistory, activityStats, graphTxCount] = await Promise.all([
+            getPortfolioPositionsWithValue(addr).catch(() => []),
+            getUserHistory(addr).catch(() => []),
+            getUserActivityStats(addr).catch(() => ({ txCount: 0, holdingsCount: 0 })),
+            getUserIdTransactionCount(addr).catch(() => 0),
+          ]);
+          if (stale()) return;
 
-      const DUST = 1e-8; // treat below this as zero (sold / dust) — strict so closed positions never show
-      const graphWithShares = graphPositions.filter((p: any) => {
-        const s = p.shares;
-        if (s === undefined || s === null) return false;
-        const n = typeof s === 'string' ? parseFloat(s) : Number(s);
-        return n > DUST;
-      });
-      // Index query is already order_by shares desc — take top N for live verify only (huge accounts exist).
-      const graphForLiveCheck = graphWithShares.slice(0, PROFILE_LIVE_CHECK_CAP);
+          const positionsWithValue = Array.isArray(positionsWithValueRaw) ? positionsWithValueRaw : [];
 
-      // Positions: use effective shares (RPC + subgraph merge) and try both curves — in small
-      // batches so we never run thousands of concurrent RPC/GQL calls (hangs the UI, loading never ends).
-      const processGraphPosition = async (p: any) => {
-          const rawId = p.vault?.term_id;
-          if (!rawId || typeof rawId !== 'string') return null;
-          const id = rawId.toLowerCase();
-          const meta = metadata.find(m => m.id.toLowerCase() === id);
-          const rawCurve = p.vault.curve_id ?? meta?.curveId;
-          const curveFromGraph = rawCurve != null ? Number(rawCurve) || LINEAR_CURVE_ID : LINEAR_CURVE_ID;
-          const otherCurve = curveFromGraph === LINEAR_CURVE_ID ? OFFSET_PROGRESSIVE_CURVE_ID : LINEAR_CURVE_ID;
-
-          const sPrimary = await getShareBalanceEffective(addr, id, curveFromGraph);
-          const sAlt = await getShareBalanceEffective(addr, id, otherCurve);
-          const nPrimary = parseFloat(sPrimary) || 0;
-          const nAlt = parseFloat(sAlt) || 0;
-
-          let sharesRaw: string;
-          let curveId: number;
-          let sharesNum: number;
-          if (nAlt > nPrimary && nAlt > DUST) {
-            sharesRaw = sAlt;
-            curveId = otherCurve;
-            sharesNum = nAlt;
-          } else if (nPrimary > DUST) {
-            sharesRaw = sPrimary;
-            curveId = curveFromGraph;
-            sharesNum = nPrimary;
-          } else {
-            return null;
+          let graphPositions: any[] = [];
+          if (positionsWithValue.length === 0) {
+            graphPositions = await getUserPositions(addr).catch(() => []);
+            if (stale()) return;
           }
 
-          const valueStr = await getQuoteRedeem(sharesRaw, id, addr, curveId);
-          const value = parseFloat(valueStr);
+          const historyVaultIds = chainHistory.map((tx) => tx.vaultId?.toLowerCase()).filter(Boolean);
+          const graphVaultIds = (positionsWithValue.length > 0 ? positionsWithValue : graphPositions)
+            .map((p: any) => p.vault?.term_id?.toLowerCase())
+            .filter(Boolean);
+          const uniqueVaultIds = Array.from(new Set([...graphVaultIds, ...historyVaultIds])) as string[];
 
-          let label = meta?.label || `Agent ${id.slice(0,6)}...`;
-          let image = meta?.image;
-          let type = meta?.type || 'ATOM';
+          const metadata =
+            positionsWithValue.length > 0 ? [] : await getVaultsByIds(uniqueVaultIds).catch(() => []);
+          if (stale()) return;
 
-          const triple = p.vault?.term?.triple;
-          const isCounter = triple?.counter_term_id?.toLowerCase() === id.toLowerCase();
-          const pointsToDistrust = triple?.object?.term_id?.toLowerCase().includes(DISTRUST_ATOM_ID.toLowerCase().slice(26));
+          const DUST = 1e-8;
+          const finalPositionsBuf: any[] = [];
 
-          if (isCounter || pointsToDistrust) {
-              const subjectLabel = triple?.subject?.label || triple?.subject?.term_id?.slice(0, 8) || 'NODE';
-              label = `OPPOSING_${subjectLabel}`.toUpperCase();
-              image = triple?.subject?.image;
-              type = 'CLAIM';
-          }
-
-          return {
-              id,
-              curveId,
-              shares: sharesNum,
-              value: value,
-              atom: { label, id, image, type }
-          };
-      };
-
-      const liveResolved: (Awaited<ReturnType<typeof processGraphPosition>>)[] = [];
-      for (let o = 0; o < graphForLiveCheck.length; o += LIVE_VERIFY_BATCH) {
-        if (activeProfileFetchFor.current !== addr) return;
-        const chunk = graphForLiveCheck.slice(o, o + LIVE_VERIFY_BATCH);
-        const part = await Promise.all(chunk.map(processGraphPosition));
-        if (activeProfileFetchFor.current !== addr) return;
-        liveResolved.push(...part);
-      }
-
-      const finalPositions = (liveResolved.filter(Boolean) as any[]).sort(
-        (a, b) => (b.value ?? 0) - (a.value ?? 0)
-      );
-      const totalAssetsSum = finalPositions.reduce((s, p) => s + (p.value || 0), 0);
-      setPositions(finalPositions);
-      setActiveHoldingsCount(activityStats.holdingsCount || finalPositions.length);
-      setExposureData(calculateCategoryExposure(finalPositions));
-      setPortfolioValue(
-        totalAssetsSum.toLocaleString(undefined, {
-          minimumFractionDigits: 4,
-          maximumFractionDigits: 4,
-        }),
-      );
-
-      const mergedHistory = chainHistory.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      setHistory(mergedHistory);
-
-      // SEMANTIC FOOTPRINT: total transactions from Intuition graph (same definition as getUserHistory)
-      const footprintCount =
-        graphTxCount > 0
-          ? graphTxCount
-          : (mergedHistory.length > 0 ? mergedHistory.length : (activityStats.txCount > 0 ? activityStats.txCount : finalPositions.length));
-      setSemanticFootprint(footprintCount); 
-
-      // SENTIMENT BIAS: use history when available, otherwise infer from holdings
-      if (mergedHistory.length > 0) {
-          setSentimentBias(calculateSentimentBias(mergedHistory));
-      } else if (finalPositions.length > 0) {
-          // Power users with holdings but no on-chain events yet: show bullish bias
-          setSentimentBias({ trust: 95, distrust: 5 });
-      } else {
-          setSentimentBias({ trust: 50, distrust: 50 });
-      }
-      
-      // Reconstruct temporal growth chart
-      let currentRunningVol = 0;
-      let chartPoints = mergedHistory
-          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
-          .map((tx, idx) => {
+          if (positionsWithValue.length > 0) {
+            for (const p of positionsWithValue) {
               try {
-                  const assetVal = parseFloat(formatEther(BigInt(tx.assets || '0')));
-                  currentRunningVol += assetVal > 0 ? assetVal : 0;
-              } catch (e) {}
-              return { idx, val: currentRunningVol };
-          });
-      
-      if (chartPoints.length === 0 && finalPositions.length > 0) {
-          chartPoints = [
-              { idx: 0, val: 0 },
-              { idx: 1, val: totalAssetsSum }
-          ];
-      }
-      setVolumeData(chartPoints);
+                const rawId = p.vault?.term_id;
+                if (!rawId || typeof rawId !== 'string') continue;
+                const id = rawId.toLowerCase();
+                const rawCurve = p.vault?.curve_id;
+                const curveId = rawCurve != null ? Number(rawCurve) || LINEAR_CURVE_ID : LINEAR_CURVE_ID;
+                const sharesNum = safeParseUnits(p.shares);
+                if (!Number.isFinite(sharesNum) || sharesNum <= DUST) continue;
+                const value =
+                  p.theoretical_value != null ? Number(formatEther(BigInt(p.theoretical_value))) : 0;
 
-    } catch (e) {
-      console.error("PROFILE_RECON_FAILURE:", e);
+                const triple = p.vault?.term?.triple;
+                const atom = p.vault?.term?.atom;
+                let label: string;
+                let image: string | undefined;
+                let type: string;
+                const isCounter = triple?.counter_term_id?.toLowerCase() === id;
+                const pointsToDistrust = triple?.object?.term_id
+                  ?.toLowerCase()
+                  .includes(DISTRUST_ATOM_ID.toLowerCase().slice(26));
+
+                if (isCounter || pointsToDistrust) {
+                  const subjectLabel = triple?.subject
+                    ? resolveMetadata(triple.subject).label
+                    : triple?.subject?.term_id?.slice(0, 8) || 'NODE';
+                  label = `OPPOSING_${subjectLabel}`.toUpperCase();
+                  image = triple?.subject?.image;
+                  type = 'CLAIM';
+                } else if (triple) {
+                  const sMeta = resolveMetadata(triple.subject);
+                  const oMeta = resolveMetadata(triple.object);
+                  label = `${sMeta.label} ${triple.predicate?.label || 'LINK'} ${oMeta.label}`;
+                  image = triple.subject?.image || triple.object?.image;
+                  type = 'CLAIM';
+                } else if (atom) {
+                  const meta = resolveMetadata(atom);
+                  label = meta.label || `Node_${id.slice(0, 8)}`;
+                  image = atom.image || meta.image;
+                  type = (meta.type || 'ATOM').toUpperCase();
+                } else {
+                  label = `Node_${id.slice(0, 8)}`;
+                  image = undefined;
+                  type = 'ATOM';
+                }
+
+                const dup = finalPositionsBuf.some(
+                  (x: any) => x.id === id && (x.curveId ?? LINEAR_CURVE_ID) === (curveId ?? LINEAR_CURVE_ID),
+                );
+                if (!dup) {
+                  finalPositionsBuf.push({
+                    id,
+                    curveId,
+                    shares: sharesNum,
+                    value,
+                    atom: { label, id, image, type },
+                  });
+                }
+              } catch {
+                /* skip row */
+              }
+            }
+          } else {
+            const graphWithShares = graphPositions.filter((p: any) => {
+              const s = p.shares;
+              if (s === undefined || s === null) return false;
+              const n = typeof s === 'string' ? parseFloat(s) : Number(s);
+              return n > DUST;
+            });
+
+            const batchItems = graphWithShares
+              .map((p: any) => {
+                const rawId = p.vault?.term_id;
+                if (!rawId || typeof rawId !== 'string') return null;
+                const id = rawId.toLowerCase();
+                const rawCurve =
+                  p.vault?.curve_id ?? metadata.find((m: any) => m.id.toLowerCase() === id)?.curveId;
+                const curveId = rawCurve != null ? Number(rawCurve) || LINEAR_CURVE_ID : LINEAR_CURVE_ID;
+                return { termId: id, curveId };
+              })
+              .filter(Boolean) as { termId: string; curveId: number }[];
+
+            const sharesMap =
+              batchItems.length > 0 ? await getShareBalancesBatch(addr, batchItems) : new Map<string, string>();
+            if (stale()) return;
+
+            for (const p of graphWithShares) {
+              try {
+                const rawId = p.vault?.term_id;
+                if (!rawId || typeof rawId !== 'string') continue;
+                const id = rawId.toLowerCase();
+                const meta = metadata.find((m: any) => m.id.toLowerCase() === id);
+                const rawCurve = p.vault?.curve_id ?? meta?.curveId;
+                const curveId = rawCurve != null ? Number(rawCurve) || LINEAR_CURVE_ID : LINEAR_CURVE_ID;
+
+                const sharesRaw = sharesMap.get(`${id}:${curveId}`) ?? '0';
+                const sharesNum = typeof sharesRaw === 'string' ? parseFloat(sharesRaw) : Number(sharesRaw);
+                if (!Number.isFinite(sharesNum) || sharesNum <= DUST) continue;
+
+                const vault = p.vault;
+                const price = vault
+                  ? calculateAgentPrice(
+                      vault.total_assets || '0',
+                      vault.total_shares || '1',
+                      vault.current_share_price,
+                    )
+                  : 0.1;
+                const value = sharesNum * price;
+
+                let label = meta?.label || `Agent ${id.slice(0, 6)}...`;
+                let image = meta?.image;
+                let type = meta?.type || 'ATOM';
+
+                const triple = p.vault?.term?.triple;
+                const isCounter = triple?.counter_term_id?.toLowerCase() === id.toLowerCase();
+                const pointsToDistrust = triple?.object?.term_id
+                  ?.toLowerCase()
+                  .includes(DISTRUST_ATOM_ID.toLowerCase().slice(26));
+
+                if (isCounter || pointsToDistrust) {
+                  const subjectLabel =
+                    triple?.subject?.label || triple?.subject?.term_id?.slice(0, 8) || 'NODE';
+                  label = `OPPOSING_${subjectLabel}`.toUpperCase();
+                  image = triple?.subject?.image;
+                  type = 'CLAIM';
+                }
+
+                const dup = finalPositionsBuf.some(
+                  (x: any) => x.id === id && (x.curveId ?? LINEAR_CURVE_ID) === (curveId ?? LINEAR_CURVE_ID),
+                );
+                if (!dup) {
+                  finalPositionsBuf.push({
+                    id,
+                    curveId,
+                    shares: sharesNum,
+                    value,
+                    atom: { label, id, image, type },
+                  });
+                }
+              } catch {
+                /* skip row */
+              }
+            }
+          }
+
+          const finalPositions = finalPositionsBuf.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+          const totalAssetsSum = finalPositions.reduce((s, p) => s + (p.value || 0), 0);
+          setPositions(finalPositions);
+          setActiveHoldingsCount(activityStats.holdingsCount || finalPositions.length);
+          setExposureData(calculateCategoryExposure(finalPositions));
+          setPortfolioValue(
+            totalAssetsSum.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+            }),
+          );
+
+          const mergedHistory = chainHistory.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          setHistory(mergedHistory);
+
+          // SEMANTIC FOOTPRINT: total transactions from Intuition graph (same definition as getUserHistory)
+          const footprintCount =
+            graphTxCount > 0
+              ? graphTxCount
+              : mergedHistory.length > 0
+                ? mergedHistory.length
+                : activityStats.txCount > 0
+                  ? activityStats.txCount
+                  : finalPositions.length;
+          setSemanticFootprint(footprintCount);
+
+          // SENTIMENT BIAS: use history when available, otherwise infer from holdings
+          if (mergedHistory.length > 0) {
+            setSentimentBias(calculateSentimentBias(mergedHistory));
+          } else if (finalPositions.length > 0) {
+            setSentimentBias({ trust: 95, distrust: 5 });
+          } else {
+            setSentimentBias({ trust: 50, distrust: 50 });
+          }
+
+          let currentRunningVol = 0;
+          let chartPoints = mergedHistory
+            .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+            .map((tx, idx) => {
+              try {
+                const assetVal = parseFloat(formatEther(BigInt(tx.assets || '0')));
+                currentRunningVol += assetVal > 0 ? assetVal : 0;
+              } catch {
+                /* ignore */
+              }
+              return { idx, val: currentRunningVol };
+            });
+
+          if (chartPoints.length === 0 && finalPositions.length > 0) {
+            chartPoints = [
+              { idx: 0, val: 0 },
+              { idx: 1, val: totalAssetsSum },
+            ];
+          }
+          setVolumeData(chartPoints);
+        })(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(Object.assign(new Error('profile fetch timed out'), { name: 'ProfileFetchTimeout' })),
+            PROFILE_FETCH_BUDGET_MS,
+          ),
+        ),
+      ]);
+    } catch (e: unknown) {
+      const name = e && typeof e === 'object' && 'name' in e ? (e as { name?: string }).name : '';
+      if (name === 'ProfileFetchTimeout') {
+        console.warn('PublicProfile: fetch timed out', addr);
+        if (gen === profileFetchGenerationRef.current && activeProfileFetchFor.current === addr) {
+          setPositions([]);
+          setPortfolioValue('0.0000');
+          setSemanticFootprint(0);
+          setActiveHoldingsCount(0);
+          setExposureData([]);
+          setVolumeData([]);
+          setSentimentBias({ trust: 50, distrust: 50 });
+        }
+      } else {
+        console.error('PROFILE_RECON_FAILURE:', e);
+      }
     } finally {
-      if (activeProfileFetchFor.current === addr) {
+      if (gen === profileFetchGenerationRef.current) {
         setLoading(false);
       }
     }
@@ -333,32 +578,29 @@ const PublicProfile: React.FC = () => {
 
   const handleSearch = async () => {
       const cleanQuery = searchQuery.trim();
-      if (isAddress(cleanQuery)) {
-          playClick();
-          try {
-            const normalized = getAddress(cleanQuery as `0x${string}`);
-            navigate(`/profile/${normalized}`);
-            setSearchQuery('');
-          } catch {
-            toast.error('Invalid address');
+      if (!cleanQuery) return;
+      playClick();
+      setIsResolving(true);
+      try {
+        const { address: resolved, error } = await resolveProfileSearchInput(cleanQuery);
+        if (resolved) {
+          if (canonicalTrustFullName(cleanQuery) || cleanQuery.toLowerCase().endsWith('.trust')) {
+            rememberTrustNameForProfile(resolved, cleanQuery);
           }
+          navigate(`/profile/${resolved}`);
+          void walletDisplayMeta(resolved).then((m) => {
+            if (m.isNamed && m.primaryLabel?.toLowerCase().endsWith('.trust')) {
+              rememberTrustNameForProfile(resolved, m.primaryLabel);
+            }
+          });
+          setSearchQuery('');
           return;
-      }
-      if (cleanQuery.endsWith('.eth')) {
-          playClick();
-          setIsResolving(true);
-          try {
-              const resolvedAddress = await resolveENS(cleanQuery);
-              if (resolvedAddress) {
-                  const n = toAddress(resolvedAddress);
-                  if (n) {
-                    navigate(`/profile/${n}`);
-                    setSearchQuery('');
-                  } else {
-                    toast.error('ENS did not resolve to a valid address');
-                  }
-              } else { toast.error(`ENS NOT FOUND: ${cleanQuery}`); }
-          } catch (e) { toast.error("ENS RESOLUTION FAILED"); } finally { setIsResolving(false); }
+        }
+        toast.error(error || 'Profile not found');
+      } catch {
+        toast.error('Search failed');
+      } finally {
+        setIsResolving(false);
       }
   };
 
@@ -371,6 +613,16 @@ const PublicProfile: React.FC = () => {
     [exposureData]
   );
 
+  const sharePortfolioMix = useMemo(
+    () =>
+      exposurePieSlices.slice(0, 6).map((row) => ({
+        name: row.name,
+        value: row.value,
+        color: COLORS[row.colorIndex % COLORS.length],
+      })),
+    [exposurePieSlices],
+  );
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020308] font-mono selection:bg-intuition-primary selection:text-black">
       <div
@@ -381,10 +633,10 @@ const PublicProfile: React.FC = () => {
       <div className="pointer-events-none absolute top-0 right-0 z-0 h-[min(70vw,560px)] w-[min(70vw,560px)] rounded-full bg-intuition-primary/6 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-1/4 left-0 z-0 h-[min(55vw,480px)] w-[min(55vw,480px)] rounded-full bg-[#ff1e6d]/5 blur-[100px]" />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-5 lg:px-8">
-      <header className="mb-8 space-y-2 font-sans">
+      <div className="relative z-10 mx-auto max-w-7xl px-3 pb-28 pt-5 sm:px-5 sm:pb-20 sm:pt-8 lg:px-8">
+      <header className="mb-5 space-y-1.5 font-sans sm:mb-8 sm:space-y-2">
         <p className={PAGE_HERO_EYEBROW}>{isOwnProfile ? 'Your account' : 'Trader profile'}</p>
-        <h1 className={PAGE_HERO_TITLE}>Profile</h1>
+        <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Profile</h1>
         <p className={`${PAGE_HERO_BODY} max-w-2xl`}>
           {isOwnProfile
             ? 'Balances, positions, and activity for your connected wallet.'
@@ -392,12 +644,12 @@ const PublicProfile: React.FC = () => {
         </p>
       </header>
 
-      <div className="relative z-20 mb-8 flex justify-end">
-          <div className="flex items-center gap-0 rounded-2xl border border-white/[0.1] bg-[#0a0c14]/80 py-1.5 pl-4 pr-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all focus-within:border-intuition-primary/45 focus-within:shadow-[0_0_0_1px_rgba(0,243,255,0.12),0_12px_40px_rgba(0,0,0,0.45)]">
+      <div className="relative z-20 mb-6 flex w-full justify-stretch sm:mb-8 sm:justify-end">
+          <div className="flex w-full min-w-0 items-center gap-0 rounded-2xl border border-white/[0.1] bg-[#0a0c14]/80 py-1.5 pl-3 pr-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all focus-within:border-intuition-primary/45 focus-within:shadow-[0_0_0_1px_rgba(0,243,255,0.12),0_12px_40px_rgba(0,0,0,0.45)] sm:w-auto sm:pl-4 sm:pr-1.5">
               <input
                   type="text"
-                  placeholder="Search by address or ENS"
-                  className="w-60 bg-transparent font-sans text-sm text-slate-100 outline-none placeholder:text-slate-500 sm:w-72"
+                  placeholder="Address, name.trust, or name.eth"
+                  className="min-w-0 flex-1 bg-transparent font-sans text-sm text-slate-100 outline-none placeholder:text-slate-500 sm:w-72 sm:flex-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -405,7 +657,14 @@ const PublicProfile: React.FC = () => {
               />
               <button
                   onClick={handleSearch}
-                  disabled={!isAddress(searchQuery.trim()) && !searchQuery.trim().endsWith('.eth') || isResolving}
+                  disabled={
+                    isResolving ||
+                    !(
+                      searchQuery.trim().length >= 2 ||
+                      isAddress(searchQuery.trim()) ||
+                      searchQuery.trim().includes('.')
+                    )
+                  }
                   className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-slate-500 transition-all hover:bg-intuition-primary hover:text-black"
               >
                   {isResolving ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
@@ -421,135 +680,167 @@ const PublicProfile: React.FC = () => {
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" aria-hidden />
           <p>
             <span className="font-semibold text-amber-50">Invalid address in URL. </span>
-            The path must be a full 42-character <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">0x</code> address. Try pasting the address again or search by ENS.
+            The path must be a full 42-character <code className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs">0x</code> address. Try pasting the address again or search by TNS / ENS.
           </p>
         </div>
       )}
 
-      <div className="mb-10 sm:mb-12 rounded-[1.75rem] bg-gradient-to-r from-intuition-primary/45 via-cyan-200/15 to-intuition-primary/40 p-[1px] shadow-[0_0_50px_rgba(0,243,255,0.14)] sm:rounded-[2rem]">
-        <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-[1.7rem] bg-gradient-to-b from-[#0c101c]/[0.97] to-[#05070d]/[0.98] p-8 sm:p-10 md:flex-row md:items-center md:gap-10 sm:rounded-[1.95rem]">
+      <div className="mb-8 rounded-[1.5rem] bg-gradient-to-r from-intuition-primary/45 via-cyan-200/15 to-intuition-primary/40 p-[1px] shadow-[0_0_50px_rgba(0,243,255,0.14)] sm:mb-12 sm:rounded-[2rem]">
+        <div className="relative flex flex-col items-center gap-5 overflow-hidden rounded-[1.45rem] bg-gradient-to-b from-[#0c101c]/[0.97] to-[#05070d]/[0.98] px-5 pt-6 pb-5 sm:gap-8 sm:rounded-[1.95rem] sm:px-10 sm:pt-9 sm:pb-7 md:flex-row md:items-start md:gap-8 lg:gap-10 md:pb-6">
           <div className="pointer-events-none absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04]" />
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.55]"
             style={{ background: MESH_ACCENT.background }}
           />
-          <div className="group relative flex h-28 w-28 shrink-0 items-center justify-center rounded-3xl border-2 border-white/10 bg-black/40 shadow-[0_0_40px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/5">
+          <div className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/10 bg-black/40 shadow-[0_0_40px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/5 sm:h-28 sm:w-28 sm:rounded-3xl">
             <div className="absolute inset-0 rounded-3xl bg-intuition-primary/5 transition-colors group-hover:bg-intuition-primary/10" />
-            <User size={56} className="relative z-10 text-slate-500 transition-colors group-hover:text-intuition-primary" />
+            <img
+              src={DEFAULT_PROFILE_AVATAR_URL}
+              alt=""
+              className="relative z-10 h-full w-full object-cover"
+            />
           </div>
-          <div className="relative z-10 min-w-0 flex-1 text-center md:text-left">
-            <p className="mb-2 font-sans text-sm text-slate-500">{isOwnProfile ? 'Your wallet' : 'Address'}</p>
-            <h2 className="mb-1 break-words font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                {ensName || (address ? address.slice(0, 6) + "..." + address.slice(-4) : "Unknown address")}
-            </h2>
-            {ensName && (
-                <div className="mx-auto mb-6 w-fit rounded-xl border border-intuition-primary/35 bg-black/50 px-3 py-1.5 font-mono text-xs font-black tracking-widest text-intuition-primary/90 antialiased backdrop-blur-sm md:mx-0">
-                    {address}
+          <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-4 md:flex-row md:items-start md:gap-6 md:gap-0 md:pl-1">
+            <div className="min-w-0 flex-1 text-center md:pt-1 md:text-left md:pr-8 lg:pr-10">
+              <p className="mb-1.5 font-sans text-xs text-slate-500 sm:mb-2 sm:text-sm">{isOwnProfile ? 'Your wallet' : 'Address'}</p>
+              <h2 className="mb-1 break-words font-display text-xl font-bold tracking-tight text-white sm:text-2xl md:text-3xl">
+                {address ? displayHeadline || maskedWalletDisplay : 'Unknown address'}
+              </h2>
+              {profileAlias?.isNamed && address && maskedWalletDisplay && (
+                  <div className="mx-auto mb-5 w-fit rounded-xl border border-intuition-primary/35 bg-black/50 px-3 py-1.5 font-mono text-xs font-black tracking-widest text-intuition-primary/90 antialiased backdrop-blur-sm md:mx-0">
+                      {maskedWalletDisplay}
+                  </div>
+              )}
+              {!profileAlias?.isNamed && <div className="mb-4"></div>}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start sm:gap-3">
+                  {/* {address && <BadgesSection address={address} compact />} */}
+                  <span className="rounded-full border border-intuition-primary/40 bg-gradient-to-r from-intuition-primary/25 to-intuition-primary/10 px-3.5 py-2 font-sans text-xs font-semibold text-intuition-primary shadow-[0_0_24px_rgba(0,243,255,0.12)] [text-rendering:geometricPrecision]">
+                    {activeHoldingsCount > 50 ? 'Level · Elite' : activeHoldingsCount > 10 ? 'Level · Pro' : 'Level · Explorer'}
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-2 font-sans text-xs font-medium text-slate-200 backdrop-blur-sm [text-rendering:geometricPrecision]">
+                    {activeHoldingsCount >= 100 ? `${activeHoldingsCount}+` : activeHoldingsCount} open positions
+                  </span>
+                  <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3.5 py-2 font-sans text-xs font-medium text-slate-200 ring-1 ring-inset ring-white/5 [text-rendering:geometricPrecision]">
+                      <Wallet size={12} className="text-intuition-primary" /> {ethBalance} {CURRENCY_SYMBOL}
+                  </span>
                 </div>
-            )}
-            {!ensName && <div className="mb-4"></div>}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start sm:gap-3">
-                {/* {address && <BadgesSection address={address} compact />} */}
-                <span className="rounded-full border border-intuition-primary/40 bg-gradient-to-r from-intuition-primary/25 to-intuition-primary/10 px-3.5 py-2 font-sans text-xs font-semibold text-intuition-primary shadow-[0_0_24px_rgba(0,243,255,0.12)] [text-rendering:geometricPrecision]">
-                  {activeHoldingsCount > 50 ? 'Level · Elite' : activeHoldingsCount > 10 ? 'Level · Pro' : 'Level · Explorer'}
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-2 font-sans text-xs font-medium text-slate-200 backdrop-blur-sm [text-rendering:geometricPrecision]">
-                  {activeHoldingsCount >= 100 ? `${activeHoldingsCount}+` : activeHoldingsCount} open positions
-                </span>
-                <span className="flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3.5 py-2 font-sans text-xs font-medium text-slate-200 ring-1 ring-inset ring-white/5 [text-rendering:geometricPrecision]">
-                    <Wallet size={12} className="text-intuition-primary" /> {ethBalance} {CURRENCY_SYMBOL}
-                </span>
-              </div>
-              {connectedAddress && address && (address.toLowerCase() !== connectedAddress.toLowerCase()) && (
-                <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 shrink-0">
-                  {followEntry ? (
-                    <>
-                      <span className="flex items-center gap-1.5 rounded-full border border-intuition-success/40 bg-intuition-success/15 px-3 py-2 font-sans text-xs font-semibold text-intuition-success [text-rendering:geometricPrecision]">
-                        <UserMinus size={12} /> Following
-                      </span>
+                {connectedAddress && address && (address.toLowerCase() !== connectedAddress.toLowerCase()) && (
+                  <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 shrink-0">
+                    {followEntry ? (
+                      <>
+                        <span className="flex items-center gap-1.5 rounded-full border border-intuition-success/40 bg-intuition-success/15 px-3 py-2 font-sans text-xs font-semibold text-intuition-success [text-rendering:geometricPrecision]">
+                          <UserMinus size={12} /> Following
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            removeFollow(connectedAddress, address);
+                            setFollowEntry(null);
+                            toast.success('Unfollowed');
+                          }}
+                          className="rounded-xl border-2 border-slate-500 px-3 py-2 font-sans text-xs font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
+                        >
+                          Unfollow
+                        </button>
+                        <label
+                          className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-600 px-3 py-2 transition-all duration-200 hover:border-amber-500/50 hover:text-amber-400/90"
+                          title="Email when they buy or sell"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={followEntry.emailAlerts && !!getEmailSubscription(connectedAddress)}
+                            onChange={(e) => {
+                              playClick();
+                              const wantOn = e.target.checked;
+                              const hasEmail = !!getEmailSubscription(connectedAddress);
+                              if (wantOn && !hasEmail) {
+                                openEmailNotify();
+                                toast.info('Add your email to receive alerts when they buy or sell');
+                                return; // don't persist emailAlerts until they have an email
+                              }
+                              setFollowEmailAlerts(connectedAddress, address, wantOn);
+                              setFollowEntry((prev) => (prev ? { ...prev, emailAlerts: wantOn } : null));
+                            }}
+                            className="sr-only"
+                          />
+                          <span className={`flex items-center justify-center w-5 h-5 border-2 rounded-sm shrink-0 ${(followEntry.emailAlerts && getEmailSubscription(connectedAddress)) ? 'bg-amber-500 border-amber-400 text-black' : 'bg-black border-slate-500 text-transparent'}`}>
+                            {(followEntry.emailAlerts && getEmailSubscription(connectedAddress)) && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </span>
+                          <Mail size={14} className={followEntry.emailAlerts ? 'text-amber-400' : 'text-slate-400'} />
+                          <span className="text-xs font-semibold tracking-normal text-slate-200 antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                            Email alerts
+                          </span>
+                        </label>
+                      </>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           playClick();
-                          removeFollow(connectedAddress, address);
-                          setFollowEntry(null);
-                          toast.success('Unfollowed');
+                          const addr = toAddress(address || '');
+                          const idToStore = addr || (await resolveENS(address || '').then((r) => toAddress(r) || r)) || address;
+                          const label = displayHeadline || maskedWalletDisplay;
+                          const hasEmail = !!getEmailSubscription(connectedAddress);
+                          addFollow(connectedAddress, idToStore, { label, emailAlerts: hasEmail });
+                          setFollowEntry(isFollowing(connectedAddress, idToStore) ?? null);
+                          if (hasEmail) {
+                            toast.success('Following — you’ll get alerts when they buy');
+                          } else {
+                            openEmailNotify();
+                            toast.info('Add your email to get alerts when they buy or sell');
+                          }
                         }}
-                        className="rounded-xl border-2 border-slate-500 px-3 py-2 font-sans text-xs font-semibold text-slate-200 transition-colors hover:border-slate-400 hover:text-white"
+                        className="flex items-center gap-2.5 rounded-2xl border-2 border-amber-400 bg-black/60 px-4 py-2.5 text-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] backdrop-blur-sm transition-all duration-200 hover:border-amber-300 hover:text-amber-300 hover:shadow-[0_0_28px_rgba(251,191,36,0.45)]"
+                        title="Get email when they buy or sell"
                       >
-                        Unfollow
+                        <UserPlus size={16} strokeWidth={2} className="shrink-0" />
+                        <span className="text-sm font-semibold tracking-normal antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                          Follow · Email when they buy
+                        </span>
                       </button>
-                      <label
-                        className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-slate-600 px-3 py-2 transition-all duration-200 hover:border-amber-500/50 hover:text-amber-400/90"
-                        title="Email when they buy or sell"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={followEntry.emailAlerts && !!getEmailSubscription(connectedAddress)}
-                          onChange={(e) => {
-                            playClick();
-                            const wantOn = e.target.checked;
-                            const hasEmail = !!getEmailSubscription(connectedAddress);
-                            if (wantOn && !hasEmail) {
-                              openEmailNotify();
-                              toast.info('Add your email to receive alerts when they buy or sell');
-                              return; // don't persist emailAlerts until they have an email
-                            }
-                            setFollowEmailAlerts(connectedAddress, address, wantOn);
-                            setFollowEntry((prev) => (prev ? { ...prev, emailAlerts: wantOn } : null));
-                          }}
-                          className="sr-only"
-                        />
-                        <span className={`flex items-center justify-center w-5 h-5 border-2 rounded-sm shrink-0 ${(followEntry.emailAlerts && getEmailSubscription(connectedAddress)) ? 'bg-amber-500 border-amber-400 text-black' : 'bg-black border-slate-500 text-transparent'}`}>
-                          {(followEntry.emailAlerts && getEmailSubscription(connectedAddress)) && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                        </span>
-                        <Mail size={14} className={followEntry.emailAlerts ? 'text-amber-400' : 'text-slate-400'} />
-                        <span className="text-xs font-semibold tracking-normal text-slate-200 antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                          Email alerts
-                        </span>
-                      </label>
-                    </>
-                  ) : (
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {address ? (
+              <div className="relative z-10 flex w-full shrink-0 flex-col justify-start border-t border-white/[0.08] pt-5 md:mt-0 md:w-[min(100%,340px)] md:border-l md:border-t-0 md:pl-8 md:pt-1 lg:w-[min(100%,360px)] lg:pl-10">
+                {profileShareUrl ? (
+                  <div className="mb-2 flex w-full shrink-0 justify-center md:justify-end">
                     <button
                       type="button"
-                      onClick={async () => {
+                      className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/55 px-3 py-2 font-sans text-xs font-semibold text-slate-200 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-colors hover:border-intuition-primary hover:text-intuition-primary"
+                      onClick={() => {
                         playClick();
-                        const addr = toAddress(address || '');
-                        const idToStore = addr || (await resolveENS(address || '').then((r) => toAddress(r) || r)) || address;
-                        const label = ensName || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '');
-                        const hasEmail = !!getEmailSubscription(connectedAddress);
-                        addFollow(connectedAddress, idToStore, { label, emailAlerts: hasEmail });
-                        setFollowEntry(isFollowing(connectedAddress, idToStore) ?? null);
-                        if (hasEmail) {
-                          toast.success('Following — you’ll get alerts when they buy');
-                        } else {
-                          openEmailNotify();
-                          toast.info('Add your email to get alerts when they buy or sell');
-                        }
+                        setShowProfileShareModal(true);
                       }}
-                      className="flex items-center gap-2.5 rounded-2xl border-2 border-amber-400 bg-black/60 px-4 py-2.5 text-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] backdrop-blur-sm transition-all duration-200 hover:border-amber-300 hover:text-amber-300 hover:shadow-[0_0_28px_rgba(251,191,36,0.45)]"
-                      title="Get email when they buy or sell"
+                      onMouseEnter={playHover}
                     >
-                      <UserPlus size={16} strokeWidth={2} className="shrink-0" />
-                      <span className="text-sm font-semibold tracking-normal antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                        Follow · Email when they buy
-                      </span>
+                      <Share2 size={14} strokeWidth={2} /> Share profile
                     </button>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                ) : null}
+                <IntuRankXpBadge
+                  arenaXp={arenaXpTotal}
+                  activityXp={protocolXpTotal}
+                  size="lg"
+                  loading={!arenaGraphReady}
+                  className="w-full shadow-[0_0_32px_rgba(0,243,255,0.08)] max-md:scale-[0.92] max-md:origin-top"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
-      <div className="mb-10 grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:mb-10 sm:gap-4 lg:grid-cols-3 lg:gap-5">
           {/* {address && (
             <BadgesSection address={address} />
           )} */}
           <div
-            className={`${GLASS_SHEET} group motion-hover-lift p-7 sm:p-8 hover:border-intuition-primary/35 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+            className={`${GLASS_SHEET} group motion-hover-lift min-w-0 p-4 sm:p-6 lg:p-8 hover:border-intuition-primary/35 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
           >
               <div
                 className="pointer-events-none absolute inset-0 opacity-40"
@@ -561,13 +852,13 @@ const PublicProfile: React.FC = () => {
               <div className="pointer-events-none absolute right-0 top-0 p-4 opacity-[0.07] transition-transform group-hover:scale-110">
                 <Shield size={80} />
               </div>
-              <div className="relative mb-1 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-intuition-primary/25 bg-intuition-primary/10">
+              <div className="relative mb-1 flex min-w-0 items-start gap-2 sm:items-center sm:gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/25 bg-intuition-primary/10 sm:h-8 sm:w-8">
                     <Activity size={14} className="text-intuition-primary" />
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className={labelSm}>Total in vaults</p>
-                    <p className={`${labelMuted} mt-0.5`}>TRUST value of your open positions</p>
+                    <p className={`${labelMuted} mt-0.5 line-clamp-2`}>TRUST value of your open positions</p>
                   </div>
               </div>
               <div className={`relative mt-3 inline-flex items-baseline gap-2 ${statDisplay} tabular-nums`}>
@@ -576,7 +867,7 @@ const PublicProfile: React.FC = () => {
               </div>
           </div>
           <div
-            className={`${GLASS_SHEET} group motion-hover-lift p-7 sm:p-8 hover:border-intuition-secondary/40 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_36px_rgba(255,0,85,0.1),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+            className={`${GLASS_SHEET} group motion-hover-lift min-w-0 p-4 sm:p-6 lg:p-8 hover:border-intuition-secondary/40 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_36px_rgba(255,0,85,0.1),inset_0_1px_0_rgba(255,255,255,0.08)]`}
           >
               <div
                 className="pointer-events-none absolute inset-0 opacity-35"
@@ -588,13 +879,13 @@ const PublicProfile: React.FC = () => {
               <div className="pointer-events-none absolute right-0 top-0 p-4 opacity-[0.07] transition-transform group-hover:scale-110">
                 <Layers size={80} />
               </div>
-              <div className="relative mb-1 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-intuition-secondary/30 bg-intuition-secondary/10">
+              <div className="relative mb-1 flex min-w-0 items-start gap-2 sm:items-center sm:gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-intuition-secondary/30 bg-intuition-secondary/10 sm:h-8 sm:w-8">
                     <Database size={14} className="text-intuition-secondary" />
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className={labelSm}>On-chain transactions</p>
-                    <p className={`${labelMuted} mt-0.5`}>Recorded on the Intuition index</p>
+                    <p className={`${labelMuted} mt-0.5 line-clamp-2`}>Recorded on the Intuition index</p>
                   </div>
               </div>
               <div className={`relative mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 ${statDisplay}`}>
@@ -603,15 +894,15 @@ const PublicProfile: React.FC = () => {
               </div>
           </div>
           <div
-            className={`${GLASS_SHEET} group motion-hover-lift p-7 sm:p-8 md:col-span-2 lg:col-span-1 hover:border-intuition-primary/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+            className={`${GLASS_SHEET} group motion-hover-lift col-span-2 min-w-0 p-4 sm:p-6 lg:col-span-1 lg:p-8 hover:border-intuition-primary/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]`}
           >
-              <div className="relative mb-1 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-intuition-primary/25 bg-intuition-primary/10">
+              <div className="relative mb-1 flex min-w-0 items-start gap-2 sm:items-center sm:gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/25 bg-intuition-primary/10 sm:h-8 sm:w-8">
                     <PulseIcon size={14} className="animate-pulse text-intuition-primary" />
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className={labelSm}>Trust vs. distrust</p>
-                    <p className={`${labelMuted} mt-0.5`}>From your recent activity</p>
+                    <p className={`${labelMuted} mt-0.5 line-clamp-2`}>From your recent activity</p>
                   </div>
               </div>
               {/*
@@ -650,27 +941,42 @@ const PublicProfile: React.FC = () => {
             </span>
             Account settings
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-            <div className={`${GLASS_SHEET} p-6 hover:border-white/15`}>
-              <div className="mb-3 flex items-center gap-2">
-                <Wallet size={14} className="text-intuition-primary" />
-                <span className="font-sans text-xs font-semibold text-slate-300 [text-rendering:geometricPrecision]">Wallet address</span>
+          <div className="grid grid-cols-2 gap-3 md:gap-6">
+            <div className={`${GLASS_SHEET} min-w-0 p-4 hover:border-white/15 sm:p-6`}>
+              <div className="mb-2 flex min-w-0 items-center gap-2 sm:mb-3">
+                <Wallet size={14} className="shrink-0 text-intuition-primary" />
+                <span className="min-w-0 truncate font-sans text-[10px] font-semibold text-slate-300 sm:text-xs [text-rendering:geometricPrecision]">
+                  Wallet · TNS / ENS / address
+                </span>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <span className="break-all font-mono text-sm text-slate-300">{address.slice(0, 10)}...{address.slice(-8)}</span>
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  {profileAlias?.isNamed ? (
+                    <>
+                      <p className="break-all font-sans text-sm font-semibold text-white">{profileAlias.primaryLabel}</p>
+                      <p className="break-all font-mono text-xs text-slate-500">{maskedWalletDisplay}</p>
+                    </>
+                  ) : (
+                    <p className="break-all font-mono text-sm text-slate-300">{displayHeadline}</p>
+                  )}
+                </div>
                 <button
-                  onClick={() => { playClick(); navigator.clipboard.writeText(address); toast.success('Address copied'); }}
+                  onClick={() => {
+                    playClick();
+                    navigator.clipboard.writeText(address);
+                    toast.success('Address copied');
+                  }}
                   onMouseEnter={playHover}
-                  className="flex items-center gap-2 rounded-xl border-2 border-white/10 px-4 py-2 font-mono text-[10px] font-black tracking-widest text-slate-400 transition-colors hover:border-intuition-primary hover:text-intuition-primary"
+                  className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-white/10 px-3 py-2 font-mono text-[10px] font-black tracking-widest text-slate-400 transition-colors hover:border-intuition-primary hover:text-intuition-primary sm:w-auto sm:px-4"
                 >
                   <Copy size={12} /> Copy
                 </button>
               </div>
             </div>
-            <div className={`${GLASS_SHEET} p-6 hover:border-white/15`}>
-              <div className="flex items-center gap-2 mb-3">
-                <Mail size={14} className="text-intuition-primary" />
-                <span className="font-sans text-xs font-semibold text-slate-300 [text-rendering:geometricPrecision]">Email alerts</span>
+            <div className={`${GLASS_SHEET} min-w-0 p-4 hover:border-white/15 sm:p-6`}>
+              <div className="mb-2 flex items-center gap-2 sm:mb-3">
+                <Mail size={14} className="shrink-0 text-intuition-primary" />
+                <span className="min-w-0 truncate font-sans text-xs font-semibold text-slate-300 [text-rendering:geometricPrecision]">Email alerts</span>
               </div>
               {subscription?.email ? (
                 <div className="space-y-3">
@@ -715,9 +1021,9 @@ const PublicProfile: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-slate-500 text-xs font-mono">No email linked</p>
-                    <button onClick={() => { playClick(); openEmailNotify(); }} onMouseEnter={playHover} className="flex items-center gap-2 rounded-xl border border-intuition-primary bg-intuition-primary px-4 py-2.5 font-mono text-[10px] font-black uppercase text-black shadow-[0_0_24px_rgba(0,243,255,0.25)] transition-colors hover:bg-white"><Mail size={12} /> Add email</button>
+                <div className="space-y-2 sm:space-y-3">
+                  <p className="text-[10px] text-slate-500 font-mono sm:text-xs">No email linked</p>
+                    <button onClick={() => { playClick(); openEmailNotify(); }} onMouseEnter={playHover} className="flex w-full items-center justify-center gap-2 rounded-xl border border-intuition-primary bg-intuition-primary px-3 py-2 font-mono text-[9px] font-black uppercase text-black shadow-[0_0_24px_rgba(0,243,255,0.25)] transition-colors hover:bg-white sm:w-auto sm:px-4 sm:py-2.5 sm:text-[10px]"><Mail size={12} /> Add email</button>
                 </div>
               )}
             </div>
@@ -730,10 +1036,10 @@ const PublicProfile: React.FC = () => {
       )}
       
       {/*
-        5-column row: mix 40% · activity 60% — the old 33/66 mix card was too narrow; legend text collided.
+        5-column row at lg: mix 40% · activity 60%. From sm: two columns so charts sit side-by-side on phones/tablets.
       */}
-      <div className="mb-12 grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
-          <div className={`${GLASS_SHEET} group flex min-h-[360px] flex-col p-6 sm:p-8 lg:col-span-2 motion-hover-lift`}>
+      <div className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5 lg:gap-6">
+          <div className={`${GLASS_SHEET} group flex min-h-[300px] flex-col p-4 sm:min-h-[320px] sm:p-6 lg:col-span-2 lg:min-h-[360px] lg:p-8 motion-hover-lift`}>
               <div
                 className="pointer-events-none absolute bottom-0 left-0 z-0 p-5 opacity-[0.04] transition-transform group-hover:scale-105"
                 aria-hidden
@@ -750,13 +1056,9 @@ const PublicProfile: React.FC = () => {
                 </span>
               </h3>
               {exposureData.length > 0 ? (
-                  <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-5 xl:grid xl:min-h-0 xl:grid-cols-[minmax(0,200px)_minmax(0,1fr)] xl:items-center xl:gap-6">
-                      {/*
-                        Recharts: square box only. On xl+ we can sit chart + legend side-by-side with room;
-                        below xl, stack so legend is full width (avoids crammed / overlapping text).
-                      */}
-                      <div className="mx-auto aspect-square w-full max-w-[200px] shrink-0 xl:mx-0 xl:max-w-[min(100%,200px)]">
-                          <div className="h-full min-h-[160px] w-full">
+                  <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row items-start gap-3 sm:gap-4 lg:gap-6">
+                      <div className="aspect-square w-[min(38vw,132px)] shrink-0 sm:w-[min(40vw,150px)] md:w-[min(42vw,168px)] lg:w-[200px]">
+                          <div className="h-full min-h-[110px] w-full min-w-0">
                               <ResponsiveContainer width="100%" height="100%">
                                   <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
                                       <Pie
@@ -794,7 +1096,7 @@ const PublicProfile: React.FC = () => {
                               </ResponsiveContainer>
                           </div>
                       </div>
-                      <ul className="font-sans min-h-0 w-full list-none space-y-2.5 [text-rendering:optimizeLegibility] xl:max-h-[280px] xl:overflow-y-auto xl:pr-1 custom-scrollbar">
+                      <ul className="font-sans min-h-0 min-w-0 flex-1 list-none space-y-2 [text-rendering:optimizeLegibility] sm:space-y-2.5 max-h-[min(52vh,300px)] overflow-y-auto pr-0.5 custom-scrollbar sm:max-h-[320px] lg:pr-1">
                           {exposureData.map((entry, index) => (
                               <li
                                   key={`${entry.name}-${index}`}
@@ -805,11 +1107,11 @@ const PublicProfile: React.FC = () => {
                                           className="mt-0.5 h-2.5 w-2.5 shrink-0 self-start rounded-sm shadow-sm ring-1 ring-white/20 sm:mt-0"
                                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                                       />
-                                      <span className="min-w-0 break-words text-left text-xs font-medium leading-snug text-slate-200">
+                                      <span className="min-w-0 break-words text-left text-[11px] font-medium leading-snug text-slate-200 sm:text-xs">
                                           {entry.name}
                                       </span>
                                   </div>
-                                  <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-white">
+                                  <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-white sm:text-sm">
                                       {entry.value.toFixed(0)}%
                                   </span>
                               </li>
@@ -820,7 +1122,7 @@ const PublicProfile: React.FC = () => {
                   <div className="font-sans flex h-full min-h-[200px] flex-1 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 text-center text-sm text-slate-500 [text-rendering:geometricPrecision]">No category breakdown yet — open a position to see a split.</div>
               )}
           </div>
-          <div className={`${GLASS_SHEET} group relative flex h-[360px] flex-col overflow-hidden p-8 sm:p-10 lg:col-span-3 motion-hover-lift`}>
+          <div className={`${GLASS_SHEET} group relative flex h-[300px] min-h-[260px] flex-col overflow-hidden p-4 sm:h-[340px] sm:min-h-[300px] sm:p-6 lg:col-span-3 lg:h-[360px] lg:p-10 motion-hover-lift`}>
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-intuition-primary/8 via-transparent to-[#ff1e6d]/5 opacity-60" />
               <h3 className="relative z-10 mb-4 flex items-center gap-3 font-sans text-sm font-semibold text-slate-100 [text-rendering:geometricPrecision]">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-intuition-primary/20 bg-intuition-primary/10">
@@ -976,6 +1278,51 @@ const PublicProfile: React.FC = () => {
             </div>
           )}
       </div>
+
+      {typeof document !== 'undefined' &&
+        showProfileShareModal &&
+        address &&
+        profileShareUrl &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[500] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/98 p-4 py-10 backdrop-blur-3xl animate-in zoom-in duration-300"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share profile card"
+            onClick={() => setShowProfileShareModal(false)}
+          >
+            <div className="relative w-full max-w-3xl shrink-0 py-4" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  setShowProfileShareModal(false);
+                }}
+                className="absolute -top-1 right-0 z-10 text-slate-500 hover:text-white transition-colors p-2 group sm:-top-2"
+                aria-label="Close share modal"
+              >
+                <X size={28} strokeWidth={2} className="sm:w-8 sm:h-8 group-hover:rotate-90 transition-transform" />
+              </button>
+              <ProfileShareCard
+                displayHeadline={displayHeadline || maskedWalletDisplay}
+                maskedAddress={maskedWalletDisplay}
+                profileUrlAbsolute={profileShareUrl}
+                avatarSrc={DEFAULT_PROFILE_AVATAR_URL}
+                vaultTotal={portfolioValue}
+                transactionCount={semanticFootprint}
+                trustPct={sentimentBias.trust}
+                portfolioMix={sharePortfolioMix}
+                protocolXpTotal={protocolXpTotal}
+                arenaXpTotal={arenaXpTotal}
+                traderStatusLabel={traderStatusLabel}
+              />
+              <p className="text-center mt-6 text-slate-600 text-[8px] font-black font-mono uppercase tracking-[0.8em] animate-pulse">
+                Click outside to close
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )}
       </div>
     </div>
   );

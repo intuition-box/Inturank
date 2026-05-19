@@ -6,15 +6,16 @@ import { Claim } from '../types';
 import { playClick, playHover } from '../services/audio';
 import { toast } from './Toast';
 import { isSystemVerified } from '../services/analytics';
+import { DEFAULT_PROFILE_AVATAR_URL } from '../constants';
 
 const HUMAN_PREDICATES: Record<string, { label: string; verb: string; icon: any; color: string; glow: string }> = {
-    'TRUST': { label: 'TRUST_SIGNAL', verb: 'validating', icon: CheckCircle, color: 'text-intuition-success', glow: 'bg-intuition-success' },
-    'DISTRUST': { label: 'DISTRUST_SIGNAL', verb: 'opposing', icon: AlertTriangle, color: 'text-intuition-danger', glow: 'bg-intuition-danger' },
-    'SIGNALED': { label: 'LINK_ESTABLISHED', verb: 'linked to', icon: Activity, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
-    'HAS_TAG': { label: 'SEMANTIC_TAG', verb: 'categorizing', icon: Tag, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
-    'HAS TAG': { label: 'SEMANTIC_TAG', verb: 'categorizing', icon: Tag, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
-    'HAS_OPINION': { label: 'AGENT_OPINION', verb: 'believes in', icon: MessageSquare, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
-    'OPINION': { label: 'AGENT_OPINION', verb: 'believes in', icon: MessageSquare, color: 'text-intuition-primary', glow: 'bg-intuition-primary' }
+    'TRUST': { label: 'Trust signal', verb: 'validating', icon: CheckCircle, color: 'text-intuition-success', glow: 'bg-intuition-success' },
+    'DISTRUST': { label: 'Distrust signal', verb: 'opposing', icon: AlertTriangle, color: 'text-intuition-danger', glow: 'bg-intuition-danger' },
+    'SIGNALED': { label: 'Linked', verb: 'linked to', icon: Activity, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
+    'HAS_TAG': { label: 'Tag', verb: 'categorizing', icon: Tag, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
+    'HAS TAG': { label: 'Tag', verb: 'categorizing', icon: Tag, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
+    'HAS_OPINION': { label: 'Opinion', verb: 'believes in', icon: MessageSquare, color: 'text-intuition-primary', glow: 'bg-intuition-primary' },
+    'OPINION': { label: 'Opinion', verb: 'believes in', icon: MessageSquare, color: 'text-intuition-primary', glow: 'bg-intuition-primary' }
 };
 
 const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
@@ -22,7 +23,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
   
   const predKey = claim.predicate.toUpperCase().replace(/\s+/g, '_');
   const info = HUMAN_PREDICATES[predKey] || HUMAN_PREDICATES[claim.predicate.toUpperCase()] || { 
-      label: 'GENERIC_SIGNAL', 
+      label: 'Claim', 
       verb: 'linking', 
       icon: Activity, 
       color: 'text-slate-400', 
@@ -151,7 +152,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
                                 className="flex items-center gap-2 px-3 py-1 bg-intuition-primary/10 border border-intuition-primary/20 hover:border-intuition-primary/60 transition-all clip-path-slant group/creator"
                             >
                                 <div className="w-4 h-4 bg-slate-900 rounded-full border border-white/10 overflow-hidden shrink-0">
-                                    <img src={claim.creator.image || `https://effigy.im/a/${claim.creator.id}.png`} className="w-full h-full object-cover" alt="" />
+                                    <img src={claim.creator.image || DEFAULT_PROFILE_AVATAR_URL} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <span className="text-[9px] font-black text-intuition-primary group-hover/creator:text-white transition-colors uppercase tracking-widest">
                                     {claim.creator.label || claim.creator.id.slice(0, 14) + '...'}
@@ -168,10 +169,17 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
                       onClick={(e) => { playClick(); e.stopPropagation(); }}
                       className="flex-1 btn-cyber btn-cyber-primary py-2 text-[8px] font-black h-9 shadow-glow-blue max-w-[1600px]"
                    >
-                       INSPECT_TARGET <ChevronsRight size={12} className="ml-1" />
+                       View market <ChevronsRight size={12} className="ml-1" />
                    </Link>
                    <button 
-                      onClick={(e) => { e.stopPropagation(); playClick(); toast.success("UPLINK_SHARED"); }}
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        playClick(); 
+                        const url = `${window.location.origin}/markets/${claim.object.id}`;
+                        navigator.clipboard.writeText(url)
+                          .then(() => toast.success("Link copied"))
+                          .catch(() => toast.error("Could not copy link"));
+                      }}
                       className="w-10 h-9 border border-white/10 bg-black hover:bg-white/5 text-slate-500 hover:text-white transition-all clip-path-slant flex items-center justify-center"
                    >
                        <Share2 size={14} />
