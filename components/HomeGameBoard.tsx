@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, Swords } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Swords, UserPlus } from 'lucide-react';
 import { ARENA_LISTS, getArenaListConstituents, type ArenaListEntry } from '../services/arenaListsRegistry';
 import {
   buildContestHubSections,
@@ -144,9 +144,9 @@ const GameRow: React.FC<{
           <h3 className="mt-1 font-display text-lg font-black tracking-tight text-white sm:text-xl">{section.title}</h3>
           <p className="mt-1 max-w-xl text-[12px] text-slate-500 leading-relaxed">{section.subtitle}</p>
         </div>
-        <span className="mx-auto shrink-0 font-mono text-[10px] tabular-nums text-slate-500 sm:mx-0 sm:rounded-md sm:border sm:border-white/[0.06] sm:bg-white/[0.02] sm:px-2.5 sm:py-1">
-          <span className="text-slate-300">{section.lists.length}</span>{' '}
-          {pluralizeArenaListCount(section.lists.length)}
+        <span className="mx-auto shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300 sm:mx-0">
+          ~{section.lists.reduce((s, L) => s + getArenaListConstituents(L), 0).toLocaleString()} pick slots ·{' '}
+          <span className="text-slate-500">{section.lists.length}</span> contest{section.lists.length === 1 ? '' : 's'}
         </span>
       </div>
       <div
@@ -216,7 +216,6 @@ const GameRow: React.FC<{
 };
 
 const ContestCard: React.FC<{ entry: ArenaListEntry; compact?: boolean }> = ({ entry, compact }) => {
-  const n = getArenaListConstituents(entry);
   return (
     <Link
       to={`/climb?list=${encodeURIComponent(entry.id)}`}
@@ -247,10 +246,19 @@ const ContestCard: React.FC<{ entry: ArenaListEntry; compact?: boolean }> = ({ e
       </p>
       <p className="relative z-[1] mt-2 line-clamp-2 text-[11px] text-slate-500">{entry.description}</p>
       <div className="relative z-[1] mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2.5">
-        <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">{n} picks</span>
-        <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider text-white/95">
-          Play
-          <ChevronRight className="h-3.5 w-3.5 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5" strokeWidth={2.5} />
+        <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
+          <span className="text-emerald-200/95">{getArenaListConstituents(entry)}</span> pick
+          {getArenaListConstituents(entry) === 1 ? '' : 's'}
+        </span>
+        <span className="inline-flex flex-wrap items-center justify-end gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.05] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-200">
+            <UserPlus className="h-3 w-3 shrink-0 text-intuition-success" strokeWidth={2.6} aria-hidden />
+            Join
+          </span>
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider text-white/95">
+            Play
+            <ChevronRight className="h-3.5 w-3.5 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5" strokeWidth={2.5} />
+          </span>
         </span>
       </div>
     </Link>

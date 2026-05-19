@@ -1198,6 +1198,18 @@ const PREFLIGHT_PREFIX =
     "Simulation failed — wallet was not opened because this call would revert on-chain. ";
 
 function preflightFailureMessage(err: unknown): string {
+    if (errorLooksLikeTripleAlreadyExists(err)) {
+        return (
+            'Simulation failed: this claim triple already exists on-chain. Open it in Markets / Portfolio and deposit TRUST there instead of signing another create.'
+        );
+    }
+    if (errorLooksLikeAtomAlreadyExists(err)) {
+        return (
+            'Simulation failed: FeeProxy would revert because this atom anchor already exists on-chain (duplicate create). ' +
+            'Prefer chat **tripleFromLabels** + labels so missing atoms batch into **one** signature, ' +
+            'or paste existing `0x…` term ids from Explorer instead of minting again.'
+        );
+    }
     const parsed = parseProtocolError(err);
     const nested = collectErrorText(err);
     const combined = `${parsed} ${nested}`.trim();
@@ -1553,12 +1565,12 @@ async function waitUntilTermCreatedOnChain(
 
 function errorLooksLikeAtomAlreadyExists(err: unknown): boolean {
     const text = `${collectErrorText(err)} ${err instanceof Error ? err.message : String(err)}`.toLowerCase();
+    if (/multivault_tripleexists|tripleexists/.test(text) && !/atomexists/.test(text)) return false;
     return (
         text.includes('0xb4856ebc') ||
         text.includes('multivault_atomexists') ||
         text.includes('atomexists') ||
-        text.includes('atom already exists') ||
-        text.includes('already exists on-chain')
+        text.includes('atom already exists')
     );
 }
 
@@ -1702,7 +1714,7 @@ export async function resolveAtomReferenceToTermId(
 /**
  * Create a semantic triple from three text labels (or existing term ids as 0x + 64 hex).
  * Hex ids that exist on-chain reuse those atoms (no creation tx). Text labels resolve/create atoms as needed, then the triple.
- * Wallets that do not batch may prompt once per transaction — fewer signatures when term ids already exist.
+ * Missing atoms are anchored via {@link batchEnsureAtomTermIds} — **one** batched createAtoms tx when multiple legs are needed (Skill demo-friendly).
  */
 export async function createTripleFromLabels(
     subjectRef: string,
@@ -1713,7 +1725,8 @@ export async function createTripleFromLabels(
     onProgress?: (log: string) => void
 ): Promise<{
     atomTxHashes: `0x${string}`[];
-    tripleHash: `0x${string}`;
+    /** Omitted when the triple was already registered — nothing new to broadcast. */
+    tripleHash?: `0x${string}`;
     tripleTermId: Hex;
     subjectId: `0x${string}`;
     predicateId: `0x${string}`;
@@ -1721,39 +1734,76 @@ export async function createTripleFromLabels(
 }> {
     const atomTxHashes: `0x${string}`[] = [];
 
-    onProgress?.('Resolving subject atom…');
-    const s = await resolveAtomReferenceToTermId(subjectRef, depositTrust, receiver, onProgress);
-    if (s.createdTxHash) atomTxHashes.push(s.createdTxHash);
+    const jobs: AtomRefJob[] = [
+        { ref: subjectRef, depositTrust },
+        { ref: predicateRef, depositTrust },
+        { ref: objectRef, depositTrust },
+    ];
+    onProgress?.('Resolving atoms (batched create when needed)…');
+    const { termMap, atomBatchTxHash } = await batchEnsureAtomTermIds(jobs, receiver, onProgress);
+    if (atomBatchTxHash) atomTxHashes.push(atomBatchTxHash);
 
-    onProgress?.('Resolving predicate atom…');
-    const p = await resolveAtomReferenceToTermId(predicateRef, depositTrust, receiver, onProgress);
-    if (p.createdTxHash) atomTxHashes.push(p.createdTxHash);
+    const sk = atomRefJobKey(subjectRef, depositTrust);
+    const pk = atomRefJobKey(predicateRef, depositTrust);
+    const ok = atomRefJobKey(objectRef, depositTrust);
+    const sTerm = termMap.get(sk);
+    const pTerm = termMap.get(pk);
+    const oTerm = termMap.get(ok);
+    if (!sTerm || !pTerm || !oTerm) {
+        throw new Error('Could not resolve subject, predicate, and object atoms for this claim.');
+    }
 
-    onProgress?.('Resolving object atom…');
-    const o = await resolveAtomReferenceToTermId(objectRef, depositTrust, receiver, onProgress);
-    if (o.createdTxHash) atomTxHashes.push(o.createdTxHash);
+    const tripleTermIdCalc = calculateTripleId(sTerm, pTerm, oTerm);
+    if (await isTermCreatedOnChain(tripleTermIdCalc)) {
+        onProgress?.('Claim already on-chain — skipping duplicate create.');
+        return {
+            atomTxHashes,
+            tripleTermId: tripleTermIdCalc,
+            subjectId: sTerm,
+            predicateId: pTerm,
+            objectId: oTerm,
+        };
+    }
 
     onProgress?.('Creating triple (claim)…');
-    const tripleHash = await createSemanticTriple(
-        s.termId,
-        p.termId,
-        o.termId,
-        depositTrust,
-        receiver,
-        onProgress,
-        true
-    );
-    const fromReceipt = await getTripleTermIdFromTxHash(tripleHash);
-    const tripleTermId = (fromReceipt ??
-        calculateTripleId(s.termId, p.termId, o.termId)) as Hex;
-    return {
-        atomTxHashes,
-        tripleHash,
-        tripleTermId,
-        subjectId: s.termId,
-        predicateId: p.termId,
-        objectId: o.termId,
-    };
+    try {
+        const tripleHash = await createSemanticTriple(
+            sTerm,
+            pTerm,
+            oTerm,
+            depositTrust,
+            receiver,
+            onProgress,
+            true,
+        );
+        const fromReceipt = await getTripleTermIdFromTxHash(tripleHash);
+        const tripleTermId = (fromReceipt ?? tripleTermIdCalc) as Hex;
+        return {
+            atomTxHashes,
+            tripleHash,
+            tripleTermId,
+            subjectId: sTerm,
+            predicateId: pTerm,
+            objectId: oTerm,
+        };
+    } catch (e) {
+        if (errorLooksLikeTripleAlreadyExists(e)) {
+            const ready =
+                (await isTermCreatedOnChain(tripleTermIdCalc)) ||
+                (await waitUntilTermCreatedOnChain(tripleTermIdCalc, { maxAttempts: 22, delayMs: 400 }));
+            if (ready) {
+                onProgress?.('Claim registered concurrently — treating as success.');
+                return {
+                    atomTxHashes,
+                    tripleTermId: tripleTermIdCalc,
+                    subjectId: sTerm,
+                    predicateId: pTerm,
+                    objectId: oTerm,
+                };
+            }
+        }
+        throw e;
+    }
 }
 
 export const createIdentityAtom = async (metadata: any, depositAmount: string, receiver: string, onProgress?: (log: string) => void): Promise<{ hash: `0x${string}`; termId?: `0x${string}` }> => {
@@ -1922,6 +1972,12 @@ export async function createIdentityAtomsBatch(
     return hash;
 }
 
+export type BatchEnsureAtomTermIdsResult = {
+    termMap: Map<string, `0x${string}`>;
+    /** Present when at least one new atom leg was submitted in a batched createAtoms tx. */
+    atomBatchTxHash?: `0x${string}`;
+};
+
 /**
  * Resolve many label/address refs: one batched `createAtoms` for all missing payloads, then a map ref→termId.
  */
@@ -1929,9 +1985,9 @@ export async function batchEnsureAtomTermIds(
     jobs: AtomRefJob[],
     receiver: string,
     onProgress?: (log: string) => void,
-): Promise<Map<string, `0x${string}`>> {
+): Promise<BatchEnsureAtomTermIdsResult> {
     const out = new Map<string, `0x${string}`>();
-    if (!jobs.length) return out;
+    if (!jobs.length) return { termMap: out };
 
     const seen = new Set<string>();
     const orderedUnique: AtomRefJob[] = [];
@@ -1968,8 +2024,14 @@ export async function batchEnsureAtomTermIds(
         assetsWei: b.assetsWei,
     }));
 
+    let atomBatchTxHash: `0x${string}` | undefined;
     if (legs.length > 0) {
-        await createIdentityAtomsBatch(legs, receiver, onProgress);
+        try {
+            atomBatchTxHash = await createIdentityAtomsBatch(legs, receiver, onProgress);
+        } catch (e) {
+            if (!errorLooksLikeAtomAlreadyExists(e)) throw e;
+            onProgress?.('Atom batch reported duplicates — confirming anchors on-chain…');
+        }
         for (const b of byDataHex.values()) {
             const tid = await getProtocolAtomIdFromAtomData(b.dataHex);
             const ok = await waitUntilTermCreatedOnChain(tid, { maxAttempts: 28, delayMs: 320 });
@@ -1980,7 +2042,7 @@ export async function batchEnsureAtomTermIds(
         }
     }
 
-    return out;
+    return { termMap: out, atomBatchTxHash };
 }
 
 /** Total TRUST to send: FeeProxy.getTotalCreationCost for one atom + deposit (includes IntuRank fees). */

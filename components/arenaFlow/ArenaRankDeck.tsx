@@ -15,6 +15,8 @@ import {
   Sparkles,
   Trophy,
   User as UserIcon,
+  Zap,
+  Users,
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
 import { playArenaRankSlide, playArenaUiClick, playArenaUiHover } from '../../services/audio';
@@ -26,6 +28,7 @@ import {
   type DeckPaletteEntry,
 } from '../../services/arenaCardDesign';
 import { ArenaContestStepShell } from './ArenaContestStepShell';
+import { ArenaPortraitImg } from './ArenaPortraitImg';
 
 type Props = {
   items: RankItem[];
@@ -43,6 +46,15 @@ type Props = {
   queuedStanceCount?: number;
   /** Remove a pick from this deck during ranking (drops batch row + resets curate stance for that card). */
   onRemoveItem?: (itemId: string) => void;
+  /** Prominent contest name for shared-link / orientation context. */
+  listTitle?: string;
+  /** Cards in the loaded pool (possible picks on this list). */
+  poolParticipantCount?: number;
+  /** Approx. distinct wallets with rank activity on portal lists — optional. */
+  listStakersCount?: number | null;
+  listStakersLoading?: boolean;
+  /** Count of reorder / stake refinements this session (XP accrues on submit). */
+  deckEngagementTuneCount?: number;
 };
 
 const UNITS_MIN = 1;
@@ -59,6 +71,11 @@ function formatTrust(base: number, units: number): string {
   if (t >= 100) return `${Math.round(t)}`;
   const rounded = Math.round(t * 100) / 100;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function rawTrustAmt(base: number, units: number): number {
+  if (base <= 0 || units < UNITS_MIN) return 0;
+  return base * units;
 }
 
 /* ---------------- Podium tier (top 3) coloring ---------------- */
@@ -194,11 +211,14 @@ const RankRow: React.FC<RowProps> = ({
             style={{ borderColor: deck.line }}
           >
             <CornerTicks color={deck.hex} />
-            {it.image ? (
-              <img src={it.image} alt="" className="h-full w-full object-cover" loading="lazy" draggable={false} />
-            ) : (
+            <ArenaPortraitImg
+              src={it.image}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              draggable={false}
+            >
               <UserIcon className="h-10 w-10 text-slate-700" strokeWidth={1.3} aria-hidden />
-            )}
+            </ArenaPortraitImg>
           </div>
 
           <div className="min-w-0 flex-1">
@@ -423,16 +443,32 @@ export const ArenaRankDeck: React.FC<Props> = ({
   signDisabled,
   queuedStanceCount = 0,
   onRemoveItem,
+  listTitle,
+  poolParticipantCount,
+  listStakersCount,
+  listStakersLoading,
+  deckEngagementTuneCount = 0,
 }) => {
   const deck = useMemo(() => deckPalette(listCategory), [listCategory]);
   const rm = Boolean(reduceMotion);
   const base = useMemo(() => parseBase(stakeBaseLabel), [stakeBaseLabel]);
 
-  const stakePerItem = useMemo(
+  const stakePerItemDeck = useMemo(
     () => items.map((it) => ({ id: it.id, label: it.label, units: rankTrustUnits[it.id] ?? 1 })),
     [items, rankTrustUnits],
   );
-  const totalUnits = useMemo(() => stakePerItem.reduce((s, r) => s + r.units, 0), [stakePerItem]);
+  /** Breakdown mirrors stake-weight order (matches main deck after manual edits; drag uses top-heavy presets). */
+  const stakePerItemSorted = useMemo(() => {
+    const copy = [...stakePerItemDeck];
+    copy.sort((a, b) => {
+      const ta = rawTrustAmt(base, a.units);
+      const tb = rawTrustAmt(base, b.units);
+      if (tb !== ta) return tb - ta;
+      return String(a.label).localeCompare(String(b.label));
+    });
+    return copy;
+  }, [stakePerItemDeck, base]);
+  const totalUnits = useMemo(() => stakePerItemDeck.reduce((s, r) => s + r.units, 0), [stakePerItemDeck]);
   const totalTrustLabel = useMemo(() => formatTrust(base, totalUnits), [base, totalUnits]);
 
   const notifyReorder = useCallback(
@@ -472,11 +508,53 @@ export const ArenaRankDeck: React.FC<Props> = ({
           Step 2 · Rank · {deck.label}
         </p>
         <h2 className="font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl md:text-[2rem]">
-          Order your deck
+          Order & weight your deck
         </h2>
+
+        {listTitle ? (
+          <div
+            className="rounded-2xl border px-4 py-3 sm:px-5 sm:py-4"
+            style={{
+              borderColor: deck.line,
+              background: ARENA_CARD_SURFACE.bodyBg,
+              boxShadow: ARENA_SHADOWS.cardResting,
+            }}
+          >
+            <p className="font-mono text-[9px] font-black uppercase tracking-[0.28em] text-slate-500">Contest</p>
+            <p className="mt-1 font-display text-lg font-black leading-snug tracking-tight text-white sm:text-xl">
+              {listTitle}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+              {typeof poolParticipantCount === 'number' ? (
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Users className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                  Pool · {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
+                </span>
+              ) : null}
+              {(listStakersLoading || listStakersCount != null) && (
+                <span className="tabular-nums text-slate-500">
+                  {listStakersLoading
+                    ? 'On-chain rankers …'
+                    : listStakersCount != null &&
+                        `${listStakersCount.toLocaleString()} wallet${listStakersCount === 1 ? '' : 's'} ranked this portal list (approx.)`}
+                </span>
+              )}
+              {deckEngagementTuneCount > 0 ? (
+                <span className="inline-flex items-center gap-1 text-emerald-200/85">
+                  <Zap className="h-3.5 w-3.5" aria-hidden />+{deckEngagementTuneCount} deck refinement
+                  {deckEngagementTuneCount === 1 ? '' : 's'}
+                </span>
+              ) : null}
+              <span className="text-slate-600">Arena / protocol XP accrues when you submit convictions.</span>
+            </div>
+          </div>
+        ) : null}
+
         <p className="max-w-2xl text-[13px] leading-relaxed text-slate-400">
-          Grab the grip to reorder (or chevrons on desktop). Use remove to drop a pick from your deck — you can swipe it
-          again in Curate. Top pick earns the crown — ties resolve on stake.
+          Drag rows to set preference — stakes <span className="text-slate-200 font-semibold">auto-scale top → bottom</span>{' '}
+          so your #1 line carries more weight. Use <span className="text-slate-200 font-semibold">− / +</span> as an
+          advanced override: totals re-sort instantly so the strongest TRUST line always crowns #1 while you stay in sync with
+          the breakdown chart.
         </p>
       </div>
 
@@ -596,23 +674,25 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 Stake distribution
               </p>
               <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-600">
-                {totalUnits} units
+                {totalUnits} units · strongest first
               </span>
             </div>
-            {stakePerItem.length === 0 ? (
+            {stakePerItemSorted.length === 0 ? (
               <p className="mt-3 text-[11px] italic text-slate-500">
                 Stake breakdown appears as you weight cards.
               </p>
             ) : (
               <ul className="mt-3 space-y-2.5">
-                {stakePerItem.slice(0, 6).map((r) => {
+                {stakePerItemSorted.slice(0, 6).map((r) => {
                   const pct = totalUnits === 0 ? 0 : Math.round((r.units / totalUnits) * 100);
                   return (
                     <li key={r.id} className="space-y-1">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="truncate text-[11px] font-semibold text-slate-200">{r.label}</span>
                         <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
-                          {pct}% <span className="text-slate-600">· ×{r.units}</span>
+                          {formatTrust(base, r.units)}{' '}
+                          <span className="text-slate-600">· ×{r.units}</span>{' '}
+                          <span className="text-slate-700">({pct}%)</span>
                         </span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.05]">
@@ -627,9 +707,9 @@ export const ArenaRankDeck: React.FC<Props> = ({
                     </li>
                   );
                 })}
-                {stakePerItem.length > 6 ? (
+                {stakePerItemSorted.length > 6 ? (
                   <li className="pt-1 text-center font-mono text-[10px] text-slate-600">
-                    + {stakePerItem.length - 6} more cards
+                    + {stakePerItemSorted.length - 6} more cards
                   </li>
                 ) : null}
               </ul>

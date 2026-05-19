@@ -23,6 +23,7 @@ import {
   Check,
   ExternalLink,
   Scale,
+  Trash2,
 } from 'lucide-react';
 import {
   getTopClaims,
@@ -116,6 +117,12 @@ import {
   type ArenaListEntry,
 } from '../services/arenaListsRegistry';
 import { buildContestHubSections } from '../services/arenaHubGroups';
+import {
+  alignPendingRowsToDeck,
+  autoDistributeStakeUnitsAlongOrder,
+  parseStakeBaseLabel,
+  sortRankItemsByEffectiveStake,
+} from '../services/arenaRankStake';
 import { hydrateArenaFavoritesFromServer, loadArenaFavoriteListIds, pushArenaFavoriteListIdsRemote, saveArenaFavoriteListIds } from '../services/arenaFavorites';
 import ArenaBatchReviewModal from '../components/ArenaBatchReviewModal';
 import ArenaBatchSuccessModal, {
@@ -132,6 +139,7 @@ import { ArenaCreateCardModal, isPendingArenaCardId } from '../components/arenaF
 import { ArenaCurateStack } from '../components/arenaFlow/ArenaCurateStack';
 import { ArenaRankDeck } from '../components/arenaFlow/ArenaRankDeck';
 import { ArenaCompareView } from '../components/arenaFlow/ArenaCompareView';
+import { ArenaPortraitImg } from '../components/arenaFlow/ArenaPortraitImg';
 import { ArenaPromoteBanner } from '../components/arenaFlow/ArenaPromoteBanner';
 import { ArenaPromoteContestModal } from '../components/arenaFlow/ArenaPromoteContestModal';
 import type { ArenaPromoteListResult } from '../services/arenaPromoteList';
@@ -369,8 +377,8 @@ function claimToRankItem(row: any, pairKind: string): RankItem | null {
   if (!label) return null;
   const subM = resolveMetadata(row.subject || {});
   const objM = resolveMetadata(row.object || {});
-  const subImg = (subM.image || row.subject?.image) as string | undefined;
-  const objImg = (objM.image || row.object?.image) as string | undefined;
+  const subImg = subM.image;
+  const objImg = objM.image;
   const leftName = (subM.label || sub || '').trim();
   const rightName = (objM.label || obj || '').trim();
   const isVs = pairKind === 'claim-vs';
@@ -623,16 +631,6 @@ function ArenaLaneCard({
   xpRoundTotal: number;
   onYesNo: (support: boolean) => void;
 }) {
-  const [vsBadL, setVsBadL] = useState(false);
-  const [vsBadR, setVsBadR] = useState(false);
-  const [soloBad, setSoloBad] = useState(false);
-
-  useEffect(() => {
-    setVsBadL(false);
-    setVsBadR(false);
-    setSoloBad(false);
-  }, [item.id]);
-
   let questionLine = '';
   if (activeList) {
     questionLine =
@@ -687,50 +685,38 @@ function ArenaLaneCard({
             {isClaimVs ? (
               <div className="-space-x-2 flex items-center">
                 <div className="relative z-[2] h-10 w-10 overflow-hidden rounded-lg border border-white/12 bg-black/70 sm:h-11 sm:w-11">
-                  {item.image && !vsBadL ? (
-                    <img
-                      src={item.image}
-                      alt=""
-                      className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
-                      loading="lazy"
-                      onError={() => setVsBadL(true)}
-                    />
-                  ) : (
+                  <ArenaPortraitImg
+                    src={item.image}
+                    className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
+                    loading="lazy"
+                  >
                     <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">{li}</div>
-                  )}
+                  </ArenaPortraitImg>
                 </div>
                 <div className="relative z-[1] h-10 w-10 overflow-hidden rounded-lg border border-white/12 bg-black/70 sm:h-11 sm:w-11">
-                  {item.imageSecondary && !vsBadR ? (
-                    <img
-                      src={item.imageSecondary}
-                      alt=""
-                      className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
-                      loading="lazy"
-                      onError={() => setVsBadR(true)}
-                    />
-                  ) : (
+                  <ArenaPortraitImg
+                    src={item.imageSecondary}
+                    className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
+                    loading="lazy"
+                  >
                     <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">{ri}</div>
-                  )}
+                  </ArenaPortraitImg>
                 </div>
               </div>
             ) : (
               <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-white/12 bg-black/70 sm:h-11 sm:w-11">
-                {item.image && !soloBad ? (
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
-                    loading="lazy"
-                    onError={() => setSoloBad(true)}
-                  />
-                ) : (
+                <ArenaPortraitImg
+                  src={item.image}
+                  className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
+                  loading="lazy"
+                >
                   <div
                     className="flex h-full w-full items-center justify-center text-base font-bold sm:text-lg"
                     style={{ color: ARENA_THEME.cyanMuted }}
                   >
                     {soloLetter}
                   </div>
-                )}
+                </ArenaPortraitImg>
               </div>
             )}
           </div>
@@ -925,6 +911,14 @@ const RankedList: React.FC = () => {
   const [commitPhase, setCommitPhase] = useState<'idle' | 'promote' | 'rank-batch'>('idle');
   /** Per ranked card: TRUST weight = session preset × units (batch rows). */
   const [rankTrustUnits, setRankTrustUnits] = useState<Record<string, number>>({});
+  /** Tracks latest trust units for reorder handlers (avoid nested setState drift). */
+  const rankTrustUnitsRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    rankTrustUnitsRef.current = rankTrustUnits;
+  }, [rankTrustUnits]);
+  /** Local engagement counter — deck refinement before on-chain submit (XP accrues via batch / protocol when you sign). */
+  const [deckEngagementTuneCount, setDeckEngagementTuneCount] = useState(0);
+  const bumpDeckEngagement = useCallback(() => setDeckEngagementTuneCount((c) => c + 1), []);
   const curateInitForListRef = useRef<string | null>(null);
   const prevListIdForFlowRef = useRef<string | null>(null);
   const guestCurateNudgeRef = useRef(false);
@@ -974,6 +968,8 @@ const RankedList: React.FC = () => {
   const urlSyncSkipInitialClearRef = useRef(true);
   const graphReturnNudgeDone = useRef(false);
   const [batchModalOpen, setBatchModalOpen] = useState(false);
+  /** Inline confirm: clear this contest vs clear global conviction cart (from top bar). */
+  const [pendingArenaClear, setPendingArenaClear] = useState<null | 'contest' | 'cart'>(null);
   const [arenaBatchSuccess, setArenaBatchSuccess] = useState<ArenaBatchSuccessPayload | null>(null);
   const [pendingRows, setPendingRows] = useState<ArenaPendingRow[]>([]);
   const [players, setPlayers] = useState<ArenaPlayerRow[]>([]);
@@ -1021,6 +1017,7 @@ const RankedList: React.FC = () => {
   }, [batchModalRows]);
 
   const stakeTRUST = useMemo(() => String(ARENA_STAKE_PRESETS[stakePresetIdx] ?? ARENA_STAKE_PRESETS[0]), [stakePresetIdx]);
+  const rankStakeBaseParsed = useMemo(() => parseStakeBaseLabel(stakeTRUST), [stakeTRUST]);
 
   /** Batch claims: FeeProxy rejects any triple row whose depositWei is below CURVE_OFFSET. */
   const batchDepositBelowProtocol = useMemo(() => {
@@ -1592,6 +1589,7 @@ const RankedList: React.FC = () => {
       setCurateQueue([]);
       setRankDeckItems([]);
       setRankTrustUnits({});
+      setDeckEngagementTuneCount(0);
       return;
     }
     const prev = prevListIdForFlowRef.current;
@@ -1602,6 +1600,7 @@ const RankedList: React.FC = () => {
         curateInitForListRef.current = null;
         setRankDeckItems([]);
         setRankTrustUnits({});
+        setDeckEngagementTuneCount(0);
       } else if (listId) {
         const persisted = readPersistedContestFlow(listId);
         if (persisted) {
@@ -1610,12 +1609,14 @@ const RankedList: React.FC = () => {
             curateInitForListRef.current = null;
             setRankDeckItems([]);
             setRankTrustUnits({});
+            setDeckEngagementTuneCount(0);
           }
         } else {
           setArenaFlowPhase('curate');
           curateInitForListRef.current = null;
           setRankDeckItems([]);
           setRankTrustUnits({});
+          setDeckEngagementTuneCount(0);
         }
       }
       prevListIdForFlowRef.current = listId;
@@ -1626,6 +1627,7 @@ const RankedList: React.FC = () => {
     if (!listId) {
       arenaFloorStingerPlayedForListRef.current = null;
     }
+    setPendingArenaClear(null);
   }, [listId]);
 
   /** Floor stinger when landing in a contest via URL (hub path calls `startListRun` which primes audio). */
@@ -1664,9 +1666,12 @@ const RankedList: React.FC = () => {
       curateInitForListRef.current = null;
       return;
     }
-    setRankDeckItems(rebuilt);
-    setRankTrustUnits(persisted.rankTrustUnits || {});
-  }, [listId, loading, pool, arenaFlowPhase, rankDeckItems.length]);
+    const units = persisted.rankTrustUnits && typeof persisted.rankTrustUnits === 'object' ? persisted.rankTrustUnits : {};
+    const base = parseStakeBaseLabel(stakeTRUST);
+    const sortedDeck = sortRankItemsByEffectiveStake(rebuilt, units, base);
+    setRankDeckItems(sortedDeck);
+    setRankTrustUnits(units);
+  }, [listId, loading, pool, arenaFlowPhase, rankDeckItems.length, stakeTRUST]);
 
   useEffect(() => {
     if (!ARENA_CONTEST_FLOW_V2 || !listId) return;
@@ -1808,6 +1813,16 @@ const RankedList: React.FC = () => {
       .sort((a, b) => b.r - a.r)
       .map((x, i) => ({ ...x, place: i + 1 }));
   }, [pool, scores]);
+
+  /** True when Curate has stances, Rank has a deck, or this list has queued batch rows. */
+  const hasClearableContestPicks = useMemo(() => {
+    if (!listId || !ARENA_CONTEST_FLOW_V2) return false;
+    if (arenaFlowPhase === 'hub') return false;
+    if (rankDeckItems.length > 0) return true;
+    if (ranking.length > 0) return true;
+    if (ARENA_BATCH_MODE && pendingRows.length > 0) return true;
+    return false;
+  }, [listId, arenaFlowPhase, rankDeckItems.length, ranking.length, pendingRows.length]);
 
   const applyLocalYesNo = useCallback(
     (item: RankItem, support: boolean) => {
@@ -2064,7 +2079,7 @@ const RankedList: React.FC = () => {
         const nUnique = new Set(atomJobs.map((j) => atomRefJobKey(j.ref, j.depositTrust))).size;
         setSubmitProgress(`Preparing ${nUnique} unique atom reference(s) (batched on-chain)…`);
       }
-      const termMap = await batchEnsureAtomTermIds(atomJobs, address, progressCb);
+      const { termMap } = await batchEnsureAtomTermIds(atomJobs, address, progressCb);
 
       const pickTerm = (ref: string, dep: string): `0x${string}` => {
         const tid = termMap.get(atomRefJobKey(ref, dep));
@@ -2330,14 +2345,17 @@ const RankedList: React.FC = () => {
 
   const clearAllArenaBatch = useCallback(() => {
     const rows = loadAllPendingRowsLive(listId, pendingRows);
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+      setBatchModalOpen(false);
+      return;
+    }
     for (const row of rows) {
       const back = row.support ? -YESNO_SCORE_YES : -YESNO_SCORE_NO;
       patchArenaPersistedScore(row.sourceListId, row.item.id, back);
     }
     clearPendingStorage();
     setPendingRows([]);
-    const nCurrentList = rows.filter((r) => r.sourceListId === listId).length;
+    const nCurrentList = listId ? rows.filter((r) => r.sourceListId === listId).length : 0;
     setDuels((d) => Math.max(0, d - nCurrentList));
     setStreak(0);
     if (listId && pool.length > 0) {
@@ -2350,7 +2368,61 @@ const RankedList: React.FC = () => {
         return next;
       });
     }
+
+    if (ARENA_CONTEST_FLOW_V2 && listId) {
+      setRankDeckItems([]);
+      setRankTrustUnits({});
+      setDeckEngagementTuneCount(0);
+      guestCurateNudgeRef.current = false;
+      curateInitForListRef.current = null;
+      if (pool.length > 0) setCurateQueue([...pool]);
+      setArenaFlowPhase('curate');
+      clearPersistedContestFlow(listId);
+    }
+    setCommitPhase((c) => (c === 'rank-batch' ? 'idle' : c));
+    setBatchModalOpen(false);
+    setPendingArenaClear(null);
+    toast.success('Conviction cart cleared.');
   }, [listId, pendingRows, pool]);
+
+  /** Reset this contest only: Curate scores, Rank deck, queued stances for this list — leaves other lists’ carts intact. */
+  const clearContestPicksForCurrentList = useCallback(() => {
+    playArenaUiClick();
+    if (!listId) return;
+
+    if (ARENA_BATCH_MODE) {
+      const rows = loadPendingForList(listId);
+      for (const row of rows) {
+        const back = row.support ? -YESNO_SCORE_YES : -YESNO_SCORE_NO;
+        patchArenaPersistedScore(listId, row.item.id, back);
+      }
+      clearPendingForList(listId);
+      setPendingRows([]);
+    }
+
+    const next: Record<string, number> = {};
+    for (const it of pool) next[it.id] = SCORE_START;
+    setScores(next);
+    savePersistedForList(listId, next);
+
+    setDuels(0);
+    setStreak(0);
+    setRound(null);
+    setRankDeckItems([]);
+    setRankTrustUnits({});
+    setDeckEngagementTuneCount(0);
+    guestCurateNudgeRef.current = false;
+    curateInitForListRef.current = null;
+    if (pool.length > 0) setCurateQueue([...pool]);
+    if (ARENA_CONTEST_FLOW_V2) {
+      setArenaFlowPhase('curate');
+      clearPersistedContestFlow(listId);
+    }
+    setBatchModalOpen(false);
+    setPendingArenaClear(null);
+    setCommitPhase('idle');
+    toast.success('Picks cleared — start again from Curate.');
+  }, [listId, pool]);
 
   const resolveYesNo = useCallback(
     async (item: RankItem, support: boolean): Promise<boolean> => {
@@ -2469,27 +2541,27 @@ const RankedList: React.FC = () => {
       const row = pendingRows.find((r) => r.item.id === it.id);
       initTrust[it.id] = Math.max(1, Math.min(RANK_TRUST_UNITS_MAX, row?.units ?? 1));
     }
-    setRankTrustUnits(initTrust);
-    setRankDeckItems(yesItems);
+    const ordered = yesItems;
+    const distributed = autoDistributeStakeUnitsAlongOrder(ordered, initTrust, 1, RANK_TRUST_UNITS_MAX);
+    const deckOrdered = sortRankItemsByEffectiveStake(ordered, distributed, rankStakeBaseParsed);
+    setRankTrustUnits(distributed);
+    setRankDeckItems(deckOrdered);
+    setDeckEngagementTuneCount(0);
     setArenaFlowPhase('rank');
-  }, [pool, scores, pendingRows]);
+  }, [pool, scores, pendingRows, rankStakeBaseParsed]);
 
   const onRankReorder = useCallback(
     (next: RankItem[]) => {
+      const prevTrust = rankTrustUnitsRef.current;
+      const merged = autoDistributeStakeUnitsAlongOrder(next, prevTrust, 1, RANK_TRUST_UNITS_MAX);
       setRankDeckItems(next);
-      if (!ARENA_BATCH_MODE || !listId) return;
-      setPendingRows((prev) => {
-        const idSet = new Set(next.map((i) => i.id));
-        const front: ArenaPendingRow[] = [];
-        for (const it of next) {
-          const row = prev.find((r) => r.item.id === it.id);
-          if (row) front.push(row);
-        }
-        const rest = prev.filter((r) => !idSet.has(r.item.id));
-        return [...front, ...rest];
-      });
+      setRankTrustUnits(merged);
+      if (ARENA_BATCH_MODE && listId) {
+        setPendingRows((prevRows) => alignPendingRowsToDeck(next, prevRows, merged));
+      }
+      bumpDeckEngagement();
     },
-    [listId],
+    [listId, bumpDeckEngagement],
   );
 
   const onRankRemoveItem = useCallback(
@@ -2498,8 +2570,6 @@ const RankedList: React.FC = () => {
 
       const rowsForItem = pendingRows.filter((r) => r.item.id === itemId);
       const nRows = rowsForItem.length;
-
-      setPendingRows((prev) => prev.filter((r) => r.item.id !== itemId));
 
       setScores((p) => {
         const next = { ...p, [itemId]: SCORE_START };
@@ -2511,35 +2581,67 @@ const RankedList: React.FC = () => {
       setDuels((d) => Math.max(0, d - duelDrop));
       setStreak(0);
 
-      setRankTrustUnits((prev) => {
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      });
-
       setRankDeckItems((prev) => {
-        const next = prev.filter((x) => x.id !== itemId);
-        if (next.length < 1) {
+        const nextDeck = prev.filter((x) => x.id !== itemId);
+        if (nextDeck.length < 1) {
           toast.info('Deck empty — opening Curate to add picks.');
+          setRankTrustUnits({});
+          setPendingRows((pr) => pr.filter((r) => r.item.id !== itemId));
           queueMicrotask(() => {
             curateInitForListRef.current = null;
             setArenaFlowPhase('curate');
           });
-        } else {
-          toast.info('Removed from deck — swipe again in Curate if you change your mind.');
+          return [];
         }
-        return next;
+
+        toast.info('Removed from deck — remaining stakes auto-balanced by rank.');
+        const pruned = { ...rankTrustUnitsRef.current };
+        delete pruned[itemId];
+        const dist = autoDistributeStakeUnitsAlongOrder(nextDeck, pruned, 1, RANK_TRUST_UNITS_MAX);
+        const base =
+          rankStakeBaseParsed > 0 ? rankStakeBaseParsed : parseStakeBaseLabel(stakeTRUST);
+        const sorted = sortRankItemsByEffectiveStake(nextDeck, dist, base);
+
+        setRankTrustUnits(dist);
+        if (!ARENA_BATCH_MODE || !listId) {
+          setPendingRows((pr) => pr.filter((r) => r.item.id !== itemId));
+        } else {
+          setPendingRows((pr) =>
+            alignPendingRowsToDeck(
+              sorted,
+              pr.filter((r) => r.item.id !== itemId),
+              dist,
+            ),
+          );
+        }
+        bumpDeckEngagement();
+        return sorted;
       });
     },
-    [listId, pendingRows],
+    [listId, pendingRows, rankStakeBaseParsed, stakeTRUST, bumpDeckEngagement],
   );
 
-  const onRankTrustUnitsChange = useCallback((itemId: string, units: number) => {
-    const u = Math.max(1, Math.min(RANK_TRUST_UNITS_MAX, units));
-    playArenaUiClick();
-    setRankTrustUnits((prev) => ({ ...prev, [itemId]: u }));
-    setPendingRows((prev) => prev.map((row) => (row.item.id === itemId ? { ...row, units: u } : row)));
-  }, []);
+  const onRankTrustUnitsChange = useCallback(
+    (itemId: string, units: number) => {
+      const u = Math.max(1, Math.min(RANK_TRUST_UNITS_MAX, units));
+      playArenaUiClick();
+      const base = rankStakeBaseParsed > 0 ? rankStakeBaseParsed : parseStakeBaseLabel(stakeTRUST);
+
+      setRankTrustUnits((prevTrust) => {
+        const nextTrust = { ...prevTrust, [itemId]: u };
+        setRankDeckItems((deck) => {
+          const sorted = sortRankItemsByEffectiveStake(deck, nextTrust, base);
+          if (ARENA_BATCH_MODE && listId) {
+            setPendingRows((prevRows) => alignPendingRowsToDeck(sorted, prevRows, nextTrust));
+          }
+          return sorted;
+        });
+        return nextTrust;
+      });
+      bumpDeckEngagement();
+    },
+    [listId, bumpDeckEngagement, rankStakeBaseParsed, stakeTRUST],
+  );
 
   const rankFlowCartCount = useMemo(
     () => (listId ? batchModalRows.filter((r) => r.sourceListId === listId).length : 0),
@@ -2582,31 +2684,6 @@ const RankedList: React.FC = () => {
     } else {
       setRound(null);
     }
-  };
-
-  const resetSession = () => {
-    playArenaUiClick();
-    const next: Record<string, number> = {};
-    for (const it of pool) next[it.id] = SCORE_START;
-    setScores(next);
-    if (listId) savePersistedForList(listId, next);
-    setDuels(0);
-    setStreak(0);
-    setRound(null);
-    if (ARENA_CONTEST_FLOW_V2 && listId) {
-      clearPersistedContestFlow(listId);
-      setArenaFlowPhase('curate');
-      curateInitForListRef.current = null;
-      setRankDeckItems([]);
-      setRankTrustUnits({});
-      guestCurateNudgeRef.current = false;
-      if (pool.length > 0) setCurateQueue([...pool]);
-    }
-    if (ARENA_BATCH_MODE && listId) {
-      clearPendingForList(listId);
-      setPendingRows([]);
-    }
-    toast.success('Session scores reset for this list');
   };
 
   const itemHref = (it: RankItem) => {
@@ -2656,6 +2733,7 @@ const RankedList: React.FC = () => {
         curateInitForListRef.current = null;
         setRankDeckItems([]);
         setRankTrustUnits({});
+        setDeckEngagementTuneCount(0);
       }
       try {
         sessionStorage.setItem('inturank-arena-last-list', id);
@@ -2681,6 +2759,7 @@ const RankedList: React.FC = () => {
       setCurateQueue([]);
       setRankDeckItems([]);
       setRankTrustUnits({});
+      setDeckEngagementTuneCount(0);
       guestCurateNudgeRef.current = false;
     }
     setListId(null);
@@ -3443,41 +3522,120 @@ const RankedList: React.FC = () => {
                 </div>
               ) : null}
           {arenaSlimRunChrome ? (
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={exitToArenaBrowse}
-                onMouseEnter={playArenaUiHover}
-                aria-label="Back to Arena lists"
-                title="Back"
-                className={
-                  false
-                    ? 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-sky-300 hover:text-slate-900'
-                    : 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.14] bg-black/45 text-slate-200 transition-all hover:border-intuition-primary/45 hover:text-white hover:bg-black/55'
-                }
-                style={false ? undefined : { boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06)` }}
-              >
-                <ArrowLeft
-                  size={18}
-                  strokeWidth={2.5}
-                  style={{ color: false ? '#0f172a' : ARENA_THEME.cyanMuted }}
-                />
-              </button>
-              {ARENA_BATCH_MODE && batchModalRows.length > 0 ? (
+            <div className="mb-2 flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    playArenaUiClick();
-                    setBatchModalOpen(true);
-                  }}
+                  onClick={exitToArenaBrowse}
+                  onMouseEnter={playArenaUiHover}
+                  aria-label="Back to Arena lists"
+                  title="Back"
                   className={
                     false
-                      ? 'rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-sky-900 transition-colors hover:border-sky-300'
-                      : 'rounded-xl border border-cyan-500/35 bg-cyan-500/[0.1] px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:border-cyan-400/50'
+                      ? 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-sky-300 hover:text-slate-900'
+                      : 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.14] bg-black/45 text-slate-200 transition-all hover:border-intuition-primary/45 hover:text-white hover:bg-black/55'
+                  }
+                  style={false ? undefined : { boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06)` }}
+                >
+                  <ArrowLeft
+                    size={18}
+                    strokeWidth={2.5}
+                    style={{ color: false ? '#0f172a' : ARENA_THEME.cyanMuted }}
+                  />
+                </button>
+                {ARENA_BATCH_MODE && batchModalRows.length > 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playArenaUiClick();
+                        setBatchModalOpen(true);
+                      }}
+                      className={
+                        false
+                          ? 'rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-sky-900 transition-colors hover:border-sky-300'
+                          : 'rounded-xl border border-cyan-500/35 bg-cyan-500/[0.1] px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:border-cyan-400/50'
+                      }
+                    >
+                      Cart ({batchModalRows.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playArenaUiClick();
+                        setPendingArenaClear((k) => (k === 'cart' ? null : 'cart'));
+                      }}
+                      aria-label="Clear entire conviction cart"
+                      title="Clear all queued stances (every list)"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.12] bg-black/35 text-slate-400 transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200"
+                    >
+                      <Trash2 size={17} strokeWidth={2.2} aria-hidden />
+                    </button>
+                  </>
+                ) : null}
+                {hasClearableContestPicks ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playArenaUiClick();
+                      setPendingArenaClear((k) => (k === 'contest' ? null : 'contest'));
+                    }}
+                    className="rounded-xl border border-white/[0.1] bg-black/30 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+                  >
+                    Clear picks
+                  </button>
+                ) : null}
+              </div>
+              {pendingArenaClear ? (
+                <div
+                  role="region"
+                  aria-label={pendingArenaClear === 'cart' ? 'Confirm clear cart' : 'Confirm clear picks'}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5"
+                  style={
+                    pendingArenaClear === 'cart'
+                      ? {
+                          borderColor: 'rgba(244,63,94,0.35)',
+                          background: 'rgba(69,10,10,0.35)',
+                        }
+                      : {
+                          borderColor: 'rgba(244,63,94,0.28)',
+                          background: 'rgba(15,23,42,0.65)',
+                        }
                   }
                 >
-                  Cart ({batchModalRows.length})
-                </button>
+                  <span className="text-[11px] text-slate-300 pr-2 leading-snug min-w-[12rem] flex-1">
+                    {pendingArenaClear === 'cart' ? (
+                      <>
+                        Remove all <span className="font-semibold text-white">{batchModalRows.length}</span> queued
+                        stance{batchModalRows.length === 1 ? '' : 's'} (every list)?
+                      </>
+                    ) : (
+                      <>Reset Curate votes, your Rank deck, and this list&apos;s cart — start fresh?</>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playArenaUiClick();
+                        setPendingArenaClear(null);
+                      }}
+                      className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-300 border border-white/15 hover:bg-white/[0.06]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (pendingArenaClear === 'cart') clearAllArenaBatch();
+                        else clearContestPicksForCurrentList();
+                      }}
+                      className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-rose-600/90 text-white border border-rose-400/45 hover:bg-rose-600"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
               ) : null}
             </div>
           ) : (
@@ -3673,6 +3831,11 @@ const RankedList: React.FC = () => {
                    */
                   signDisabled={stakingTx}
                   queuedStanceCount={rankFlowCartCount}
+                  listTitle={activeList?.title}
+                  poolParticipantCount={pool.length}
+                  listStakersCount={portalListRankerCount}
+                  listStakersLoading={portalListRankerCountLoading}
+                  deckEngagementTuneCount={deckEngagementTuneCount}
                   onCreateCard={() => {
                     playArenaUiClick();
                     setCreateCardOpen(true);
@@ -3693,6 +3856,10 @@ const RankedList: React.FC = () => {
                   pendingStakeCount={ARENA_BATCH_MODE ? rankFlowCartCount : 0}
                   batchMode={ARENA_BATCH_MODE}
                   isWalletConnected={isConnected}
+                  contestTitle={activeList?.title}
+                  poolParticipantCount={pool.length}
+                  listStakersCount={portalListRankerCount}
+                  listStakersLoading={portalListRankerCountLoading}
                   onSubmitAndContinue={beginArenaCommit}
                   onRandomGame={onCompareRandomGame}
                   onPickNextGame={exitToArenaBrowse}
@@ -3991,13 +4158,11 @@ const RankedList: React.FC = () => {
                           >
                             <div className="flex items-start gap-2.5">
                               <div className="relative h-10 w-10 shrink-0 rounded-2xl overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-slate-800 to-slate-950 shadow-inner">
-                                {p.image ? (
-                                  <img src={p.image} alt="" className="h-full w-full object-cover" />
-                                ) : (
+                                <ArenaPortraitImg src={p.image} className="h-full w-full object-cover">
                                   <div className="h-full w-full flex items-center justify-center text-sm font-black text-cyan-200/90">
                                     {leaderboardAvatarGlyph(p.label)}
                                   </div>
-                                )}
+                                </ArenaPortraitImg>
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5 gap-y-1">

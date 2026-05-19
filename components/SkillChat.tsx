@@ -994,17 +994,25 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     address,
                     (msg) => toast.info(msg)
                 );
-                toast.success("Triple broadcast confirmed.");
-                notifyProtocolXpEarned({
-                  address,
-                  reasonKey: 'skill_triple',
-                  txHash: result.tripleHash,
-                  depositTrustWei: parseEther(String(intent.depositTrust ?? '0.5')),
-                });
+                if (result.tripleHash) {
+                  toast.success('Triple broadcast confirmed.');
+                  notifyProtocolXpEarned({
+                    address,
+                    reasonKey: 'skill_triple',
+                    txHash: result.tripleHash,
+                    depositTrustWei: parseEther(String(intent.depositTrust ?? '0.5')),
+                  });
+                } else {
+                  toast.success('This claim already exists on-chain — open it below (no duplicate tx).');
+                }
                 logSkillEvent({
                     level: 'info',
                     event: 'skill.tx.success',
-                    detail: { action: 'tripleFromLabels', tx_hash_prefix: String(result.tripleHash).slice(0, 12) },
+                    detail: {
+                        action: 'tripleFromLabels',
+                        tx_hash_prefix: (result.tripleHash ?? result.tripleTermId).slice(0, 12),
+                        skipped_duplicate: !result.tripleHash,
+                    },
                 });
                 window.dispatchEvent(new Event('local-tx-updated'));
                 setMessages((prev) =>
@@ -1015,7 +1023,8 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                   txOutcome: "success" as const,
                                   txHash: result.tripleHash,
                                   txTermId: String(result.tripleTermId),
-                                  txAtomHashes: result.atomTxHashes.map(String),
+                                  txAtomHashes:
+                                    result.atomTxHashes.length > 0 ? result.atomTxHashes.map(String) : undefined,
                                   txError: undefined,
                               }
                             : msgItem
@@ -1591,7 +1600,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                 </div>
                                                 <p className="text-xs text-amber-100/90 font-sans leading-relaxed [overflow-wrap:anywhere]">
                                                     {isTripleFromLabelsIntent(m.txIntent)
-                                                        ? 'Approve each prompt in your wallet in order.'
+                                                        ? 'Approve atom batch if prompted (one signature for all new anchors), then the claim.'
                                                         : 'Approve or reject in your wallet.'}
                                                 </p>
                                             </div>
@@ -1603,11 +1612,15 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                     Done
                                                 </p>
                                                 <p className="text-sm text-slate-300 font-sans leading-relaxed">
-                                                    Your transaction is on-chain.
+                                                    {isTripleFromLabelsIntent(m.txIntent) && !m.txHash && m.txTermId
+                                                        ? 'Nothing new to mint — this claim was already on-chain.'
+                                                        : 'Your transaction is on-chain.'}
                                                 </p>
                                                 {m.txAtomHashes && m.txAtomHashes.length > 0 && (
                                                     <p className="text-xs text-slate-500 font-sans leading-relaxed">
-                                                        Also signed {m.txAtomHashes.length} atom transaction{m.txAtomHashes.length > 1 ? 's' : ''}. See the explorer for details.
+                                                        {m.txAtomHashes.length === 1
+                                                            ? 'Atoms anchored in one batched transaction — see explorer.'
+                                                            : `Signed ${m.txAtomHashes.length} atom transactions — see explorer for details.`}
                                                     </p>
                                                 )}
                                                 {m.txHash ? (
@@ -1623,7 +1636,11 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs font-sans text-slate-500">Hash unavailable.</p>
+                                                    <p className="text-xs font-sans text-slate-500">
+                                                        {isTripleFromLabelsIntent(m.txIntent) && m.txTermId
+                                                            ? 'No transaction hash — claim already existed (use Open claim).'
+                                                            : 'Hash unavailable.'}
+                                                    </p>
                                                 )}
                                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1">
                                                     {m.txHash && (

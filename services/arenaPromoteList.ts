@@ -116,7 +116,7 @@ export async function promoteArenaListOnChain(
     ref: it.label.trim(),
     depositTrust: depositPerLeg,
   }));
-  const termMap = await batchEnsureAtomTermIds(atomJobs, wallet, (m) =>
+  const { termMap } = await batchEnsureAtomTermIds(atomJobs, wallet, (m) =>
     onProgress?.(`Members · ${m}`),
   );
 

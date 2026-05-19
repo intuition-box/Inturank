@@ -26,6 +26,7 @@ import {
   type DeckPaletteEntry,
 } from '../../services/arenaCardDesign';
 import { ArenaContestStepShell } from './ArenaContestStepShell';
+import { ArenaPortraitImg } from './ArenaPortraitImg';
 
 type Props = {
   deck: RankItem[];
@@ -60,6 +61,10 @@ type Props = {
   /** Opens batch review so the user can sign queued rows (this list or others). */
   onOpenConvictionCart?: () => void;
   onOpenSignal?: () => void;
+  contestTitle?: string;
+  poolParticipantCount?: number;
+  listStakersCount?: number | null;
+  listStakersLoading?: boolean;
 };
 
 function shortAddr(a: string): string {
@@ -101,6 +106,10 @@ export const ArenaCompareView: React.FC<Props> = ({
   onPickNextGame,
   onOpenConvictionCart,
   onOpenSignal,
+  contestTitle,
+  poolParticipantCount,
+  listStakersCount,
+  listStakersLoading,
 }) => {
   const palette = useMemo(() => deckPalette(listCategory), [listCategory]);
   const topFive = deck.slice(0, 5);
@@ -139,6 +148,31 @@ export const ArenaCompareView: React.FC<Props> = ({
         <h2 className="font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl md:text-[2rem]">
           Your deck vs the board
         </h2>
+        {contestTitle ? (
+          <div
+            className="rounded-2xl border border-white/[0.08] bg-[#05070c]/80 px-4 py-3 sm:px-5"
+            style={{ boxShadow: ARENA_SHADOWS.cardResting }}
+          >
+            <p className="font-mono text-[9px] font-black uppercase tracking-[0.28em] text-slate-500">Contest</p>
+            <p className="mt-1 font-display text-lg font-black text-white">{contestTitle}</p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
+              {typeof poolParticipantCount === 'number' ? (
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Users className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                  Pool · {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
+                </span>
+              ) : null}
+              {(listStakersLoading || listStakersCount != null) && (
+                <span className="tabular-nums text-slate-500">
+                  {listStakersLoading
+                    ? 'On-chain rankers …'
+                    : listStakersCount != null &&
+                      `${listStakersCount.toLocaleString()} wallet${listStakersCount === 1 ? '' : 's'} ranked (approx.)`}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : null}
         <p className="max-w-2xl text-[13px] leading-relaxed text-slate-400">
           {listIsOnChain
             ? 'Every peer here actually staked on this list on-chain. Similarity is computed against their real picks — not a guess.'
@@ -211,14 +245,11 @@ export const ArenaCompareView: React.FC<Props> = ({
                         <p className="truncate text-[10px] text-slate-500">{c.subtitle}</p>
                       ) : null}
                     </div>
-                    {c.image ? (
-                      <img
-                        src={c.image}
-                        alt=""
-                        loading="lazy"
-                        className="h-9 w-9 shrink-0 rounded-md object-cover"
-                      />
-                    ) : null}
+                    <ArenaPortraitImg
+                      src={c.image}
+                      loading="lazy"
+                      className="h-9 w-9 shrink-0 rounded-md object-cover"
+                    />
                   </li>
                 ))}
               </ul>
@@ -663,11 +694,9 @@ const PeerRow: React.FC<{ peer: ArenaComparePeer; idx: number; palette: DeckPale
         className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-[#070a10]"
         style={{ borderColor: palette.line }}
       >
-        {player.image ? (
-          <img src={player.image} alt="" className="h-full w-full object-cover" loading="lazy" />
-        ) : (
+        <ArenaPortraitImg src={player.image} className="h-full w-full object-cover" loading="lazy">
           <span className="font-display text-base font-black text-slate-400">{initial}</span>
-        )}
+        </ArenaPortraitImg>
       </div>
 
       {/* Identity + shared chips */}

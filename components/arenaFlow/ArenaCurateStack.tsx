@@ -22,6 +22,7 @@ import {
   type DeckPaletteEntry,
 } from '../../services/arenaCardDesign';
 import { ArenaContestStepShell } from './ArenaContestStepShell';
+import { ArenaPortraitImg } from './ArenaPortraitImg';
 
 type Props = {
   listTitle: string;
@@ -553,19 +554,16 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
             style={{ borderColor: deck.line }}
           >
             <CornerTicks color={deck.hex} />
-            {item.image ? (
-              <img
-                src={item.image}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="eager"
-                decoding="async"
-                fetchPriority="high"
-                draggable={false}
-              />
-            ) : (
+            <ArenaPortraitImg
+              src={item.image}
+              className="h-full w-full object-cover"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              draggable={false}
+            >
               <User className="h-24 w-24 text-slate-700" strokeWidth={1.2} aria-hidden />
-            )}
+            </ArenaPortraitImg>
           </div>
         </div>
 

@@ -16,7 +16,14 @@ import {
 import { Account, Transaction, Claim, Triple } from '../types';
 import { hexToString, formatEther, parseEther, getAddress, isAddress } from 'viem';
 import { safeWeiToEther, safeParseUnits } from './analytics';
+import { normalizeWebMediaUrl } from './mediaUrl';
 import { publicClient } from './web3';
+
+function graphCachedImageUrl(ci: { url?: string; safe?: boolean } | null | undefined): string | undefined {
+  if (!ci?.url) return undefined;
+  if (ci.safe === false) return undefined;
+  return ci.url;
+}
 
 // Request guard to prevent parallel overlapping global claims fetches
 let isGlobalClaimsFetching = false;
@@ -183,7 +190,7 @@ export const resolveMetadata = (atom: any) => {
     
     let label = atom.label;
     let description = '';
-    let image = atom.image;
+    let image: string | undefined = atom.image || graphCachedImageUrl(atom.cached_image);
     let links = [];
 
     // Attempt to decode primary hex data payload for enriched metadata
@@ -209,7 +216,7 @@ export const resolveMetadata = (atom: any) => {
         if (meta) {
             if (!label || label.startsWith('0x')) label = meta.name || meta.label;
             if (!description) description = meta.description || '';
-            if (!image) image = meta.image;
+            if (!image) image = (meta.image || graphCachedImageUrl(meta.cached_image)) as string | undefined;
             // Some indexers expose url/links on the parsed value
             if (links.length === 0 && meta.links && Array.isArray(meta.links)) links = meta.links;
             if (links.length === 0 && meta.url && typeof meta.url === 'string') links = [{ label: 'Link', url: meta.url }];
@@ -218,11 +225,12 @@ export const resolveMetadata = (atom: any) => {
 
     if (atom.triple && atom.triple.object_id?.toLowerCase().includes(DISTRUST_ATOM_ID.toLowerCase().slice(26))) {
         const subjectLabel = atom.triple.subject?.label || atom.triple.subject_id?.slice(0, 8);
+        const subMeta = atom.triple.subject ? resolveMetadata(atom.triple.subject) : { image: undefined };
         return {
             label: `OPPOSING_${subjectLabel}`.toUpperCase(),
             description: `A directional signal of distrust against ${subjectLabel} on the Intuition Network.`,
             type: 'CLAIM',
-            image: atom.triple.subject?.image,
+            image: subMeta.image,
             links: []
         };
     }
@@ -231,7 +239,7 @@ export const resolveMetadata = (atom: any) => {
         label: (label && label !== '0x' && !label.startsWith('0x00')) ? label : `${atom.term_id?.slice(0, 8)}...`, 
         description,
         type: atom.type || 'ATOM',
-        image,
+        image: normalizeWebMediaUrl(image),
         links
     };
 };
@@ -2786,7 +2794,58 @@ export async function getListMemberSubjectsForObject(
       order_by: { block_number: desc }
       limit: $limit
     ) {
-      subject { term_id label image }
+      subject {
+        term_id
+        label
+        image
+        data
+        type
+        cached_image {
+          url
+          safe
+        }
+        value {
+          person {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          thing {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          organization {
+            name
+            label
+            image
+            url
+            cached_image {
+              url
+              safe
+            }
+          }
+          account {
+            id
+            label
+            image
+            cached_image {
+              url
+              safe
+            }
+          }
+        }
+      }
     }
   }`;
   try {
@@ -2803,7 +2862,7 @@ export async function getListMemberSubjectsForObject(
       out.push({
         id: sub.term_id,
         label: m.label || sub.label || sub.term_id.slice(0, 10),
-        image: (m.image || sub.image) as string | undefined,
+        image: m.image,
       });
     }
     return out;
@@ -4937,7 +4996,7 @@ function pickAtomLabel(node: any): string {
 }
 
 function pickAtomImage(node: any): string | undefined {
-  return (
+  const raw =
     node?.cached_image?.url ||
     node?.image ||
     node?.value?.person?.cached_image?.url ||
@@ -4945,8 +5004,8 @@ function pickAtomImage(node: any): string | undefined {
     node?.value?.thing?.cached_image?.url ||
     node?.value?.thing?.image ||
     node?.value?.organization?.image ||
-    undefined
-  );
+    undefined;
+  return normalizeWebMediaUrl(raw);
 }
 
 /** Convert a vault's `userPosition[].shares` × `current_share_price` into a TRUST decimal. Returns 0 if nothing. */

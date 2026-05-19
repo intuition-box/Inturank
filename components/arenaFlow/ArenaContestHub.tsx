@@ -7,6 +7,7 @@ import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import type { ContestHubSection as ArenaContestHubSection } from '../../services/arenaHubGroups';
 import { pluralizeArenaListCount } from '../../services/arenaHubGroups';
 import { ARENA_HUB_LANE_PAGE_SIZE } from '../../services/arenaHubPagination';
+import { ArenaPortraitImg } from './ArenaPortraitImg';
 
 export type { ArenaContestHubSection };
 
@@ -156,9 +157,8 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
             >
               <div className="relative h-32 w-full overflow-hidden bg-[#0a1620]">
                 {cover ? (
-                  <img
+                  <ArenaPortraitImg
                     src={cover}
-                    alt=""
                     loading="lazy"
                     decoding="async"
                     className={`h-full w-full object-cover ${
@@ -166,7 +166,18 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                         ? ''
                         : 'motion-safe:origin-center motion-safe:transition-[transform] motion-safe:duration-[280ms] motion-safe:ease-out motion-safe:group-hover:scale-[1.045]'
                     }`}
-                  />
+                  >
+                    <div
+                      className={`absolute inset-0 ${
+                        rm
+                          ? ''
+                          : 'motion-safe:origin-center motion-safe:transition-[transform] motion-safe:duration-[280ms] motion-safe:ease-out motion-safe:group-hover:scale-[1.04]'
+                      }`}
+                      style={{
+                        background: `linear-gradient(135deg, ${palette.accent}26 0%, rgba(5,10,18,0.95) 55%, rgba(255,30,109,0.08) 100%)`,
+                      }}
+                    />
+                  </ArenaPortraitImg>
                 ) : (
                   <div
                     className={`absolute inset-0 ${
@@ -223,17 +234,14 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                             key={p.id || i}
                             className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md border border-[#0a0d15] bg-slate-800 text-[9px] font-bold text-slate-400"
                           >
-                            {p.image ? (
-                              <img
-                                src={p.image}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              (p.label || '?').slice(0, 1).toUpperCase()
-                            )}
+                            <ArenaPortraitImg
+                              src={p.image}
+                              loading="lazy"
+                              decoding="async"
+                              className="h-full w-full object-cover"
+                            >
+                              {(p.label || '?').slice(0, 1).toUpperCase()}
+                            </ArenaPortraitImg>
                           </span>
                         ))}
                       </div>
