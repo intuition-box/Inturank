@@ -346,44 +346,54 @@ export async function fetchArenaLiveAtomsFromGraph(options: {
   atomTypesUpper?: string[];
 }): Promise<ArenaGraphAtomPick[]> {
   const poolSize = Math.max(6, Math.min(48, Math.floor(options.poolSize)));
-  const scanLimit = Math.max(poolSize * 6, options.scanLimit ?? Math.min(480, poolSize * 14));
-  const wanted = options.atomTypesUpper?.map((s) => s.toUpperCase()).filter(Boolean);
-  const { items } = await getAllAgents(scanLimit, 0, 'desc');
+  /** First page size hint; additional pages widen the vault crawl when TVL leaders are mostly claim vaults. */
+  const scanHint = Math.max(poolSize * 6, options.scanLimit ?? Math.min(480, poolSize * 14));
+  const pageSize = Math.min(220, Math.max(90, scanHint));
+  /** Hard cap so Arena load stays bounded; deepest pages reveal non-claim atom vaults. */
+  const maxVaultOffset = Math.min(12_000, Math.max(scanHint * 14, 2200));
 
+  const wanted = options.atomTypesUpper?.map((s) => s.toUpperCase()).filter(Boolean);
   const out: ArenaGraphAtomPick[] = [];
   const seen = new Set<string>();
 
-  for (const x of items as any[]) {
-    if (!x?.id) continue;
-    const upperType = String(x.type || '').toUpperCase();
-    if (upperType === 'CLAIM' || upperType.includes('OPPOSING')) continue;
-    if (wanted && wanted.length > 0) {
-      const hit = wanted.some((w) => upperType === w || upperType.includes(w));
-      if (!hit) continue;
-    }
-    const nid = normalize(String(x.id));
-    if (!nid || seen.has(nid)) continue;
-    seen.add(nid);
-    const raw = String(x.label || '').trim();
-    const labelBase = raw || `${String(x.id).slice(0, 10)}…`;
-    const label = labelBase.length > 140 ? `${labelBase.slice(0, 138)}…` : labelBase;
+  outer: for (let offset = 0; offset < maxVaultOffset; offset += pageSize) {
+    const { items, hasMore } = await getAllAgents(pageSize, offset, 'desc');
+    if (!items?.length) break;
 
-    const accountish = upperType.includes('ACCOUNT') || upperType.includes('PERSON');
-    const subtitle =
-      wanted && wanted.length > 0
-        ? 'Ranking identities by vault (live graph)'
-        : accountish
+    for (const x of items as any[]) {
+      if (!x?.id) continue;
+      const upperType = String(x.type || '').toUpperCase();
+      if (upperType === 'CLAIM' || upperType.includes('OPPOSING')) continue;
+      if (wanted && wanted.length > 0) {
+        const hit = wanted.some((w) => upperType === w || upperType.includes(w));
+        if (!hit) continue;
+      }
+      const nid = normalize(String(x.id));
+      if (!nid || seen.has(nid)) continue;
+      seen.add(nid);
+      const raw = String(x.label || '').trim();
+      const labelBase = raw || `${String(x.id).slice(0, 10)}…`;
+      const label = labelBase.length > 140 ? `${labelBase.slice(0, 138)}…` : labelBase;
+
+      const accountish = upperType.includes('ACCOUNT') || upperType.includes('PERSON');
+      const subtitle =
+        wanted && wanted.length > 0
           ? 'Ranking identities by vault (live graph)'
-          : 'Other identities by vault (live graph)';
+          : accountish
+            ? 'Ranking identities by vault (live graph)'
+            : 'Other identities by vault (live graph)';
 
-    out.push({
-      termId: String(x.id),
-      label,
-      image: typeof x.image === 'string' ? x.image : undefined,
-      subtitle,
-    });
+      out.push({
+        termId: String(x.id),
+        label,
+        image: typeof x.image === 'string' ? x.image : undefined,
+        subtitle,
+      });
 
-    if (out.length >= poolSize) break;
+      if (out.length >= poolSize) break outer;
+    }
+
+    if (!hasMore || items.length < pageSize) break;
   }
 
   return out;
@@ -2869,7 +2879,6 @@ export async function getListMemberSubjectsForObject(
         value {
           person {
             name
-            label
             image
             url
             cached_image {
@@ -2879,7 +2888,6 @@ export async function getListMemberSubjectsForObject(
           }
           thing {
             name
-            label
             image
             url
             cached_image {
@@ -2889,13 +2897,8 @@ export async function getListMemberSubjectsForObject(
           }
           organization {
             name
-            label
             image
             url
-            cached_image {
-              url
-              safe
-            }
           }
           account {
             id

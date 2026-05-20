@@ -31,6 +31,7 @@ export const ArenaPortraitImg: React.FC<Props> = ({
   }, [src]);
   const normalized = normalizeWebMediaUrl(src);
   if (!normalized || bad) return <>{children ?? null}</>;
+  /* Use DOM attribute `fetchpriority` (lowercase); React warns when camelCase `fetchPriority` is passed through. */
   return (
     <img
       src={normalized}
@@ -39,7 +40,7 @@ export const ArenaPortraitImg: React.FC<Props> = ({
       loading={loading}
       decoding={decoding}
       draggable={draggable}
-      {...(fetchPriority ? { fetchPriority } : {})}
+      {...(fetchPriority ? { fetchpriority: fetchPriority } : {})}
       onError={() => setBad(true)}
     />
   );

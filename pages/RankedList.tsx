@@ -438,8 +438,9 @@ async function loadClaimsSortedPool(theme: ClaimsSortTheme): Promise<RankItem[]>
 
 async function loadGraphqlArenaContestPool(entry: Extract<ArenaListEntry, { source: 'graphql' }>): Promise<RankItem[]> {
   const cid = entry.id;
-  const minAtomRows = 8;
-  const minIdentityRows = 6;
+  /** After skipping claim-heavy vault heads, small pools still beat an empty Arena deck. */
+  const minAtomRows = 2;
+  const minIdentityRows = 2;
 
   if (entry.theme === 'tokens') {
     try {
@@ -465,11 +466,19 @@ async function loadGraphqlArenaContestPool(entry: Extract<ArenaListEntry, { sour
     try {
       let rows = await fetchArenaLiveAtomsFromGraph({
         poolSize: POOL_SIZE,
-        scanLimit: 520,
+        scanLimit: 640,
         atomTypesUpper: ['ACCOUNT', 'PERSON'],
       });
+      /** Indexer atom `type` strings vary — widen before falling back to all non-claim vault picks. */
       if (rows.length < minIdentityRows) {
-        rows = await fetchArenaLiveAtomsFromGraph({ poolSize: POOL_SIZE, scanLimit: 520 });
+        rows = await fetchArenaLiveAtomsFromGraph({
+          poolSize: POOL_SIZE,
+          scanLimit: 840,
+          atomTypesUpper: ['ACCOUNT', 'PERSON', 'ORGANIZATION', 'ORG'],
+        });
+      }
+      if (rows.length < minIdentityRows) {
+        rows = await fetchArenaLiveAtomsFromGraph({ poolSize: POOL_SIZE, scanLimit: 960 });
       }
       if (rows.length >= minIdentityRows) return mapArenaGraphAtomsToRank(rows, 'graph-identity');
     } catch (e) {
