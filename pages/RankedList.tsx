@@ -38,6 +38,8 @@ import {
   fetchDistinctRankingCreatorsForPortalList,
   fetchDistinctReceiversForPortalListFromProxyDeposits,
   fetchApproxDistinctPortalListRankerCount,
+  fetchArenaLiveAtomsFromGraph,
+  countListMembersForObject,
   type UserArenaRankingClaim,
 } from '../services/graphql';
 import {
@@ -52,8 +54,10 @@ import {
   hasCachedProxyApproval,
   getRawShareBalance,
   grantProxyApproval,
+  switchNetwork,
   collapseAdjacentDuplicateSentences,
   isTermCreatedOnChain,
+  isUserRejectedWalletError,
   parseProtocolError,
   sendNativeTransfer,
 } from '../services/web3';
@@ -88,6 +92,7 @@ import {
   ARENA_PORTAL_LISTS_FETCH_LIMIT,
   ARENA_PERSONAL_ATTESTATION_TRIPLES,
   ARENA_XP_PER_RANK_PICK,
+  BUILT_ON_INTUITION_PORTAL_LIST_OBJECT_TERM_ID,
   CURVE_OFFSET,
   LINEAR_CURVE_ID,
   OFFSET_PROGRESSIVE_CURVE_ID,
@@ -112,6 +117,7 @@ import {
   getArenaListById,
   getArenaListConstituents,
   getArenaPreviewItems,
+  getArenaDataSourceFootprint,
   registerPortalListEntries,
   portalListIdFromTermId,
   type ArenaListEntry,
@@ -155,7 +161,9 @@ import {
 import { FLAGSHIP_ARENA_LIST_ID } from '../services/intuRankProductSpec';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 import { copyTextToClipboard, getArenaListShareUrl } from '../services/arenaShareLink';
-export type ArenaTheme = 'claims' | 'narratives' | 'tokens' | 'passion';
+export type ArenaTheme = 'claims' | 'narratives' | 'tokens' | 'passion' | 'atoms' | 'identities';
+
+type ClaimsSortTheme = 'claims' | 'narratives' | 'passion';
 
 /**
  * A leaderboard peer's REAL alignment with the player's current deck for
@@ -278,7 +286,7 @@ function arenaVoteLaneGridClasses(lanes: number): string {
   return 'grid-cols-1 gap-5 md:gap-6';
 }
 
-/** Perceived-performance placeholder while a list pool loads — matches lane grid. */
+/** Perceived-performance placeholder while pool loads (matches lane skeleton grid). */
 function ArenaPoolSkeleton({ lanes }: { lanes: number }) {
   return (
     <div
@@ -324,7 +332,7 @@ function pickSingleItem(pool: RankItem[], lastId: string | null): RankItem | nul
 
 const STORAGE_PREFIX = 'inturank-arena-pairwise';
 
-/** Intuition FeeProxy / vault minimum deposit per atom or claim triple — enforced on-chain (see `CURVE_OFFSET`). */
+/** Intuition FeeProxy / vault minimum deposit per triple (enforced on-chain; see `CURVE_OFFSET`). */
 const PROTOCOL_MIN_CLAIM_DEPOSIT_LABEL = formatEther(CURVE_OFFSET);
 
 /**
@@ -342,21 +350,6 @@ const ARENA_STAKE_TITLES = ARENA_BATCH_MODE
 
 /** Per-card multiplier in Step 2 · Rank (batch deposit = stake preset × units per row). */
 const RANK_TRUST_UNITS_MAX = 12;
-
-const TOKEN_POOL: RankItem[] = [
-  { id: 'tok-eth', kind: 'token', label: 'ETH', subtitle: 'Native gas & collateral', pairKind: 'token' },
-  { id: 'tok-trust', kind: 'token', label: 'TRUST', subtitle: 'Intuition conviction token', pairKind: 'token' },
-  { id: 'tok-btc', kind: 'token', label: 'BTC', subtitle: 'Digital gold narrative', pairKind: 'token' },
-  { id: 'tok-sol', kind: 'token', label: 'SOL', subtitle: 'High-throughput L1', pairKind: 'token' },
-  { id: 'tok-usdc', kind: 'token', label: 'USDC', subtitle: 'Stable unit of account', pairKind: 'token' },
-  { id: 'tok-dai', kind: 'token', label: 'DAI', subtitle: 'Decentralized stable', pairKind: 'token' },
-  { id: 'tok-op', kind: 'token', label: 'OP', subtitle: 'Optimism governance', pairKind: 'token' },
-  { id: 'tok-arb', kind: 'token', label: 'ARB', subtitle: 'Arbitrum governance', pairKind: 'token' },
-  { id: 'tok-link', kind: 'token', label: 'LINK', subtitle: 'Oracle rail', pairKind: 'token' },
-  { id: 'tok-meme', kind: 'token', label: 'Memecoins', subtitle: 'Culture / attention', pairKind: 'token' },
-  { id: 'tok-ai', kind: 'token', label: 'AI agents', subtitle: 'Autonomous actors', pairKind: 'token' },
-  { id: 'tok-restake', kind: 'token', label: 'Restaking', subtitle: 'Shared security', pairKind: 'token' },
-];
 
 const NARRATIVE_PRED = /predict|forecast|will\b|should\b|believe|future|outcome|if\s+.+\s+then/i;
 const BATTLE_PRED_EXTRA =
@@ -413,12 +406,8 @@ function rankItemToPendingSnapshot(item: RankItem): ArenaPendingRow['item'] {
  * Stance pool for contest Curate: **deterministic order** so cards follow ecosystem / indexer ordering
  * (portal lists = graph order; static = registry order; claims = indexer order). Not shuffled.
  */
-async function loadPool(theme: ArenaTheme): Promise<RankItem[]> {
-  if (theme === 'tokens') {
-    return [...TOKEN_POOL].slice(0, Math.min(POOL_SIZE, TOKEN_POOL.length));
-  }
-
-  /** Larger slice so more head-to-head claims appear (indexer returns by mcap — shallow fetch hid many vs claims). */
+async function loadClaimsSortedPool(theme: ClaimsSortTheme): Promise<RankItem[]> {
+  /** Larger claim slice so more head-to-heads surface (mcap indexing is shallow versus claim depth). */
   const { items } = await getTopClaims(420, 0);
   const base = items.filter((row: any) => !predicateIsSocialTagNoise(row.predicate || ''));
 
@@ -447,25 +436,123 @@ async function loadPool(theme: ArenaTheme): Promise<RankItem[]> {
   return base.map((r: any) => claimToRankItem(r, 'claim')).filter(Boolean).slice(0, POOL_SIZE) as RankItem[];
 }
 
+async function loadGraphqlArenaContestPool(entry: Extract<ArenaListEntry, { source: 'graphql' }>): Promise<RankItem[]> {
+  const cid = entry.id;
+  /** After skipping claim-heavy vault heads, small pools still beat an empty Arena deck. */
+  const minAtomRows = 2;
+  const minIdentityRows = 2;
+
+  if (entry.theme === 'tokens') {
+    try {
+      const rows = await fetchArenaLiveAtomsFromGraph({ poolSize: POOL_SIZE, scanLimit: 480 });
+      if (rows.length >= minAtomRows) return mapArenaGraphAtomsToRank(rows, 'graph-macro');
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[Arena] ticker graph hydrate failed', cid, e);
+    }
+    return [];
+  }
+
+  if (entry.theme === 'atoms') {
+    try {
+      const rows = await fetchArenaLiveAtomsFromGraph({ poolSize: POOL_SIZE, scanLimit: 480 });
+      if (rows.length >= minAtomRows) return mapArenaGraphAtomsToRank(rows, 'graph-ecosystem');
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[Arena] atoms contest hydrate failed', cid, e);
+    }
+    return [];
+  }
+
+  if (entry.theme === 'identities') {
+    try {
+      let rows = await fetchArenaLiveAtomsFromGraph({
+        poolSize: POOL_SIZE,
+        scanLimit: 640,
+        atomTypesUpper: ['ACCOUNT', 'PERSON'],
+      });
+      /** Indexer atom `type` strings vary — widen before falling back to all non-claim vault picks. */
+      if (rows.length < minIdentityRows) {
+        rows = await fetchArenaLiveAtomsFromGraph({
+          poolSize: POOL_SIZE,
+          scanLimit: 840,
+          atomTypesUpper: ['ACCOUNT', 'PERSON', 'ORGANIZATION', 'ORG'],
+        });
+      }
+      if (rows.length < minIdentityRows) {
+        rows = await fetchArenaLiveAtomsFromGraph({ poolSize: POOL_SIZE, scanLimit: 960 });
+      }
+      if (rows.length >= minIdentityRows) return mapArenaGraphAtomsToRank(rows, 'graph-identity');
+    } catch (e) {
+      if (import.meta.env.DEV) console.warn('[Arena] identity contest hydrate failed', cid, e);
+    }
+    return [];
+  }
+
+  const t = entry.theme;
+  if (t === 'claims' || t === 'narratives' || t === 'passion') {
+    return loadClaimsSortedPool(t);
+  }
+  return loadClaimsSortedPool('claims');
+}
+
+function mapArenaGraphAtomsToRank(
+  rows: Awaited<ReturnType<typeof fetchArenaLiveAtomsFromGraph>>,
+  pairKind: string
+): RankItem[] {
+  return rows.map((r) => ({
+    id: r.termId,
+    kind: 'atom' as const,
+    label: r.label,
+    subtitle: r.subtitle,
+    image: r.image,
+    pairKind,
+  }));
+}
+
 async function loadArenaListPool(entry: ArenaListEntry): Promise<RankItem[]> {
   if (entry.source === 'static') {
-    /** Curated list order from the registry — same sequence the ecosystem auth had in mind. */
+    /** Registry order preserved (same curator sequence as authored). */
     return [...entry.items];
   }
   if (entry.source === 'portal') {
-    /** Members in subgraph order (e.g. recent list adds first) — community-visible ranking, not random. */
-    const rows = await getListMemberSubjectsForObject(entry.listObjectTermId, 220);
+    /** Members in subgraph order (recent adds first); community-visible, not random. */
+    const rows = await getListMemberSubjectsForObject(entry.listObjectTermId, 280);
     if (rows.length < 1) return [];
     return rows.map((r) => ({
       id: r.id,
       kind: 'atom' as const,
       label: r.label,
-      subtitle: 'On-chain list · community order',
+      subtitle: 'On-chain list roster in subgraph order',
       image: r.image,
       pairKind: 'list-member',
     }));
   }
-  return loadPool(entry.theme);
+  return loadGraphqlArenaContestPool(entry);
+}
+
+/** Explains curator vs indexer vs portal for reviewers and demos (see `arenaListsRegistry` header). */
+function FootprintStripe({ entry }: { entry: ArenaListEntry }) {
+  const fp = getArenaDataSourceFootprint(entry);
+  const shell =
+    fp.kind === 'live_indexer' || fp.kind === 'portal_chain'
+      ? 'border-emerald-400/35 bg-emerald-500/[0.12] text-emerald-100/95'
+      : 'border-amber-400/35 bg-amber-500/[0.1] text-amber-100/95';
+
+  return (
+    <div className="mt-2 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5">
+      <p className="text-[10px] leading-snug text-slate-400">
+        <span
+          className={`mr-2 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 align-middle text-[9px] font-mono font-black uppercase tracking-[0.14em] ${shell}`}
+          title={fp.detailLine}
+        >
+          {fp.kind === 'live_indexer' || fp.kind === 'portal_chain' ? (
+            <span className="block h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.8)]" aria-hidden />
+          ) : null}
+          {fp.badgeShort}
+        </span>
+        {fp.detailLine}
+      </p>
+    </div>
+  );
 }
 
 function pickYesNoGridItems(pool: RankItem[], n: number): RankItem[] {
@@ -502,9 +589,23 @@ function refillLanesAfterAnswer(pool: RankItem[], prevLanes: RankItem[], answere
 }
 
 function dedupeArenaEntries(entries: ArenaListEntry[]): ArenaListEntry[] {
-  const m = new Map<string, ArenaListEntry>();
-  for (const e of entries) m.set(e.id, e);
-  return [...m.values()];
+  const seenIds = new Set<string>();
+  const seenPortalListObjectHex = new Set<string>();
+  const out: ArenaListEntry[] = [];
+  for (const e of entries) {
+    if (seenIds.has(e.id)) continue;
+    if (e.source === 'portal') {
+      const raw = e.listObjectTermId.trim();
+      if (raw) {
+        const hex = raw.replace(/^0x/i, '').toLowerCase();
+        if (seenPortalListObjectHex.has(hex)) continue;
+        seenPortalListObjectHex.add(hex);
+      }
+    }
+    seenIds.add(e.id);
+    out.push(e);
+  }
+  return out;
 }
 
 /** Raw Elo-style scores start at 0 and can go negative; display with a baseline so numbers read like familiar ratings. */
@@ -527,7 +628,7 @@ function getStreakTier(s: number): { label: string; className: string } {
   return { label: '', className: '' };
 }
 
-/** Arena XP tier — cyan / magenta spectrum only (matches profile). */
+/** Arena XP tier (cyan/magenta palette; matches profile). */
 function arenaCombatTier(xp: number): { label: string; chip: string } {
   if (xp >= 5000)
     return {
@@ -561,7 +662,7 @@ function arenaCombatTier(xp: number): { label: string; chip: string } {
 }
 
 function formatRelativeArenaActive(ts: number): string {
-  if (!ts) return '—';
+  if (!ts) return '…';
   const sec = Math.floor((Date.now() - ts) / 1000);
   if (sec < 45) return 'just now';
   if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
@@ -569,7 +670,7 @@ function formatRelativeArenaActive(ts: number): string {
   return `${Math.floor(sec / 86400)}d ago`;
 }
 
-/** First meaningful glyph for avatar fallback — avoids "0" for 0x… wallet labels. */
+/** First meaningful avatar glyph when label is unclear (avoid leading “0” on 0x… strings). */
 function leaderboardAvatarGlyph(label: string): string {
   const t = (label || '').trim();
   if (/^0x/i.test(t)) {
@@ -600,6 +701,16 @@ function savePersistedForList(listId: string, s: Record<string, number>) {
   }
 }
 
+/** Drop all cached stance integers for one list so a clear cannot “come back” after refresh. */
+function wipePersistedArenaScoresForList(listId: string | null | undefined) {
+  if (!listId) return;
+  try {
+    sessionStorage.removeItem(`${STORAGE_PREFIX}-scores-${listId}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 function patchArenaPersistedScore(listId: string | null | undefined, itemId: string, delta: number) {
   if (!listId) return;
   const persisted = loadPersistedForList(listId) ?? {};
@@ -607,7 +718,7 @@ function patchArenaPersistedScore(listId: string | null | undefined, itemId: str
   savePersistedForList(listId, { ...persisted, [itemId]: R + delta });
 }
 
-/** Vote lane card — Markets-style metrics strip + Yes/No actions. */
+/** Vote lane card. Markets-style metrics strip + Yes/No actions. */
 function ArenaLaneCard({
   item,
   activeList,
@@ -850,7 +961,7 @@ function getTreasury(): `0x${string}` | null {
   }
 }
 
-/** Index into `ARENA_STAKE_PRESETS` — default aligns with `CURVE_OFFSET` (0.1 TRUST). */
+/** Index into `ARENA_STAKE_PRESETS` (defaults to `CURVE_OFFSET`, 0.1 TRUST). */
 function defaultStakePresetIndex(): number {
   const raw = (import.meta.env.VITE_ARENA_DEFAULT_STAKE_TRUST as string | undefined)?.trim();
   /** Earlier builds documented `0.5` as the example default; ignore so testers land on 0.1 unless they pick another value. */
@@ -900,7 +1011,7 @@ const RankedList: React.FC = () => {
   const [rankDeckItems, setRankDeckItems] = useState<RankItem[]>([]);
   /** Inline "create a new card" modal for the Rank step (no nav-away). */
   const [createCardOpen, setCreateCardOpen] = useState(false);
-  /** "Mint contest on-chain" modal — only relevant for static lists. */
+  /** Mint contest modal (static lists only). */
   const [promoteContestOpen, setPromoteContestOpen] = useState(false);
   /**
    * Commit coordinator phase. On Compare, "Sign + pick next game" runs the
@@ -916,7 +1027,7 @@ const RankedList: React.FC = () => {
   useEffect(() => {
     rankTrustUnitsRef.current = rankTrustUnits;
   }, [rankTrustUnits]);
-  /** Local engagement counter — deck refinement before on-chain submit (XP accrues via batch / protocol when you sign). */
+  /** Deck tune counter until you sign XP from batch/protocol. */
   const [deckEngagementTuneCount, setDeckEngagementTuneCount] = useState(0);
   const bumpDeckEngagement = useCallback(() => setDeckEngagementTuneCount((c) => c + 1), []);
   const curateInitForListRef = useRef<string | null>(null);
@@ -924,7 +1035,7 @@ const RankedList: React.FC = () => {
   const guestCurateNudgeRef = useRef(false);
   /** Deeplink vs hub: avoid double-playing the floor-enter stinger for the same list. */
   const arenaFloorStingerPlayedForListRef = useRef<string | null>(null);
-  /** Starred rail starts collapsed — expands from the right column. */
+  /** Stars rail collapsed by default (expands from the right rail). */
   const [starredRailCollapsed, setStarredRailCollapsed] = useState(false);
   const [favoriteListIds, setFavoriteListIds] = useState<string[]>(() => loadArenaFavoriteListIds());
   const navigate = useNavigate();
@@ -1056,9 +1167,7 @@ const RankedList: React.FC = () => {
   }, [refreshPlayers]);
 
   /**
-   * Burst-poll the leaderboard after a successful Arena batch — the subgraph attribution path
-   * (FeeProxy → depositor via vault positions) needs ~30s to catch up so the user actually
-   * appears on the board instead of the empty splash.
+   * Poll leaderboard bursts after Arena batch succeeds; indexer needs seconds to attach FeeProxy stakes.
    */
   useEffect(() => {
     let burstTimers: number[] = [];
@@ -1098,7 +1207,7 @@ const RankedList: React.FC = () => {
   }, []);
 
   const [graphArenaXp, setGraphArenaXp] = useState(0);
-  /** After first graph XP fetch for this wallet — avoids flashing Arena 0 / wrong total before indexer data arrives. */
+  /** After first graph XP fetch for wallet; avoids flashing 0 before indexer lands. */
   const [arenaGraphReady, setArenaGraphReady] = useState(false);
   const [protocolLedgerTick, setProtocolLedgerTick] = useState(0);
   const [pickCreditTick, setPickCreditTick] = useState(0);
@@ -1125,7 +1234,7 @@ const RankedList: React.FC = () => {
   );
   /** Indexer rarely credits vault-only stakes to `triple.creator`; pick credit bridges until subgraph matches your wallet. */
   const arenaXpUi = Math.max(graphArenaXp, arenaPickXp);
-  /** Single displayed total everywhere in this page (no count-up — that read as “wrong numbers” while animating). */
+  /** One total on this page (no animated count-up; it read as wrong numbers mid-tween). */
   const xpDisplayTarget = arenaXpUi + myProtocolXp;
 
   const refreshArenaXpSelf = useCallback(async () => {
@@ -1185,9 +1294,7 @@ const RankedList: React.FC = () => {
     return Math.max(players.length, pool.length + 4, 12);
   }, [listId, portalListRankerCount, players.length, pool.length]);
   /**
-   * Compare-step numbers — all derived from REAL on-chain data when present.
-   * Returns `null` when the truth isn't available so the UI can stay honest
-   * instead of fabricating a comparison.
+   * Compare numbers from on-chain data when we have it; otherwise `null` so UI stays honest.
    */
   const compareSimilarityAgg = useMemo(
     () => aggregateSimilarity(comparePeers.map((p) => p.similarity)),
@@ -1195,7 +1302,7 @@ const RankedList: React.FC = () => {
   );
   /** Headline similarity vs the top of the on-chain leaderboard for THIS list. */
   const compareSimilarityPct: number | null = compareSimilarityAgg?.similarityPct ?? null;
-  /** Ladder progression — only when we actually know the user's place. */
+  /** Ladder bar when placement is known. */
   const compareProgressionPct: number | null = useMemo(() => {
     if (!myLadderPosition || myLadderPosition.total <= 0) return null;
     return Math.max(
@@ -1247,10 +1354,10 @@ const RankedList: React.FC = () => {
   }, [listId, address, listRankersTick]);
 
   /**
-   * Live similarity fetch — pulls other rankers’ on-chain claims for this portal
-   * list (global leaderboard **plus** FeeProxy receivers **plus** triple creators on this list) and
-   * scores overlap with your deck. Refetch on Compare step, deck changes, leaderboard
-   * changes, or `inturank-arena-onchain-updated` via `comparePeersVersion`.
+   * Fetches other rankers’ on-chain claims for this portal
+   * list (global leaderboard plus FeeProxy receivers and triple creators here) and
+   * scores overlap with your deck. Refetch on Compare, deck edits, leaderboard
+   * churn, or `inturank-arena-onchain-updated` (`comparePeersVersion`).
    */
   useEffect(() => {
     if (arenaFlowPhase !== 'compare') return;
@@ -1375,6 +1482,10 @@ const RankedList: React.FC = () => {
   const [portalListEntries, setPortalListEntries] = useState<
     Extract<ArenaListEntry, { source: 'portal' }>[]
   >([]);
+  /** Hub tile: live member count from indexer (portal lists). */
+  const [arenaListConstituentOverrides, setArenaListConstituentOverrides] = useState<Record<string, number>>({});
+  /** Hub tile previews for portal lists with empty `previewItemsData` (e.g. Built on Intuition). */
+  const [hubPreviewPoolByListId, setHubPreviewPoolByListId] = useState<Record<string, RankItem[]>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -1400,7 +1511,7 @@ const RankedList: React.FC = () => {
               `Should “${(item.label || 'this entry').trim()}” stay on “${(row.label || 'this list').trim()}” for you?`,
             previewItemsData: subs.map((s) => ({
               termId: s.termId,
-              label: s.label || '—',
+              label: s.label || '…',
               image: s.image,
             })),
           };
@@ -1416,11 +1527,54 @@ const RankedList: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (const entry of ARENA_LISTS) {
+        if (entry.source !== 'portal') continue;
+        try {
+          const [rows, count] = await Promise.all([
+            getListMemberSubjectsForObject(entry.listObjectTermId, 6),
+            countListMembersForObject(entry.listObjectTermId),
+          ]);
+          if (cancelled) return;
+          if (typeof count === 'number' && count >= 0) {
+            setArenaListConstituentOverrides((prev) => ({ ...prev, [entry.id]: count }));
+          }
+          if (rows.length > 0) {
+            setHubPreviewPoolByListId((prev) => ({
+              ...prev,
+              [entry.id]: rows.map((r) => ({
+                id: r.id,
+                kind: 'atom' as const,
+                label: r.label,
+                subtitle: 'On-chain list',
+                image: r.image,
+                pairKind: 'list-preview',
+              })),
+            }));
+          }
+        } catch {
+          /* ignore hub portal hydrate */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const listsForCategory = useMemo(() => {
     const curated = filterArenaListsByCategory(ARENA_LISTS, arenaCategoryId);
-    if (arenaCategoryId === 'all') return [...curated, ...portalListEntries];
+    const portalDeduped = portalListEntries.filter((p) => {
+      if (p.source !== 'portal') return true;
+      const a = p.listObjectTermId.replace(/^0x/i, '').toLowerCase();
+      const b = BUILT_ON_INTUITION_PORTAL_LIST_OBJECT_TERM_ID.replace(/^0x/i, '').toLowerCase();
+      return a !== b;
+    });
+    if (arenaCategoryId === 'all') return [...curated, ...portalDeduped];
     if (arenaCategoryId === 'network') {
-      return filterArenaListsByCategory(portalListEntries, 'network');
+      return filterArenaListsByCategory(portalDeduped, 'network');
     }
     return curated;
   }, [arenaCategoryId, portalListEntries]);
@@ -1693,11 +1847,11 @@ const RankedList: React.FC = () => {
     setCurateQueue([...pool]);
   }, [arenaFlowPhase, listId, loading, pool]);
 
-  /** Return-trigger nudge — pair with bookmarks like `?ref=graph`. */
+  /** Nudge when returning from graph bookmark (`?ref=graph`). */
   useEffect(() => {
     if (searchParams.get('ref') !== 'graph' || graphReturnNudgeDone.current) return;
     graphReturnNudgeDone.current = true;
-    toast.info('Crowd stakes on this list may have moved — worth another pass when you’re ready.');
+    toast.info('Crowd stakes on this list may have moved. Worth another pass when you’re ready.');
   }, [searchParams]);
 
   useEffect(() => {
@@ -1751,10 +1905,6 @@ const RankedList: React.FC = () => {
     if (!entry) return;
     setLoading(true);
     setRound(null);
-    if (ARENA_BATCH_MODE) {
-      clearPendingForList(listId);
-      setPendingRows([]);
-    }
     try {
       const items = await loadArenaListPool(entry);
       const roundItems = pickYesNoGridItems(items, ARENA_CARDS_PER_ROUND);
@@ -1805,7 +1955,7 @@ const RankedList: React.FC = () => {
     }
   }, [pool, loading, round, listId]);
 
-  /** Only items you’ve moved off the baseline — after reset, list is empty until you stance again. */
+  /** Items moved off the baseline; after reset the list is empty until you stance again. */
   const ranking = useMemo(() => {
     return [...pool]
       .map((it) => ({ it, r: scores[it.id] ?? SCORE_START }))
@@ -1888,10 +2038,12 @@ const RankedList: React.FC = () => {
     const txByRowKey = new Map<string, string>();
     /** Per-row activity XP grant for curation modal / ledger (batch tx shares one hash across rows). */
     const xpdnByRowKey = new Map<string, number>();
-    /** Activity XP (XPDN) awarded across this batch — sum and per-row grants from `notifyProtocolXpEarned`. */
+    /** Activity XP (XPDN) for this batch from `notifyProtocolXpEarned`. */
     let activityXpDelta = 0;
     const xpdnGrantsPerTx: number[] = [];
     try {
+      setSubmitProgress('Switching to Intuition if needed…');
+      await switchNetwork();
       const awardArenaStakeXp = (txHash: string, depositWei: bigint, rowKey: string) => {
         const granted = notifyProtocolXpEarned({
           address: address!,
@@ -2077,13 +2229,13 @@ const RankedList: React.FC = () => {
 
       if (atomJobs.length > 0) {
         const nUnique = new Set(atomJobs.map((j) => atomRefJobKey(j.ref, j.depositTrust))).size;
-        setSubmitProgress(`Preparing ${nUnique} unique atom reference(s) (batched on-chain)…`);
+        setSubmitProgress(`Preparing ${nUnique} unique identity reference(s) for batch submit…`);
       }
       const { termMap } = await batchEnsureAtomTermIds(atomJobs, address, progressCb);
 
       const pickTerm = (ref: string, dep: string): `0x${string}` => {
         const tid = termMap.get(atomRefJobKey(ref, dep));
-        if (!tid) throw new Error(`Could not resolve atom for “${String(ref).slice(0, 48)}…”.`);
+        if (!tid) throw new Error(`Could not resolve identity for “${String(ref).slice(0, 48)}…”.`);
         return tid;
       };
 
@@ -2186,12 +2338,17 @@ const RankedList: React.FC = () => {
         }
       }
       sent = true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[Arena batch submit]', e);
       let msg = collapseAdjacentDuplicateSentences(parseProtocolError(e));
-      if (!msg?.trim()) msg = e?.shortMessage ?? e?.message ?? 'Transaction failed';
+      if (!msg?.trim()) msg = collapseAdjacentDuplicateSentences(String((e as { shortMessage?: string })?.shortMessage ?? ''));
+      if (!msg?.trim()) msg = e instanceof Error ? e.message : 'Transaction failed';
       msg = collapseAdjacentDuplicateSentences(msg);
-      toast.error(msg.length > 420 ? `${msg.slice(0, 417)}…` : msg);
+      if (isUserRejectedWalletError(e)) {
+        toast.info('Signing was cancelled. Your queued picks are unchanged.');
+      } else {
+        toast.error(msg.length > 420 ? `${msg.slice(0, 417)}…` : msg);
+      }
     } finally {
       setStakingTx(false);
       setSubmitProgress(null);
@@ -2249,7 +2406,7 @@ const RankedList: React.FC = () => {
           const side = r.support ? 'YES' : 'NO';
           return `${side} for “${r.item.label}” in “${lt}”`;
         });
-        humanLine = `${who} — ${rowSummaries.join(' · ')}`;
+        humanLine = `${who}: ${rowSummaries.join(' · ')}`;
       } catch {
         /* ignore */
       }
@@ -2385,7 +2542,7 @@ const RankedList: React.FC = () => {
     toast.success('Conviction cart cleared.');
   }, [listId, pendingRows, pool]);
 
-  /** Reset this contest only: Curate scores, Rank deck, queued stances for this list — leaves other lists’ carts intact. */
+  /** Clears this contest only; other lists’ carts stay as-is. */
   const clearContestPicksForCurrentList = useCallback(() => {
     playArenaUiClick();
     if (!listId) return;
@@ -2402,6 +2559,7 @@ const RankedList: React.FC = () => {
 
     const next: Record<string, number> = {};
     for (const it of pool) next[it.id] = SCORE_START;
+    wipePersistedArenaScoresForList(listId);
     setScores(next);
     savePersistedForList(listId, next);
 
@@ -2421,7 +2579,7 @@ const RankedList: React.FC = () => {
     setBatchModalOpen(false);
     setPendingArenaClear(null);
     setCommitPhase('idle');
-    toast.success('Picks cleared — start again from Curate.');
+    toast.success('Picks cleared. Start again from Curate.');
   }, [listId, pool]);
 
   const resolveYesNo = useCallback(
@@ -2510,7 +2668,7 @@ const RankedList: React.FC = () => {
         pop();
         if (!guestCurateNudgeRef.current) {
           guestCurateNudgeRef.current = true;
-          toast.info('Practice mode — connect a wallet to queue TRUST and submit on-chain.');
+          toast.info('Practice mode: connect a wallet to queue TRUST and submit on-chain.');
         }
         return;
       }
@@ -2584,7 +2742,7 @@ const RankedList: React.FC = () => {
       setRankDeckItems((prev) => {
         const nextDeck = prev.filter((x) => x.id !== itemId);
         if (nextDeck.length < 1) {
-          toast.info('Deck empty — opening Curate to add picks.');
+          toast.info('Deck empty; opening Curate to add picks.');
           setRankTrustUnits({});
           setPendingRows((pr) => pr.filter((r) => r.item.id !== itemId));
           queueMicrotask(() => {
@@ -2594,7 +2752,7 @@ const RankedList: React.FC = () => {
           return [];
         }
 
-        toast.info('Removed from deck — remaining stakes auto-balanced by rank.');
+        toast.info('Removed from deck. Remaining stakes were rebalanced by rank.');
         const pruned = { ...rankTrustUnitsRef.current };
         delete pruned[itemId];
         const dist = autoDistributeStakeUnitsAlongOrder(nextDeck, pruned, 1, RANK_TRUST_UNITS_MAX);
@@ -2655,7 +2813,7 @@ const RankedList: React.FC = () => {
       return;
     }
     if (!ARENA_BATCH_MODE) {
-      toast.info('Batch mode is off — use legacy per-pick sends.');
+      toast.info('Batch mode is off. Use per-pick sends instead.');
       return;
     }
     if (rankFlowCartCount < 1) {
@@ -2916,10 +3074,10 @@ const RankedList: React.FC = () => {
                       {' · batch when ready.'}
                     </>
                   ) : (
-                    'Pick now — wallet only on stake.'
+                    'Pick now. Wallet only when you stake.'
                   )
                 ) : (
-                  'Pick a lane, then a list — or jump to Signal for live stances.'
+                  'Pick a lane, then a list, or jump to Signal for live stances.'
                 )}
               </p>
               {showOnboardTip ? (
@@ -3129,7 +3287,7 @@ const RankedList: React.FC = () => {
                       <p className="w-full text-[10px] sm:text-[11px] font-mono text-slate-500 leading-relaxed px-0.5">
                         <span className="font-black uppercase tracking-[0.2em] text-slate-600 mr-2">Session</span>
                         Open a contest from <span className="text-slate-400">Arena</span> to track rounds, streak, and
-                        lane XP here — Signal &amp; Explorer keep this rail parked.
+                        lane XP here. Signal and Explorer leave this rail idle until then.
                       </p>
                     )}
                   </div>
@@ -3278,7 +3436,7 @@ const RankedList: React.FC = () => {
                       IntuRank · Arena
                     </p>
                     <p className="text-[13px] text-slate-200 leading-snug mt-0.5">
-                      Dark glass, cyan readouts — same language as your IntuRank profile.
+                      Same dark glass and cyan numbers as your IntuRank profile.
                     </p>
                   </div>
                 </div>
@@ -3319,6 +3477,8 @@ const RankedList: React.FC = () => {
                   onRandomContest={onRandomContestFromGate}
                   onResumeLast={onResumeLastFromGate}
                   resumeListTitle={resumeBrowseTitle}
+                  previewPoolByListId={hubPreviewPoolByListId}
+                  listConstituentOverrides={arenaListConstituentOverrides}
                 />
               </div>
             ) : (
@@ -3382,7 +3542,7 @@ const RankedList: React.FC = () => {
                     <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-300">
                       Jump in
                     </p>
-                    <p className="text-sm font-bold text-white truncate">{quickStartList?.title ?? '—'}</p>
+                    <p className="text-sm font-bold text-white truncate">{quickStartList?.title ?? '…'}</p>
                   </div>
                 </div>
                 <button
@@ -3518,7 +3678,7 @@ const RankedList: React.FC = () => {
                         }
                   }
                 >
-                  Guest — connects only if you stake
+                  Guest, connects when you stake
                 </div>
               ) : null}
           {arenaSlimRunChrome ? (
@@ -3610,7 +3770,7 @@ const RankedList: React.FC = () => {
                         stance{batchModalRows.length === 1 ? '' : 's'} (every list)?
                       </>
                     ) : (
-                      <>Reset Curate votes, your Rank deck, and this list&apos;s cart — start fresh?</>
+                      <>Reset Curate votes, your Rank deck, and this list&apos;s cart and start fresh?</>
                     )}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
@@ -3715,6 +3875,9 @@ const RankedList: React.FC = () => {
                 {activeList.description ? (
                   <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-1 leading-snug">{activeList.description}</p>
                 ) : null}
+                {activeList ? (
+                  <FootprintStripe entry={activeList} />
+                ) : null}
               </>
             ) : null}
 
@@ -3742,7 +3905,7 @@ const RankedList: React.FC = () => {
                       {round.items.length}-lane vote
                     </span>
                     <p className="text-xs sm:text-[13px] text-slate-400 leading-relaxed min-w-0">
-                      Each card has its prompt — tap Yes / No per lane.
+                      Each lane card asks a Yes / No prompt.
                     </p>
                   </div>
                 )}
@@ -3777,8 +3940,11 @@ const RankedList: React.FC = () => {
           {loading ? (
             <ArenaPoolSkeleton lanes={ARENA_CONTEST_FLOW_V2 ? 1 : ARENA_CARDS_PER_ROUND} />
           ) : pool.length < minPoolNeeded ? (
-            <div className="rounded-xl border border-dashed border-slate-700 py-16 text-center text-sm text-slate-500">
-              Not enough items. Try another list.
+            <div className="rounded-xl border border-dashed border-slate-700 py-16 px-4 text-center text-sm text-slate-500">
+              <p className="font-semibold text-slate-400">Nothing loaded from the indexer for this contest.</p>
+              <p className="mt-2 text-xs text-slate-600">
+                GraphQL returned no rows (or the request failed). Try another list or confirm `VITE_GRAPHQL_URL` / network.
+              </p>
             </div>
           ) : ARENA_CONTEST_FLOW_V2 && listId ? (
             <div className="w-full min-w-0 py-2 md:py-3">
@@ -3797,7 +3963,7 @@ const RankedList: React.FC = () => {
               ) : null}
               {arenaFlowPhase === 'curate' ? (
                 <ArenaCurateStack
-                  listTitle={activeList?.title ?? '—'}
+                  listTitle={activeList?.title ?? '…'}
                   listGlyph={activeList?.listGlyph}
                   listCategory={activeList?.arenaCategory}
                   queue={curateQueue}
@@ -3824,10 +3990,9 @@ const RankedList: React.FC = () => {
                   onRemoveItem={onRankRemoveItem}
                   onCompare={onCompareFromRank}
                   /**
-                   * On-chain writes (atom mints, list promotion, membership
-                   * triples, rank stakes) all happen at the END of the flow
-                   * in a single commit from the Compare step. Rank no longer
-                   * shows a sign button — `onSignSubmit` intentionally omitted.
+                   * On-chain writes (list promotion, identity mints, membership
+                   * triples, rank stakes) finish in one Compare commit. Rank no longer
+                   * shows a sign button (`onSignSubmit` omitted on purpose).
                    */
                   signDisabled={stakingTx}
                   queuedStanceCount={rankFlowCartCount}
@@ -3973,7 +4138,7 @@ const RankedList: React.FC = () => {
         </div>
         </div>
 
-        {/* Bottom "Arena champions" leaderboard kept for reference but gated off — replaced by the side-by-side ArenaRankerLeaderboard. */}
+        {/* Legacy bottom leaderboard (disabled); use ArenaRankerLeaderboard instead. */}
         {false && (
         <motion.section
           className="relative mt-8 md:mt-10 w-full min-w-0 overflow-hidden rounded-3xl border-2 border-fuchsia-500/30 bg-[#020814] shadow-[0_0_100px_rgba(168,85,247,0.14),0_0_1px_rgba(34,211,238,0.35),inset_0_1px_0_rgba(255,255,255,0.07)] transition-[box-shadow] duration-500 hover:shadow-[0_0_120px_rgba(168,85,247,0.2),0_0_1px_rgba(34,211,238,0.45),inset_0_1px_0_rgba(255,255,255,0.09)]"
@@ -4241,8 +4406,8 @@ const RankedList: React.FC = () => {
           onClose={() => {
             setBatchModalOpen(false);
             /**
-             * Dismissed without signing — bail out of the commit chain so the
-             * user isn't auto-advanced past the contest.
+             * Close without signing: stop the commit chain so we do not
+             * auto-advance past the contest.
              */
             if (commitPhase === 'rank-batch') {
               setCommitPhase('idle');
@@ -4270,9 +4435,7 @@ const RankedList: React.FC = () => {
         onClose={() => {
           setArenaBatchSuccess(null);
           /**
-           * If we got here via the Compare commit chain, the user already
-           * intended to advance — once the success splash is dismissed, pick
-           * the next game for them so the loop closes naturally.
+           * Dismissing batch success ends the Compare chain: jump back to contests.
            */
           if (commitPhase === 'rank-batch') {
             setCommitPhase('idle');
@@ -4524,10 +4687,8 @@ const RankedList: React.FC = () => {
           toast.success(`"${portalEntry.title}" is live on-chain.`);
 
           /**
-           * If this was the manual "promote-only" path (no commit chain active),
-           * navigate to the new portal id and stop. Otherwise we're mid-commit
-           * — stay put, update listId in place, and chain into the rank-batch
-           * step so the user finishes signing in one continuous flow.
+           * Promote-only exits here. Mid-commit replaces URL/listId and continues to rank-batch
+           * so signing stays one flow.
            */
           if (commitPhase !== 'promote') {
             navigate(`/climb?list=${encodeURIComponent(portalId)}`);
@@ -4564,7 +4725,7 @@ const RankedList: React.FC = () => {
         onSubmit={(item) => {
           setRankDeckItems((prev) => [...prev, item]);
           setRankTrustUnits((prev) => ({ ...prev, [item.id]: 1 }));
-          toast.success(`"${item.label}" added — mints on-chain at submit.`);
+          toast.success(`"${item.label}" added. Will mint on-chain when you submit.`);
         }}
       />
     </div>

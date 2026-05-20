@@ -327,6 +327,78 @@ export const getAllAgents = async (
   } catch (e) { return { items: [], hasMore: false }; }
 };
 
+/** Rows for Arena identity lanes (vault-ranked), sourced from live indexer vault order. */
+export type ArenaGraphAtomPick = {
+  termId: string;
+  label: string;
+  image?: string;
+  subtitle: string;
+};
+
+/**
+ * Top vault-ranked **identities** (skips triple/claim vault rows). Caller controls how many indexer rows to scan
+ * because the head of global TVL is often claims, not identities.
+ */
+export async function fetchArenaLiveAtomsFromGraph(options: {
+  poolSize: number;
+  scanLimit?: number;
+  /** Only include terms whose `type` matches one entry (substring match allowed), e.g. ACCOUNT, PERSON. */
+  atomTypesUpper?: string[];
+}): Promise<ArenaGraphAtomPick[]> {
+  const poolSize = Math.max(6, Math.min(48, Math.floor(options.poolSize)));
+  /** First page size hint; additional pages widen the vault crawl when TVL leaders are mostly claim vaults. */
+  const scanHint = Math.max(poolSize * 6, options.scanLimit ?? Math.min(480, poolSize * 14));
+  const pageSize = Math.min(220, Math.max(90, scanHint));
+  /** Hard cap so Arena load stays bounded; deepest pages reveal non-claim atom vaults. */
+  const maxVaultOffset = Math.min(12_000, Math.max(scanHint * 14, 2200));
+
+  const wanted = options.atomTypesUpper?.map((s) => s.toUpperCase()).filter(Boolean);
+  const out: ArenaGraphAtomPick[] = [];
+  const seen = new Set<string>();
+
+  outer: for (let offset = 0; offset < maxVaultOffset; offset += pageSize) {
+    const { items, hasMore } = await getAllAgents(pageSize, offset, 'desc');
+    if (!items?.length) break;
+
+    for (const x of items as any[]) {
+      if (!x?.id) continue;
+      const upperType = String(x.type || '').toUpperCase();
+      if (upperType === 'CLAIM' || upperType.includes('OPPOSING')) continue;
+      if (wanted && wanted.length > 0) {
+        const hit = wanted.some((w) => upperType === w || upperType.includes(w));
+        if (!hit) continue;
+      }
+      const nid = normalize(String(x.id));
+      if (!nid || seen.has(nid)) continue;
+      seen.add(nid);
+      const raw = String(x.label || '').trim();
+      const labelBase = raw || `${String(x.id).slice(0, 10)}…`;
+      const label = labelBase.length > 140 ? `${labelBase.slice(0, 138)}…` : labelBase;
+
+      const accountish = upperType.includes('ACCOUNT') || upperType.includes('PERSON');
+      const subtitle =
+        wanted && wanted.length > 0
+          ? 'Ranking identities by vault (live graph)'
+          : accountish
+            ? 'Ranking identities by vault (live graph)'
+            : 'Other identities by vault (live graph)';
+
+      out.push({
+        termId: String(x.id),
+        label,
+        image: typeof x.image === 'string' ? x.image : undefined,
+        subtitle,
+      });
+
+      if (out.length >= poolSize) break outer;
+    }
+
+    if (!hasMore || items.length < pageSize) break;
+  }
+
+  return out;
+}
+
 /** Full Account rows for specific term IDs (e.g. Arena duel pair → compare modal). Order matches input `ids`; null if no vault. */
 export async function getAccountsByTermIds(ids: string[]): Promise<(Account | null)[]> {
   if (ids.length === 0) return [];
@@ -2807,7 +2879,6 @@ export async function getListMemberSubjectsForObject(
         value {
           person {
             name
-            label
             image
             url
             cached_image {
@@ -2817,7 +2888,6 @@ export async function getListMemberSubjectsForObject(
           }
           thing {
             name
-            label
             image
             url
             cached_image {
@@ -2827,13 +2897,8 @@ export async function getListMemberSubjectsForObject(
           }
           organization {
             name
-            label
             image
             url
-            cached_image {
-              url
-              safe
-            }
           }
           account {
             id
@@ -2869,6 +2934,27 @@ export async function getListMemberSubjectsForObject(
   } catch (e) {
     console.warn('[getListMemberSubjectsForObject]', e);
     return [];
+  }
+}
+
+/** Approximate list size for hub UI: counts list-membership triples (object=list, predicate=list), same filter as `getListMemberSubjectsForObject`. */
+export async function countListMembersForObject(listObjectTermId: string): Promise<number> {
+  const ids = prepareQueryIds(listObjectTermId);
+  if (ids.length === 0) return 0;
+  const q = `query ListMemberCount($ids: [String!]!, $pred: String!) {
+    triples_aggregate(
+      where: { object_id: { _in: $ids }, predicate_id: { _eq: $pred } }
+    ) {
+      aggregate { count }
+    }
+  }`;
+  try {
+    const res = await fetchGraphQL(q, { ids, pred: LIST_PREDICATE_ID });
+    const raw = res?.triples_aggregate?.aggregate?.count;
+    return typeof raw === 'number' ? raw : 0;
+  } catch (e) {
+    console.warn('[countListMembersForObject]', e);
+    return 0;
   }
 }
 

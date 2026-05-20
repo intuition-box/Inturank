@@ -551,23 +551,23 @@ export const ArenaRankDeck: React.FC<Props> = ({
         ) : null}
 
         <p className="max-w-2xl text-[13px] leading-relaxed text-slate-400">
-          Drag rows to set preference — stakes <span className="text-slate-200 font-semibold">auto-scale top → bottom</span>{' '}
+          Drag rows to set preference. Stakes{' '}
+          <span className="text-slate-200 font-semibold">scale from top down</span>{' '}
           so your #1 line carries more weight. Use <span className="text-slate-200 font-semibold">− / +</span> as an
-          advanced override: totals re-sort instantly so the strongest TRUST line always crowns #1 while you stay in sync with
-          the breakdown chart.
+          advanced override: totals re-sort instantly so the strongest TRUST line crowns #1 and the breakdown chart stays in sync.
         </p>
       </div>
 
       {/* 2-COLUMN COMPOSITION */}
       <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7">
-        {/* ============================ LEFT — CARD LIST ============================ */}
+        {/* ============================ LEFT COLUMN: CARD LIST ============================ */}
         <div className="min-w-0">
           {items.length < 1 ? (
             <div className="rounded-2xl border-2 border-dashed border-white/12 bg-black/30 px-6 py-16 text-center">
               <Sparkles className="mx-auto h-7 w-7 text-slate-600" strokeWidth={2} aria-hidden />
               <p className="mt-3 font-display text-lg font-bold text-white">Your deck is empty</p>
               <p className="mt-2 text-[12px] leading-relaxed text-slate-400">
-                Go back to Curate and agree with a few picks — they’ll land here ready to sort.
+                Go back to Curate, agree with a few picks, and they appear here sorted.
               </p>
             </div>
           ) : (

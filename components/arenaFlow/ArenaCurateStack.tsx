@@ -173,7 +173,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
           <p className="mt-3 text-[13px] leading-relaxed text-slate-400">
             {agreedYesCount > 0
               ? 'Drop them in your own order next, then we’ll show who ranks like you.'
-              : 'Go back and try a few more — you’ll need at least one card to rank.'}
+              : 'Go back and try more picks. You need at least one card to rank.'}
           </p>
           <SolidButton
             disabled={agreedYesCount < 1}
@@ -328,7 +328,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
             </div>
             <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
               {agreedYesCount >= RANK_READY_MIN
-                ? 'You are set — continue curating or go rank whenever you want.'
+                ? 'Ready: keep curating or jump to rank whenever you want.'
                 : `Minimum to rank is 1 saved card. For a fuller rank step, aim for ${RANK_READY_MIN}+ (${Math.max(0, RANK_READY_MIN - agreedYesCount)} more).`}
             </p>
             <div className="mt-5">

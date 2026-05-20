@@ -509,6 +509,14 @@ export const DISTRUST_ATOM_ID = "0x000000000000000000000000000000000000000000000
 /** List predicate — used for "add identity to list" (triple: subject=atom, predicate=this, object=list) */
 export const LIST_PREDICATE_ID = "0x7ec36d201c842dc787b45cb5bb753bea4cf849be3908fb1b0a7d067c3c3cc1f5";
 
+/**
+ * Official portal list object for “Built on Intuition” (second segment of
+ * `/explore/list/{LIST_PREDICATE_ID}-{LIST_OBJECT_TERM_ID}` on portal.intuition.systems).
+ * Arena contest `built-on-intuition` loads roster members via `getListMemberSubjectsForObject`.
+ */
+export const BUILT_ON_INTUITION_PORTAL_LIST_OBJECT_TERM_ID =
+  "0xb57be6ff391550db8e4e1b05d4217ed1b92d9a2f468ed213d235cfcb2ac28b79";
+
 // Protocol Pricing Constants
 export const CURVE_SLOPE = 30000000000000000000n; // 3 * 10^19
 /**

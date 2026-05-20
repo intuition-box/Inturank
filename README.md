@@ -22,6 +22,12 @@ Copy `.env.example` to `.env.local` and set values as needed:
 | `VITE_GRAPHQL_URL` | Production GraphQL endpoint. In dev, leave unset so `/v1/graphql` is proxied by Vite. |
 | Others in `.env.example` | IPFS uploads, email hooks, maintenance mode, etc. |
 
+### Docs for reviewers / demo QA
+
+- **[`docs/demo.md`](docs/demo.md)** — scripted walkthrough aligned with `PRODUCT_PHASES` in **`services/intuRankProductSpec.ts`**
+- **[`docs/presenter-runbook.md`](docs/presenter-runbook.md)** — **one-pager for whoever demos when you’re not in the room** (talk track + failure mode)
+- **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — release-style **demo checklist** (paste into PRs or issues)
+
 **Intuition Skill Playground:** With a connected wallet on **Intuition Mainnet (chain 1155)** and `VITE_GEMINI_API_KEY` set, open **Intel → Skill Playground** or go to `/#/skill-playground`. The in-app agent proposes unsigned transactions (`to`, `data`, `value`); you review and **Sign & Broadcast** through your wallet—the same pattern as the CLI Skill workflow below.
 
 ### Product roadmap (Arena and trust funnels)
@@ -29,6 +35,12 @@ Copy `.env.example` to `.env.local` and set values as needed:
 Phased priorities (outcomes × metrics) and the Arena UX checklist live in [`services/intuRankProductSpec.ts`](services/intuRankProductSpec.ts). **Trust picks** open in the Arena at **`/#/climb?list=trust-your-tools&onboard=1`** (`/hub/trust-tools` redirects there so the flow stays on one page). Arena share URLs use **`/#/climb?list=<id>`** (`listId` still accepted as an alias). Optional return nudge: **`ref=graph`** on the same URL.
 
 **What syncs where (today):** positions, atoms, triples, and TRUST you put through the protocol live **on-chain / in the indexer**. Some IntuRank UX (Arena batch queue before submit, starred list IDs, skill chat history, activity XP ledger) still uses **browser storage** so it does not follow the user across devices until we add a backend or move more state on-chain.
+
+**Arena card pools (be precise in demos):**
+
+- **Curated** contests (`trust-your-tools`, …) use in-repo names for the **daily-life** lane only. They are intentionally not pretending to be an on-chain roster.
+- **GraphQL** contests load **only** from the Intuition indexer: claim lanes → `getTopClaims`; identity / vault lanes → `getAllAgents` via `fetchArenaLiveAtomsFromGraph`. If the indexer returns nothing, the deck is **empty** (no placeholder companies or “Nexora”-style fillers).
+- **Portal** contests (e.g. **Built on Intuition**) load list members with **`getListMemberSubjectsForObject`** / **`countListMembersForObject`**, matching indexed list triples on the graph.
 
 ---
 

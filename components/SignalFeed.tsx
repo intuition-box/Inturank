@@ -1,5 +1,5 @@
 /**
- * Signal — Pulse (stance queue + markets) · Vouch (on-chain name claims).
+ * Signal / Pulse stance queue plus Vouch flows.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -59,6 +59,7 @@ import {
 } from '../services/signalPulseCache';
 import { submitSignalVouchesOnChain } from '../services/signalVouchOnchain';
 import { submitSignalStancesOnChain } from '../services/signalStanceOnchain';
+import { isUserRejectedWalletError, parseProtocolError } from '../services/web3';
 import {
   getSignalPendingForWallet,
   getSignalVouchesForWallet,
@@ -123,10 +124,10 @@ function shortPredicate(label: string): string {
   return trimmed;
 }
 
-/** Teal tag chip text — short so names + labels read like a profile row, not a raw triple dump. */
+/** Short tag chip (profile row tone, not raw triple syntax). */
 function shortTag(text: string, max = 22): string {
   const t = text.trim();
-  if (!t) return '—';
+  if (!t) return '…';
   if (t.length <= max) return t;
   return `${t.slice(0, Math.max(1, max - 1))}…`;
 }
@@ -226,7 +227,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       setAtomCardsErrorTrending(null);
     } catch (e: unknown) {
       setAtomCardsTrending((prev) => (prev.length ? prev : []));
-      setAtomCardsErrorTrending(e instanceof Error ? e.message : 'Could not load Hot atoms');
+      setAtomCardsErrorTrending(e instanceof Error ? e.message : 'Could not load Hot identities');
     } finally {
       setAtomCardsLoadingTrending(false);
     }
@@ -260,7 +261,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       setAtomCardsErrorNetwork(null);
     } catch (e: unknown) {
       setAtomCardsNetwork((prev) => (prev.length ? prev : []));
-      setAtomCardsErrorNetwork(e instanceof Error ? e.message : 'Could not load Crowd atoms');
+      setAtomCardsErrorNetwork(e instanceof Error ? e.message : 'Could not load Crowd identities');
     } finally {
       setAtomCardsLoadingNetwork(false);
     }
@@ -335,7 +336,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       });
     } catch (e: unknown) {
       if (gen !== yoursFetchGen.current) return;
-      setYoursError(e instanceof Error ? e.message : 'Could not load your atoms');
+      setYoursError(e instanceof Error ? e.message : 'Could not load tracked identities');
       setYoursCards([]);
     } finally {
       if (gen === yoursFetchGen.current) setYoursLoading(false);
@@ -540,7 +541,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       if (result.reason === 'added') toast.success(`Queued · ${stance === 'stand' ? 'Support' : 'Oppose'}`);
       else if (result.reason === 'flipped')
         toast.info(
-          `${stance === 'stand' ? 'Support' : 'Oppose'} queued — submit from the conviction cart (new deposit, not an instant flip).`,
+          `${stance === 'stand' ? 'Support' : 'Oppose'} queued. Submit from the conviction cart (new deposit, not an instant flip).`,
         );
       else toast.info('Removed from queue');
     },
@@ -604,7 +605,14 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       setVouchTick((n) => n + 1);
       void loadNamedBundle();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Vouch submit failed');
+      if (isUserRejectedWalletError(e)) {
+        toast.info('Signing was cancelled. Your queued vouches are unchanged.');
+      } else {
+        const parsed = parseProtocolError(e).trim();
+        const msg =
+          parsed || (e instanceof Error ? e.message : '') || 'Vouch submit failed';
+        toast.error(msg.length > 420 ? `${msg.slice(0, 417)}…` : msg);
+      }
     } finally {
       setVouchSubmitBusy(false);
     }
@@ -679,7 +687,14 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
         /* ignore */
       }
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Stance submit failed');
+      if (isUserRejectedWalletError(e)) {
+        toast.info('Signing was cancelled. Your Pulse queue is unchanged.');
+      } else {
+        const parsed = parseProtocolError(e).trim();
+        const msg =
+          parsed || (e instanceof Error ? e.message : '') || 'Stance submit failed';
+        toast.error(msg.length > 420 ? `${msg.slice(0, 417)}…` : msg);
+      }
     } finally {
       setStanceSubmitBusy(false);
     }
@@ -732,10 +747,10 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-mono font-black uppercase tracking-[0.28em] text-cyan-200">
-              IntuRank · Signal
+              IntuRank Signal
             </p>
             <p className="text-[13px] text-slate-200 leading-snug mt-0.5">
-              Queue Pulse stances, then open <strong className="text-cyan-300/95">Review cart</strong> below — same flow as the Arena conviction cart.
+              Queue Pulse stances, then open <strong className="text-cyan-300/95">Review cart</strong> below (same conviction cart pattern as Arena).
             </p>
           </div>
         </div>
@@ -780,7 +795,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
         />
       </div>
 
-      {/* Body — switches per lane */}
+      {/* Body switches per Pulse vs Vouch lane */}
       <AnimatePresence mode="wait">
         {lane === 'pulse' ? (
           <motion.div
@@ -1081,7 +1096,7 @@ const PulseYoursSearchModal: React.FC<{
       className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
-      aria-label="Search atoms to add"
+      aria-label="Search identities to track"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -1091,7 +1106,7 @@ const PulseYoursSearchModal: React.FC<{
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-white/[0.08]">
-          <p className="text-[12px] font-black uppercase tracking-[0.2em] text-white">Add atom</p>
+          <p className="text-[12px] font-black uppercase tracking-[0.2em] text-white">Add identity</p>
           <button
             type="button"
             onClick={() => {
@@ -1107,7 +1122,7 @@ const PulseYoursSearchModal: React.FC<{
         </div>
         <div className="p-3 border-b border-white/[0.06]">
           <label className="sr-only" htmlFor="pulse-yours-search">
-            Search Intuition atoms
+            Search Intuition graph
           </label>
           <div className="flex items-center gap-2 rounded-xl border border-white/[0.12] bg-black/50 px-3 py-2">
             <Search size={16} className="text-cyan-400/90 shrink-0" />
@@ -1373,7 +1388,7 @@ const PulseLane: React.FC<{
               Queue Support or Oppose on the <strong className="text-cyan-200">identity claim rail</strong> above, then submit from the conviction cart.
             </p>
             <p className="text-[11px] text-slate-500 mt-3 max-w-md mx-auto leading-relaxed">
-              If you just confirmed on-chain, stakes can take a few minutes to show here while the indexer catches up — use{' '}
+              If you just confirmed on-chain, stakes can take a few minutes to appear while the indexer syncs. Use{' '}
               <strong className="text-slate-400">Refresh</strong> at the top of Signal.
             </p>
           </div>
@@ -1392,7 +1407,7 @@ const PulseLane: React.FC<{
         <div className="flex items-center justify-between gap-2 px-1">
           <p className="text-[12px] text-slate-300">
             <strong className="text-white tabular-nums">{meStances.length}</strong> stake{meStances.length === 1 ? '' : 's'} ·
-            <span className="text-slate-400"> showing {start + 1}–{start + pageRows.length}</span>
+            <span className="text-slate-400"> showing {start + 1} to {start + pageRows.length}</span>
           </p>
           <Link
             to="/portfolio"
@@ -1475,7 +1490,7 @@ const PulseLane: React.FC<{
                         ? 'bg-amber-500/25 border-amber-300/60 text-amber-50'
                         : 'border-white/15 bg-black/40 text-slate-100 hover:text-white hover:border-white/40'
                     }`}
-                    title={`Queue ${it.support ? 'Oppose' : 'Support'} in the conviction cart — you submit a separate vault deposit; this is not a one-tap “flip” like some other apps.`}
+                    title={`Queue ${it.support ? 'Oppose' : 'Support'} in the conviction cart. You confirm a separate vault deposit here (not a one-tap flip).`}
                   >
                     <ArrowLeftRight size={13} strokeWidth={2.3} />
                     {oppositeQueued
@@ -1557,7 +1572,7 @@ const PulseLane: React.FC<{
             <div className="flex flex-col items-center gap-2 py-16">
               <Loader2 className="w-7 h-7 text-cyan-300 animate-spin" />
               <span className="text-[12px] font-semibold uppercase tracking-widest text-slate-300">
-                Loading your atoms…
+                Loading your identities…
               </span>
             </div>
           ) : !yoursHasIds ? (
@@ -1565,8 +1580,8 @@ const PulseLane: React.FC<{
               <Hash className="mx-auto mb-2 text-cyan-300" size={22} />
               <p className="text-[14px] text-white font-semibold">Nothing saved yet.</p>
               <p className="text-[12px] text-slate-400 mt-2 max-w-sm mx-auto">
-                Heart atoms on <strong className="text-cyan-200">Hot</strong>/<strong className="text-cyan-200">Crowd</strong>,
-                or search to add.
+                Heart identities on <strong className="text-cyan-200">Hot</strong> or{' '}
+                <strong className="text-cyan-200">Crowd</strong>, or search to add one.
               </p>
               <button
                 type="button"
@@ -1578,7 +1593,7 @@ const PulseLane: React.FC<{
                 className="mt-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/55 bg-cyan-500/15 px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider text-cyan-50 hover:bg-cyan-500/25"
               >
                 <Plus size={16} />
-                Search atoms
+                Search identities
               </button>
             </div>
           ) : (
@@ -1595,7 +1610,7 @@ const PulseLane: React.FC<{
               {!yoursLoading && yoursCards.length === 0 && !yoursError ? (
                 <div className="rounded-2xl border border-white/[0.08] bg-black/40 px-6 py-8 text-center">
                   <p className="text-[13px] text-slate-300 max-w-md mx-auto leading-relaxed">
-                    No claims for these atoms yet. Try <strong className="text-cyan-200">Refresh</strong> or{' '}
+                    No claims loaded for these identities yet. Try <strong className="text-cyan-200">Refresh</strong> or{' '}
                     <strong className="text-cyan-200">Add</strong>.
                   </p>
                 </div>
@@ -1684,7 +1699,7 @@ const PulseLane: React.FC<{
 };
 
 /* -------------------------------------------------------------------------- */
-/* Pulse · Identity atom cards — portal-style rail (teal tags + stake + gold thumbs)            */
+/* Pulse identity cards rail */
 /* -------------------------------------------------------------------------- */
 
 /** Hide redundant “has tag” line; show predicate when it adds meaning (graph-driven). */
@@ -1750,10 +1765,10 @@ const PulseAtomTagSection: React.FC<{
 
   const atomsHeading =
     rail === 'yours'
-      ? 'Your atoms'
+      ? 'Your identities'
       : atomTone === 'crowd'
-        ? 'Atoms · live order'
-        : 'Atoms · curated heat';
+        ? 'Identities (live order)'
+        : 'Identities (spotlight)';
 
   const gridClass = 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start';
 
@@ -1761,9 +1776,8 @@ const PulseAtomTagSection: React.FC<{
     return (
       <div className="space-y-3">
         <p className="px-1 text-[11px] font-medium text-slate-500 max-w-xl">
-          Each card loads that identity on the Intuition graph, then triples and vault stats per atom (the same depth
-          as a market claim view). That means many requests—first load is slower; Hot and Crowd are then cached in
-          this browser for a while.
+          Each card resolves that identity from the graph, then loads triples and vault stats (same depth as a market row).
+          First load pulls many subgraph calls; Hot and Crowd results cache in this browser afterward.
         </p>
         <div className={gridClass}>
           {Array.from({ length: 4 }).map((_, i) => (
@@ -1885,7 +1899,7 @@ const PulseAtomTagSection: React.FC<{
             }}
             onMouseEnter={playHover}
             className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/50 bg-cyan-500/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-cyan-50 hover:bg-cyan-500/25 transition-colors duration-200"
-            title="Search atoms"
+            title="Search identities"
           >
             <Plus size={14} strokeWidth={2.4} />
             Add
@@ -1989,7 +2003,7 @@ const PulseAtomTagCard: React.FC<{
   const slotKind = card.pulseSlotKind;
   const emptySlotCopy =
     slotKind === 'unresolved'
-      ? 'Not indexed under this label yet — the graph may be catching up.'
+      ? 'Label not indexed yet; the subgraph may still be syncing.'
       : slotKind === 'empty_claims'
         ? 'Atom resolved, but no “has tag” claims with vaults are wired for this slot yet.'
         : 'Nothing on this page.';
@@ -2296,7 +2310,7 @@ const VouchLane: React.FC<{
         <Shield className="mx-auto mb-3 text-amber-300" size={28} />
         <p className="text-[13px] text-slate-200 font-semibold">No `.eth` / `.trust` rows from the graph.</p>
         <p className="text-[12px] text-slate-400 mt-2 leading-relaxed">
-          Refresh pulls vault atoms and the accounts index. If the subgraph lags, names can appear after sync.
+          Refresh pulls vault identities and the accounts index. Names can lag until the indexer finishes.
         </p>
       </div>
     );
@@ -2315,7 +2329,7 @@ const VouchLane: React.FC<{
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-black font-display text-white leading-tight">Vouch</h2>
             <p className="text-[14px] text-slate-200 leading-relaxed mt-1">
-              Queue trust for the handles below — submit the whole batch from the bar when you&rsquo;re ready.
+              Queue trust for the handles below, then submit the full batch from the bar when ready.
             </p>
             <p className="text-[12px] font-mono uppercase tracking-[0.16em] text-slate-300 mt-2">
               {sorted.length} names · heavier vaults first

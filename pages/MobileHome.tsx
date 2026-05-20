@@ -1,5 +1,5 @@
 /**
- * MobileHome — purpose-built mobile landing.
+ * Mobile-first landing variant.
  * Loads only on mobile viewports; the full desktop `Home` page stays untouched.
  *
  * Visual language: layered glass cards, bold gradients, generous radii,
@@ -232,7 +232,7 @@ const MobileHome: React.FC = () => {
           </div>
         </div>
 
-        {/* network pulse — slightly larger tap/read zones */}
+        {/* Network pulse row: larger tap targets */}
         <div className="relative mt-5 grid grid-cols-3 gap-2.5 sm:gap-3">
           <div className="min-w-0 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-3.5 sm:px-3">
             <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-slate-500 font-black truncate">
@@ -245,7 +245,7 @@ const MobileHome: React.FC = () => {
           </div>
           <div className="min-w-0 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-3.5 sm:px-3">
             <p className="text-[8px] font-mono uppercase tracking-[0.2em] text-slate-500 font-black truncate">
-              Atoms
+              Identities
             </p>
             <p className="mt-1.5 text-[15px] sm:text-base font-display font-black text-intuition-primary leading-none truncate">
               {compact(atoms)}
@@ -262,7 +262,7 @@ const MobileHome: React.FC = () => {
         </div>
       </section>
 
-      {/* QUICK ACTIONS — 2×2 rows so tiles aren’t micro-columns */}
+      {/* Quick actions grid */}
       <section aria-label="Quick actions">
         <div className="grid grid-cols-2 gap-3">
           {QuickActions.map((q) => (
@@ -290,7 +290,7 @@ const MobileHome: React.FC = () => {
 
       <HomeGameBoard compact />
 
-      {/* Activity · Portfolio · Create — one row, three columns */}
+      {/* Activity / Portfolio / Create row */}
       <section className="grid grid-cols-3 gap-2 sm:gap-2.5">
         <Link
           to="/feed"
@@ -302,7 +302,7 @@ const MobileHome: React.FC = () => {
           </div>
           <span className="text-[11px] font-display font-black text-white leading-tight sm:text-[12px]">Activity</span>
           <span className="hidden text-[9px] leading-snug text-slate-500 min-[360px]:line-clamp-2 min-[360px]:block">
-            Live atoms, claims, and stakes.
+            Live identities, claims, and stakes.
           </span>
           <span className="mt-auto inline-flex items-center gap-0.5 text-[9px] font-mono font-black uppercase tracking-[0.12em] text-intuition-primary">
             Feed <ArrowRight size={10} />
@@ -340,7 +340,7 @@ const MobileHome: React.FC = () => {
             Create
           </span>
           <span className="relative hidden text-[9px] leading-snug text-slate-400 min-[360px]:line-clamp-2 min-[360px]:block">
-            Atom or claim
+            Identity or claim
           </span>
           <span className="relative mt-auto flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 text-intuition-primary group-active:scale-95 transition-transform">
             <ArrowRight size={12} />
@@ -348,9 +348,9 @@ const MobileHome: React.FC = () => {
         </Link>
       </section>
 
-      {/* FOOTNOTE — extra air above dock */}
+      {/* Footer spacing above bottom dock */}
       <p className="text-center text-[10px] font-mono uppercase tracking-[0.28em] text-slate-600 pt-2 pb-1 flex items-center justify-center gap-2">
-        <Trophy size={11} className="text-intuition-warning/70 shrink-0" /> IntuRank mobile · live
+        <Trophy size={11} className="text-intuition-warning/70 shrink-0" /> IntuRank mobile, live
       </p>
     </div>
   );

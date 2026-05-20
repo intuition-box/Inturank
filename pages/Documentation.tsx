@@ -331,7 +331,7 @@ const Documentation: React.FC = () => {
     };
   }, [syncActiveFromScroll]);
 
-  /** Scroll docs column (or window on mobile) to a section — shared by TOC clicks and deep links (`/documentation#activity-xp`). */
+  /** Scroll docs column (or mobile window) to a section anchor (TOC / deep links). */
   const applySectionScroll = useCallback((id: string, behavior: ScrollBehavior) => {
     const target = document.getElementById(id);
     if (!target) return false;
@@ -815,9 +815,9 @@ const Documentation: React.FC = () => {
               </p>
               <p>
                 <strong className="text-slate-100 font-semibold">Activity XP</strong> (wallet connected): +{PROTOCOL_XP_SKILL_CHAT}{' '}
-                per assistant reply (daily cap). Signing a Skill-proposed <strong className="text-slate-200">atom</strong> adds
+                per assistant reply (daily cap). Signing a Skill-proposed <strong className="text-slate-200">identity mint</strong> adds
                 up to +{PROTOCOL_XP_SKILL_ATOM}; signing a <strong className="text-slate-200">triple</strong> adds up to +
-                {PROTOCOL_XP_SKILL_TRIPLE} — on-chain amounts scale with your vault deposit (see{' '}
+                {PROTOCOL_XP_SKILL_TRIPLE}. On-chain payouts scale with your vault deposit (see{' '}
                 <Link
                   to="/documentation#activity-xp"
                   className="text-intuition-primary hover:text-intuition-primary/90 underline-offset-2 hover:underline font-medium"
@@ -827,19 +827,18 @@ const Documentation: React.FC = () => {
                 ).
               </p>
               <p>
-                Typical actions include <strong className="text-slate-100 font-semibold">creating atoms</strong> (labels and
-                deposits), <strong className="text-slate-100 font-semibold">creating triples</strong> from subject, predicate,
-                and object labels (missing atoms can be created in the same flow), and{' '}
+                Typical actions include <strong className="text-slate-100 font-semibold">minting identities</strong>,{' '}
+                <strong className="text-slate-100 font-semibold">creating triples</strong> from subject, predicate,
+                and object labels (missing terms can mint in-flow), and{' '}
                 <strong className="text-slate-100 font-semibold">vault deposits</strong> into existing terms. The sidebar
                 shows approximate costs: on the order of <strong className="text-slate-100 font-semibold">~0.15 {CURRENCY_SYMBOL}</strong>{' '}
-                plus your chosen vault deposit for atom and triple creation in many configurations; deposit size for
+                plus your chosen vault deposit for identity mints and triple creation in many configurations; deposit size for
                 staking varies with the curve and pool. First-time flows may ask for{' '}
                 <strong className="text-slate-100 font-semibold">FeeProxy approval</strong> before the protocol accepts your
                 transactions.
               </p>
               <p>
-                <strong className="text-slate-100 font-semibold">Minimum TRUST for creations via the Skill:</strong> Any atom
-                or triple the Intuition Skill agent proposes uses a vault deposit of at least{' '}
+                <strong className="text-slate-100 font-semibold">Minimum TRUST for Skill JSON:</strong> Any identity or triple mint the agent proposes carries at least{' '}
                 <strong className="text-slate-100 font-semibold">0.5 TRUST</strong> ({CURRENCY_SYMBOL}). The JSON field{' '}
                 <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">depositTrust</code> must be{' '}
                 <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">&quot;0.5&quot;</code> or higher (that
@@ -1112,7 +1111,7 @@ const Documentation: React.FC = () => {
             <DocSection id="activity-xp" title="How XP works">
               <p>
                 There are <strong className="text-slate-100 font-semibold">two kinds of XP</strong>.{' '}
-                <strong className="text-slate-100 font-semibold">Arena XP</strong> is what you get from playing the Arena — the fast voting flow on{' '}
+                <strong className="text-slate-100 font-semibold">Arena XP</strong> rewards the fast voting ladder on{' '}
                 <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">/climb</code>.{' '}
                 <strong className="text-slate-100 font-semibold">Activity XP</strong> is extra credit for things you do on-chain (markets, create flows, sending TRUST, Arena vault deposits, and Signal vouch batches). The app adds it when your wallet qualifies; numbers stay in sync with the little hints on each page.
               </p>
@@ -1134,35 +1133,35 @@ const Documentation: React.FC = () => {
                       <td className="px-4 py-3 text-slate-200">Voted in the Arena (Climb)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">≥ {ARENA_XP_PER_RANK_PICK}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Arena XP — not chain trading. You get more when you turn up the stake on your picks.
+                        Arena XP: not marketplace trading; higher stakes on picks credit more Arena XP when applicable.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Bought into a market (deposit TRUST)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_MARKET_ACQUIRE}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with how much {CURRENCY_SYMBOL} you deposit on that buy. Dust-sized buys earn little or none; big buys earn up to this max.
+                        Activity XP scales with TRUST deposited on that market buy (dust buys earn less; caps apply).
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Created an atom</td>
+                      <td className="px-4 py-3 text-slate-200">Minted an identity term</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_ATOM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with your vault deposit on create; protocol minimum alone usually isn’t enough for the full amount.
+                        Activity XP scales with vault deposit when you mint; protocol minimum alone is usually below the listed max.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Created a claim (triple)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with triple deposit; small deposits earn a fraction of this max.
+                        Activity XP scales with vault deposit when you mint a triple; small deposits earn a fraction of this max.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Added something to a list</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_ADD_TO_LIST}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with list triple deposit (often the protocol floor unless you raise it).
+                        Activity XP scales with list-membership deposits (often the protocol floor unless you raise it).
                       </td>
                     </tr>
                     <tr>
@@ -1177,36 +1176,35 @@ const Documentation: React.FC = () => {
                       <td className="px-4 py-3 text-slate-200">Signal · Vouch batch (FeeProxy createTriples)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — treated like <strong className="text-slate-400 font-semibold">created a claim</strong>. One transaction can mint several “vouches for” triples; the deposit basis is the{' '}
-                        <strong className="text-slate-400 font-semibold">sum</strong> of per-vouch vault deposits, then the usual create-claim scaling and daily cap apply.
+                        Activity XP counts like <strong className="text-slate-400 font-semibold">created a claim</strong>. One batched mint can attach several “vouches for” triples; deposits sum before scaling and caps apply.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Chatted with Skill agent</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_CHAT}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — each assistant reply while your wallet is connected (deduped per message). Capped per day.
+                        Activity XP grants per assistant reply with wallet connected (deduped); daily cap enforced.
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Used Skill to create an atom (signed)</td>
+                      <td className="px-4 py-3 text-slate-200">Used Skill for an identity mint (signed)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_ATOM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with vault deposit on that Skill-signed atom; small deposits earn a fraction of this max. Separate from the generic “Created an atom” row (Create flow).
+                        Activity XP scales with deposit on Skill-signed identities; capped separately from generic Create-flow mint XP.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Used Skill to publish a triple (signed)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SKILL_TRIPLE}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — scales with the triple deposit (label pipeline or FeeProxy createTriples from Skill). Higher cap than Skill atom; tiny deposits earn little or none.
+                        Activity XP scales with Skill triple deposits from label bundles or FeeProxy paths; tinier stakes earn less before daily caps clip.
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-slate-200">Sent TRUST (wallet to wallet)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_SEND_TRUST}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
-                        Activity XP — only if this send is <strong className="text-slate-400 font-semibold">{PROTOCOL_XP_SEND_TRUST_MIN_TRUST_UNITS} TRUST or more</strong> in one go. Daily caps still apply. Not the same as buying market shares.
+                        Activity XP only if the send is <strong className="text-slate-400 font-semibold">{PROTOCOL_XP_SEND_TRUST_MIN_TRUST_UNITS} TRUST or more</strong> in one transfer. Daily caps still apply. Different from buying market shares.
                       </td>
                     </tr>
                   </tbody>
@@ -1222,7 +1220,7 @@ const Documentation: React.FC = () => {
                   <strong className="text-slate-200">daily ceiling</strong> (UTC midnight) so endless tiny repeats stop paying off.
                 </p>
                 <p className="text-slate-500 text-xs">
-                  Exact floors, reference sizes, and caps live in <code className="bg-white/5 px-1 rounded text-slate-400">constants.ts</code> next to the XP numbers — tune them as the product evolves.
+                  Exact floors, reference sizes, and caps live in <code className="bg-white/5 px-1 rounded text-slate-400">constants.ts</code> next to the XP numbers; tune them as the product evolves.
                 </p>
               </div>
             </DocSection>
@@ -1305,7 +1303,7 @@ const Documentation: React.FC = () => {
 
               <h3 className="text-base font-semibold text-slate-100 mt-8 mb-3 flex items-center gap-2">
                 <Radio className="w-5 h-5 text-cyan-300 shrink-0" aria-hidden />
-                Signal — Pulse &amp; Vouch
+                Signal: Pulse &amp; Vouch
               </h3>
               {ARENA_UI_VISIBLE ? (
                 <>
@@ -1315,12 +1313,12 @@ const Documentation: React.FC = () => {
                     <strong className="text-slate-100 font-semibold">Vouch</strong>.
                   </p>
                   <p>
-                    <strong className="text-slate-100 font-semibold">Pulse</strong> surfaces identity atoms as <strong className="text-slate-200">tag cards</strong> (third-person predicates like “has tag”, “trusts”, etc.).
+                    <strong className="text-slate-100 font-semibold">Pulse</strong> surfaces identity tag cards (third-person predicates like “has tag”, “trusts”, etc.).
                     Tabs group the rail: <strong className="text-slate-200">Hot</strong> is the editorial spotlight;{' '}
-                    <strong className="text-slate-200">Crowd</strong> is the full curated portal list (same order you configured in the app);{' '}
-                    <strong className="text-slate-200">Yours</strong> is atoms you pin; <strong className="text-slate-200">My stakes</strong> lists every triple where your wallet already has a position, with controls to queue the opposite stance{' '}
-                    (new on-chain deposit via the conviction cart) or unstake from the vault.{' '}
-                    Tapping <strong className="text-slate-200">Support</strong> or <strong className="text-slate-200">Oppose</strong> queues a stance for that vault triple (local queue — no wallet yet). Queued stances are summarized in the footer; the on-chain batch for those stances is still rolling out — until then, plan in Signal and execute larger Arena list batches from the main grid when you need vault deposits and XP.
+                    <strong className="text-slate-200">Crowd</strong> follows the curated portal order;{' '}
+                    <strong className="text-slate-200">Yours</strong> tracks identities you pin; <strong className="text-slate-200">My stakes</strong> lists triples where your wallet already has a position, with controls to queue the opposite stance{' '}
+                    (new vault deposit through the conviction cart) or redeem from the vault.{' '}
+                    <strong className="text-slate-200">Support</strong> and <strong className="text-slate-200">Oppose</strong> add rows to the local cart; connect to {NETWORK_NAME}, enable the fee proxy when prompted, then submit from the cart footer to write those vault deposits on-chain.
                   </p>
                   <p>
                     <strong className="text-slate-100 font-semibold">Vouch</strong> is for named identities (e.g. <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-slate-300">.eth</code> /{' '}

@@ -1,7 +1,12 @@
 import React, { memo, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dices, Plus, Play, Sparkles, Flame, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getArenaListConstituents, getArenaPreviewItems } from '../../services/arenaListsRegistry';
+import {
+  getArenaDataSourceFootprint,
+  getArenaListConstituents,
+  getArenaPreviewItems,
+} from '../../services/arenaListsRegistry';
+import type { ArenaDataSourceFootprintKind } from '../../services/arenaListsRegistry';
 import type { RankItem } from '../../pages/RankedList';
 import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import type { ContestHubSection as ArenaContestHubSection } from '../../services/arenaHubGroups';
@@ -16,6 +21,8 @@ type Props = {
   onSelectList: (id: string) => void;
   reduceMotion?: boolean;
   previewPoolByListId?: Record<string, RankItem[]>;
+  /** Live member counts for portal lists (e.g. from `countListMembersForObject`). */
+  listConstituentOverrides?: Record<string, number>;
   onRandomContest?: () => void;
   onResumeLast?: () => void;
   /** When set, shows resume control (last played list title). */
@@ -64,6 +71,17 @@ function paletteFor(tag: string): TagPalette {
   return TAG_PALETTE[tag.toLowerCase()] || FALLBACK_PALETTE;
 }
 
+function footprintTopRightClasses(kind: ArenaDataSourceFootprintKind): string {
+  switch (kind) {
+    case 'live_indexer':
+      return 'border-emerald-400/45 bg-emerald-500/10 text-emerald-200';
+    case 'portal_chain':
+      return 'border-violet-400/45 bg-violet-500/10 text-violet-100';
+    default:
+      return 'border-amber-400/45 bg-amber-500/10 text-amber-100';
+  }
+}
+
 /** GPU-friendly card hover: translate + shadow (no backdrop-filter). Honors `motion-safe`. */
 function contestCardInteractClasses(reducedMotion: boolean, isHot: boolean): string {
   if (reducedMotion) return 'transition-colors duration-150 active:opacity-[0.92]';
@@ -100,15 +118,17 @@ function pagerBtnInteractClasses(reducedMotion: boolean): string {
 type LaneProps = {
   sec: ArenaContestHubSection;
   previewPoolByListId?: Record<string, RankItem[]>;
+  listConstituentOverrides?: Record<string, number>;
   onSelectList: (id: string) => void;
   /** When true (or user OS pref), skip transform / springy motion. */
   reduceMotion?: boolean;
 };
 
-/** One thematic lane — truncates very long grids with Prev / Next. */
+/** Paginated thematic lane row. */
 const PaginatedContestLane = memo(function PaginatedContestLane({
   sec,
   previewPoolByListId,
+  listConstituentOverrides,
   onSelectList,
   reduceMotion,
 }: LaneProps) {
@@ -136,8 +156,11 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
           const glyph = L.listGlyph?.trim() || '◇';
           const palette = paletteFor(L.tag);
           const isHot = L.tag.toLowerCase() === 'heat';
-          const isLive = L.source === 'graphql' || (L.source === 'portal' && previews.length > 0);
-          const picks = getArenaListConstituents(L);
+          const footprint = getArenaDataSourceFootprint(L);
+          const picks =
+            typeof listConstituentOverrides?.[L.id] === 'number'
+              ? listConstituentOverrides[L.id]!
+              : getArenaListConstituents(L);
           const cardInteract = contestCardInteractClasses(rm, isHot);
 
           return (
@@ -203,12 +226,17 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                   {isHot ? <Flame className="h-2.5 w-2.5" strokeWidth={2.6} aria-hidden /> : null}
                   {L.tag}
                 </span>
-                {isLive ? (
-                  <span className="absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded border border-emerald-400/45 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-mono font-black uppercase tracking-[0.16em] text-emerald-200">
-                    <span className="block h-1.5 w-1.5 rounded-full bg-emerald-300" />
-                    Live
-                  </span>
-                ) : null}
+                <span
+                  className={`absolute right-2.5 top-2.5 inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-mono font-black uppercase tracking-[0.16em] ${footprintTopRightClasses(
+                    footprint.kind
+                  )}`}
+                  title={footprint.detailLine}
+                >
+                  {footprint.kind === 'live_indexer' || footprint.kind === 'portal_chain' ? (
+                    <span className="block h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-90 shadow-[0_0_10px_currentColor]" />
+                  ) : null}
+                  {footprint.badgeShort}
+                </span>
                 <span
                   className={`absolute right-2.5 bottom-2.5 flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-black/60 text-lg shadow-sm ${
                     rm
@@ -283,12 +311,12 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
       {needPaging ? (
         <nav
           className="mt-5 flex flex-col items-stretch gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between"
-          aria-label={`${sec.title} — pagination`}
+          aria-label={`${sec.title}, pagination`}
         >
           <p className="text-center font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 sm:text-left">
             Showing{' '}
             <span className="tabular-nums text-slate-300">
-              {total === 0 ? 0 : start + 1}–{endIdx}
+              {total === 0 ? 0 : start + 1} to {endIdx}
             </span>{' '}
             of <span className="tabular-nums text-slate-300">{total}</span>
           </p>
@@ -348,6 +376,7 @@ export const ArenaContestHub: React.FC<Props> = ({
   sections,
   onSelectList,
   previewPoolByListId,
+  listConstituentOverrides,
   reduceMotion,
   onRandomContest,
   onResumeLast,
@@ -398,8 +427,7 @@ export const ArenaContestHub: React.FC<Props> = ({
               </span>
             </h1>
             <p className="mt-3 max-w-xl text-[13px] sm:text-sm text-slate-400/95 leading-relaxed">
-              Every tile below is a live list — stack stances, order your deck, see how you line up.
-              Conviction on-chain is optional.
+              Every contest below pulls a live roster: stance in Curate, order your Rank deck, then Compare. Submitting stakes is optional.
             </p>
           </div>
 
@@ -528,6 +556,7 @@ export const ArenaContestHub: React.FC<Props> = ({
           <PaginatedContestLane
             sec={sec}
             previewPoolByListId={previewPoolByListId}
+            listConstituentOverrides={listConstituentOverrides}
             onSelectList={onSelectList}
             reduceMotion={reduceMotion}
           />

@@ -31,12 +31,13 @@ function avatarGlyph(label: string): string {
 }
 
 const HINT_LISTS = 'Distinct portal lists represented in your finalized indexed claims (Arena + same Intuition predicates).';
-const HINT_ATOMS = 'Distinct subjects you have a latest on-chain stance for in those lists.';
+const HINT_IDENTITIES =
+  'Count of identities you latest stanced on-chain inside those lists.';
 const HINT_XP =
   'Ranks by **total IntuRank XP**: Arena (indexed ranks) + Activity (markets, creates, sends). Others’ activity counts when mirrored from the API; yours includes this browser.';
 
 
-/** Column template: rank · player · lists · atoms · arena XP — match header row to body rows */
+/** Column grid: rank, player, lists, identities, arena XP */
 const LB_GRID =
   'grid-cols-[minmax(4.25rem,5.25rem)_minmax(9rem,1fr)_minmax(5rem,8rem)_minmax(5rem,8rem)_minmax(11rem,1.2fr)]';
 
@@ -239,9 +240,9 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                           {myXpRec.listsPlayed.toLocaleString()}
                         </span>
                       </div>
-                      <div title={HINT_ATOMS}>
+                      <div title={HINT_IDENTITIES}>
                         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-400/95 block mb-0.5">
-                          Atoms
+                          Identities
                         </span>
                         <span className="text-lg sm:text-xl font-black tabular-nums text-emerald-100">
                           {myXpRec.atomsRanked.toLocaleString()}
@@ -323,8 +324,8 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                       <ColHead align="right" hint={HINT_LISTS}>
                         Lists
                       </ColHead>
-                      <ColHead align="right" hint={HINT_ATOMS}>
-                        Atoms
+                      <ColHead align="right" hint={HINT_IDENTITIES}>
+                        Identities
                       </ColHead>
                       <span
                         className="flex items-center justify-end gap-2 uppercase tracking-[0.14em] text-slate-300 font-bold text-[10px] sm:text-[11px] leading-snug text-right"

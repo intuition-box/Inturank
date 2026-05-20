@@ -1,5 +1,5 @@
 /**
- * MobileLayout — top app-bar + floating pill bottom nav (five primary tabs).
+ * MobileLayout: top bar + floating bottom nav (five primary tabs).
  * Used in place of the desktop `Layout` chrome whenever `useIsMobile()` is true.
  *
  * Dock: Home · Markets · Skill · Leaderboard · Portfolio (all in-app routes).
@@ -325,11 +325,19 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
             type="button"
             onClick={async () => {
               playClick();
-              await switchNetwork();
+              try {
+                await switchNetwork();
+              } catch (e: unknown) {
+                const msg =
+                  typeof e === 'object' && e !== null && 'message' in e
+                    ? String((e as { message?: string }).message)
+                    : 'Could not switch network';
+                toast.error(msg.length > 160 ? `${msg.slice(0, 157)}…` : msg);
+              }
             }}
             className="w-full px-4 py-2 text-[10px] font-mono font-black tracking-[0.18em] uppercase text-white bg-intuition-danger active:opacity-90"
           >
-            Wrong network — tap to switch
+            Wrong network: tap to switch
           </button>
         )}
       </header>

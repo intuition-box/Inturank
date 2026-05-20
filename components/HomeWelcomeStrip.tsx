@@ -224,12 +224,12 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
               </span>
             </Link>
             <p className="max-w-[14rem] text-center text-[10px] leading-snug text-slate-500">
-              Contest picker lives below. Graph Create is under nav for atoms / claims.
+              Contest picker lives below. Use nav for graph create (identities + claims).
             </p>
           </div>
         </div>
 
-        {/* Scroll bridge — anchors contest floor */}
+        {/* Scroll cue into contest grid */}
         <div
           className={`mx-auto flex w-full max-w-5xl flex-col items-center ${mobile ? 'mt-10' : 'mt-14'}`}
         >
