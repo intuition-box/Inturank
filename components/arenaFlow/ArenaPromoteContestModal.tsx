@@ -49,9 +49,9 @@ type Props = {
   onClose: () => void;
   /** Drives deck color theming. */
   listCategory?: string;
-  /** Contest title used as the list atom's name. */
+  /** Contest title saved on the list identity. */
   contestTitle: string;
-  /** Optional contest description that lands on the list atom. */
+  /** Optional description copied onto the list identity metadata. */
   contestDescription?: string;
   /** Members to anchor on-chain. Trimmed to ARENA_PROMOTE_MAX_MEMBERS by the service. */
   items: ArenaPromoteListItem[];
@@ -151,7 +151,7 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
 
     setTxStatus('CALCULATING');
     setTxError(null);
-    setTxProgress('Preparing list atom…');
+    setTxProgress('Preparing list identity…');
 
     try {
       setTxStatus('SIGNING');
@@ -329,28 +329,27 @@ const FormView: React.FC<{
   const balanceNum = parseFloat(walletBalance);
   const submitLabel = !isWalletConnected
     ? 'Connect wallet'
-    : `Mint contest · ~${estCost} ${CURRENCY_SYMBOL}`;
+    : `Mint contest, ~${estCost} ${CURRENCY_SYMBOL}`;
   const canSubmit = isWalletConnected && !insufficientFunds && effectiveItems.length > 0;
 
   return (
     <div className="px-5 py-5">
       <p className="text-[12px] leading-relaxed text-slate-400">
-        Promoting writes a real <span className="font-semibold text-slate-200">list atom</span> plus one membership
-        triple per item. Once live, every peer who ranks this contest contributes to the same on-chain leaderboard
-        — and you finally get real comparisons.
+        Promoting writes the <span className="font-semibold text-slate-200">list identity</span> plus one membership
+        triple per row. When it is live, everyone ranks the same on-chain leaderboard so similarity is real.
       </p>
 
       {/* Plan summary */}
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <PlanStat icon={<Sparkles className="h-3.5 w-3.5" strokeWidth={2.4} />} label="List atom" value="1" palette={palette} />
-        <PlanStat icon={<Layers className="h-3.5 w-3.5" strokeWidth={2.4} />} label="Member atoms" value={String(effectiveItems.length)} palette={palette} />
+        <PlanStat icon={<Sparkles className="h-3.5 w-3.5" strokeWidth={2.4} />} label="List identity" value="1" palette={palette} />
+        <PlanStat icon={<Layers className="h-3.5 w-3.5" strokeWidth={2.4} />} label="Members" value={String(effectiveItems.length)} palette={palette} />
         <PlanStat icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.4} />} label="Triples" value={String(effectiveItems.length)} palette={palette} />
       </div>
 
       {trimmed ? (
         <p className="mt-3 text-[11px] leading-snug text-amber-300/85">
-          Trimmed to first {effectiveItems.length} of {rawItemCount} items (per-call cap). You can re-promote the
-          rest later — they’ll attach to the same list atom.
+          Trimmed to first {effectiveItems.length} of {rawItemCount} rows (per-call cap). Re-promote later to attach the
+          remainder to the same list identity.
         </p>
       ) : null}
 
@@ -569,7 +568,7 @@ function defaultProgress(s: TxStatus): string {
     case 'SIGNING':
       return 'Confirm in your wallet.';
     case 'BROADCASTING':
-      return 'Sending atoms and triples to the network…';
+      return 'Sending identities and triples…';
     case 'CONFIRMING':
       return 'Waiting for the indexer to surface the new list…';
     case 'SUCCESS':

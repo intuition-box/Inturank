@@ -37,6 +37,7 @@ import {
   createTripleFromLabels,
   looksLikeBytes32TermId,
   inferFeeProxyActionFromCalldata,
+  isUserRejectedWalletError,
 } from '../services/web3';
 import {
     CURRENCY_SYMBOL,
@@ -95,15 +96,7 @@ function newSkillMessageId(): string {
     return `skill-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-function isUserRejectionError(err: unknown): boolean {
-    const e = err as { code?: number | string; cause?: { code?: number }; message?: string; shortMessage?: string };
-    const code = e?.code ?? e?.cause?.code;
-    if (code === 4001 || code === 'ACTION_REJECTED') return true;
-    const s = `${e?.message ?? ''} ${e?.shortMessage ?? ''}`.toLowerCase();
-    return /user reject|rejected|denied|cancel|cancelled|4001|action_rejected|user denied|request rejected|wallet.*reject|rejected the request/i.test(s);
-}
-
-/** GraphQL or prose was fenced as ```json — do not run JSON5 tx parser (avoids false "Could not build transaction" on read-only answers). */
+/** GraphQL in a ```json fence: skip tx parser (avoid false positives on read-only answers). */
 function looksLikeGraphQLFencedAsJson(raw: string): boolean {
     const s = raw.trim();
     if (s.startsWith('{')) return false;
@@ -175,7 +168,7 @@ function skillTxActionDisplayLabel(intent: Record<string, unknown> | null | unde
     if (!intent) return 'Protocol transaction';
     if (isTripleFromLabelsIntent(intent)) return 'Triple (claim)';
     const a = resolveSkillTxAction(intent);
-    if (a === 'createAtoms') return 'Create atom(s)';
+    if (a === 'createAtoms') return 'Create identity';
     if (a === 'createTriples') return 'Create claim(s)';
     if (a === 'deposit') return 'Vault deposit';
     if (a === 'tripleFromLabels') return 'Triple (claim)';
@@ -293,7 +286,7 @@ function parsedRecordLooksLikeShellTemplate(parsed: Record<string, unknown>): bo
     return false;
 }
 
-/** Triple vault deposit — matches protocol prompt; LLMs often hallucinate "10". */
+/** Triple vault deposit (protocol default); models often hallucinate "10". */
 const DEFAULT_TRIPLE_DEPOSIT_TRUST = '0.5';
 
 function normalizeTripleDepositTrust(raw: unknown): string {
@@ -303,16 +296,16 @@ function normalizeTripleDepositTrust(raw: unknown): string {
     return s;
 }
 
-/** Explains how subject/predicate/object are resolved — matches web3 resolveAtomReferenceToTermId. */
+/** Resolution note for triple preview (same rules as on-chain term resolution). */
 function tripleUiResolutionLine(subject: string, predicate: string, object: string): string {
     const n = [subject, predicate, object].filter((x) => looksLikeBytes32TermId(x)).length;
     if (n === 3) {
-        return 'All three are term IDs — existing on-chain atoms are reused for them (no new atom transactions for those values).';
+        return 'All three are hex term IDs. The graph reuses those on-chain identities (no new mints for them).';
     }
     if (n > 0) {
-        return 'Hex term IDs use existing atoms on-chain when present; plain-text labels only create atoms if that name does not exist yet.';
+        return 'Hex IDs bind to existing identities when present; plain text only mints if that name is not on-chain yet.';
     }
-    return 'Text labels: missing atoms are created first when needed, then the triple (one wallet prompt per new atom).';
+    return 'Plain labels: new identities mint first if needed, then the claim (one wallet prompt per new identity).';
 }
 
 /** Prefer first non-empty string among keys (LLMs use subject vs subjectId, etc.). */
@@ -424,7 +417,7 @@ async function tryRescueBuiltInCreateAtomAfterBadSkillJson(
                 data: built.data,
                 value: built.valueWei.toString(),
                 chainId: String(CHAIN_ID),
-                description: `Create atom "${onChainName}"`,
+                description: `Create identity "${onChainName}"`,
                 txBuiltIn: true,
                 builtinLabel: onChainName,
                 builtinDepositTrust: depositTrust,
@@ -464,7 +457,7 @@ const DEFAULT_SKILL_MESSAGES: Message[] = [
         id: 'skill-seed-welcome',
         role: 'assistant',
         content:
-            "Hi. I run on the full upstream Intuition skill package (SKILL.md, GraphQL reference, schemas, workflows, deposit/redeem batch ops, simulation, fees) plus IntuRank-specific routing. Ask deep protocol questions or tell me what to create (atom or a claim like “Alice / trusts / Bob” with a 0.5 TRUST deposit). I reply in your language when I can. Connect your wallet when you are ready to Sign & broadcast. Before your first on-chain create, use Enable fee proxy in the bar if it appears (one time).",
+            "Hi. I use the full upstream Intuition skill package (schemas, GraphQL, deposits, simulation) plus IntuRank routing. Ask protocol questions or say what to create (an identity, or a claim like “Alice / trusts / Bob” with 0.5 TRUST). Connect your wallet to Sign & broadcast. If you see Enable fee proxy, run it once before your first write.",
     },
 ];
 
@@ -554,8 +547,7 @@ function AssistantMessageBody({ content }: { content: string }) {
                 <pre className="max-h-[min(360px,55vh)] overflow-auto border-t border-white/[0.06] p-3.5 text-[10px] leading-relaxed text-slate-300 font-mono whitespace-pre-wrap [overflow-wrap:anywhere] rounded-b-2xl">
                     {display || (
                         <span className="text-slate-500 italic font-sans">
-                            No JSON in this block — the model may have skipped the payload or used a non-standard fence. Ask again for a
-                            fenced JSON code block only.
+                            No JSON fence here. Ask for one fenced JSON payload only.
                         </span>
                     )}
                 </pre>
@@ -781,7 +773,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                             const depositTrust = String(parsed.depositTrust ?? '0').trim();
                             if (isPlaceholderAtomLabel(label)) {
                                 contentAppend =
-                                    '\n\n_(No on-chain preview: use a specific atom name in your message if you want to create one.)_';
+                                    '\n\n_(No on-chain preview: use a specific identity name in your message.)_';
                             } else {
                             const built = await buildCreateAtomTxIntent(address, label, depositTrust);
                             const onChainName = normalizeAtomLabel(label);
@@ -794,7 +786,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                 description:
                                     typeof parsed.description === 'string'
                                         ? parsed.description
-                                        : `Create atom "${onChainName}"`,
+                                        : `Create identity "${onChainName}"`,
                                 txBuiltIn: true,
                                 builtinLabel: onChainName,
                                 builtinDepositTrust: depositTrust,
@@ -809,7 +801,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                         const object = strFromParsed(p, 'object', 'objectId', 'objectTermId');
                         const depositTrust = normalizeTripleDepositTrust(parsed.depositTrust);
                         if (!subject || !predicate || !object) {
-                            contentAppend = '\n\n_(createTriple JSON needs subject, predicate, and object — or subjectId / predicateId / objectId as hex term ids.)_';
+                            contentAppend = '\n\n_(createTriple JSON needs subject, predicate, and object fields, or subjectId/predicateId/objectId hex term ids.)_';
                         } else {
                             txIntent = {
                                 action: 'tripleFromLabels',
@@ -836,8 +828,8 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                         if (shell) {
                             txIntent = null;
                             txBlockedReason =
-                                'This JSON block is from a **shell walkthrough** (placeholders like $MULTIVAULT, 0x$CALLDATA, or $(…)). Those are not real addresses or calldata — the app cannot open a wallet for them.\n\n' +
-                                `Ask again for **only** one \`createAtom\` JSON: \`"action": "createAtom"\`, \`label\`, \`depositTrust\`, \`chainId": "${CHAIN_ID}"\` — no numbered steps, no \`curl\`/\`cast\`, no \`$\` variables.`;
+                                'This JSON looks like a **shell walkthrough** (placeholders such as $MULTIVAULT). That is not signable calldata.\n\n' +
+                                `Ask again for **one** \`createAtom\` JSON: \`"action": "createAtom"\`, \`label\`, \`depositTrust\`, \`chainId": "${CHAIN_ID}"\`. No numbered steps, no curl/cast, no $ variables.`;
                             logSkillEvent({
                                 level: 'warn',
                                 event: 'skill.chat.tx_intent_shell_template',
@@ -854,7 +846,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                     (enriched.value != null && String(enriched.value).trim() !== '');
                                 if (partial) {
                                     txBlockedReason =
-                                        'This JSON cannot be signed: a raw transaction needs a real FeeProxy **`to`** address and **`data`** hex. For creating an atom, use the **`createAtom`** shape (`label`, `depositTrust`) instead of MultiVault/shell output.';
+                                        'Cannot sign raw MultiVault payloads here. For a mint, use **`createAtom`** JSON with `label` and `depositTrust` (FeeProxy path).';
                                 }
                             } else {
                                 const rawErr = getRawSkillBroadcastValidationError(enriched);
@@ -961,11 +953,15 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     markProxyApproved(address);
                 }
             } catch (setupErr: unknown) {
-                const userRejected = isUserRejectionError(setupErr);
+                const userRejected = isUserRejectedWalletError(setupErr);
                 const errText = userRejected
-                    ? "Protocol approval cancelled in wallet"
+                    ? ''
                     : parseProtocolError(setupErr) || extractErrorText(setupErr) || "Network or protocol setup failed";
-                toast.error(errText.length > 140 ? errText.slice(0, 137) + "…" : errText);
+                if (userRejected) {
+                    toast.info('Cancelled in wallet. Enable fee proxy when you are ready, then retry.');
+                } else {
+                    toast.error(errText.length > 140 ? errText.slice(0, 137) + '…' : errText);
+                }
                 setMessages((prev) =>
                     prev.map((msgItem, idx) =>
                         idx === messageIndex
@@ -1003,7 +999,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     depositTrustWei: parseEther(String(intent.depositTrust ?? '0.5')),
                   });
                 } else {
-                  toast.success('This claim already exists on-chain — open it below (no duplicate tx).');
+                  toast.success('This claim already exists on-chain. Open it below (no duplicate tx).');
                 }
                 logSkillEvent({
                     level: 'info',
@@ -1031,7 +1027,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     )
                 );
             } catch (error: unknown) {
-                const userRejected = isUserRejectionError(error);
+                const userRejected = isUserRejectedWalletError(error);
                 const errText = parseProtocolError(error) || extractErrorText(error) || "Triple pipeline failed";
                 const shortErr = errText.length > 160 ? errText.slice(0, 157) + "…" : errText;
                 setMessages((prev) =>
@@ -1045,7 +1041,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                             : msgItem
                     )
                 );
-                if (userRejected) toast.error("Transaction cancelled in wallet");
+                if (userRejected) toast.info("Cancelled in wallet. Connect and try again when ready.");
                 else toast.error(shortErr.length > 140 ? shortErr.slice(0, 137) + "…" : shortErr);
                 logSkillEvent({
                     level: userRejected ? 'info' : 'warn',
@@ -1095,11 +1091,15 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 }
             }
         } catch (setupErr: unknown) {
-            const userRejected = isUserRejectionError(setupErr);
+            const userRejected = isUserRejectedWalletError(setupErr);
             const errText = userRejected
-                ? "Protocol approval cancelled in wallet"
+                ? ''
                 : parseProtocolError(setupErr) || extractErrorText(setupErr) || "Network or protocol setup failed";
-            toast.error(errText.length > 140 ? errText.slice(0, 137) + "…" : errText);
+            if (userRejected) {
+                toast.info('Cancelled in wallet. Enable fee proxy when you are ready, then retry.');
+            } else {
+                toast.error(errText.length > 140 ? errText.slice(0, 137) + "…" : errText);
+            }
             setMessages((prev) =>
                 prev.map((msgItem, idx) =>
                     idx === messageIndex
@@ -1207,7 +1207,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 )
             );
         } catch (error: unknown) {
-            const userRejected = isUserRejectionError(error);
+            const userRejected = isUserRejectedWalletError(error);
             const errText = parseProtocolError(error) || extractErrorText(error) || "Execution failed";
             const shortErr = errText.length > 160 ? errText.slice(0, 157) + "…" : errText;
             setMessages((prev) =>
@@ -1222,7 +1222,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 )
             );
             if (userRejected) {
-                toast.error("Transaction cancelled in wallet");
+                toast.info("Cancelled in wallet.");
             } else {
                 toast.error(shortErr.length > 140 ? shortErr.slice(0, 137) + "…" : shortErr);
             }
@@ -1301,7 +1301,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     ) : (
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-xs text-amber-100/90 leading-snug min-w-0 font-sans">
-                                Enable IntuRank fee proxy for atoms, claims, and deposits. One wallet approval.
+                                Enable IntuRank fee proxy for identities, claims, and deposits (one wallet approval).
                             </p>
                             <button
                                 type="button"
@@ -1316,7 +1316,12 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                         setProtocolReady(true);
                                         toast.success('IntuRank fee proxy enabled.');
                                     } catch (e: unknown) {
-                                        toast.error(parseProtocolError(e) || extractErrorText(e) || 'Could not enable protocol');
+                                        const rej = isUserRejectedWalletError(e);
+                                        toast[rej ? 'info' : 'error'](
+                                            rej
+                                                ? 'Cancelled in wallet.'
+                                                : parseProtocolError(e) || extractErrorText(e) || 'Could not enable protocol',
+                                        );
                                     } finally {
                                         setEnablingProtocol(false);
                                     }
@@ -1434,10 +1439,11 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                             {m.txBlockedReason}
                                         </p>
                                         <p className="text-[11px] leading-relaxed text-slate-500 font-sans border-t border-white/10 pt-3">
-                                            Example prompt: “Output <span className="text-slate-400">only</span> the{' '}
-                                            <code className="text-cyan-200/90">createAtom</code> JSON for{' '}
-                                            <span className="text-white font-semibold">Video Calls</span>, depositTrust 0.5 — no
-                                            shell steps.”
+                                            Example prompt: “Output{' '}
+                                            <span className="text-slate-400">only</span>{' '}
+                                            <code className="text-cyan-200/90">createAtom</code>{' '}
+                                            JSON for <span className="text-white font-semibold">Video Calls</span> with{' '}
+                                            depositTrust 0.5. No shell steps.”
                                         </p>
                                     </div>
                                 )}
@@ -1538,7 +1544,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                     <>
                                                         {m.txIntent.txBuiltIn && (
                                                             <p className="mb-3 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs font-medium text-cyan-200/95">
-                                                                New atom (built in-app)
+                                                                New identity (built in-app)
                                                             </p>
                                                         )}
                                                         <div className="grid gap-2">
@@ -1549,7 +1555,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                             {m.txIntent.txBuiltIn && m.txIntent.builtinLabel != null && (
                                                                 <>
                                                                     <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
-                                                                        <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Atom</span>
+                                                                        <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Identity</span>
                                                                         <span className="text-right font-bold text-white break-all">{m.txIntent.builtinLabel}</span>
                                                                     </div>
                                                                     <div className="grid grid-cols-[minmax(4.25rem,auto)_1fr] items-start gap-x-3 gap-y-1 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
@@ -1600,7 +1606,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                 </div>
                                                 <p className="text-xs text-amber-100/90 font-sans leading-relaxed [overflow-wrap:anywhere]">
                                                     {isTripleFromLabelsIntent(m.txIntent)
-                                                        ? 'Approve atom batch if prompted (one signature for all new anchors), then the claim.'
+                                                        ? 'If prompted, approve the identity batch first (one signature for new anchors), then the claim.'
                                                         : 'Approve or reject in your wallet.'}
                                                 </p>
                                             </div>
@@ -1613,14 +1619,14 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                 </p>
                                                 <p className="text-sm text-slate-300 font-sans leading-relaxed">
                                                     {isTripleFromLabelsIntent(m.txIntent) && !m.txHash && m.txTermId
-                                                        ? 'Nothing new to mint — this claim was already on-chain.'
+                                                        ? 'Nothing new to mint. This claim was already on-chain.'
                                                         : 'Your transaction is on-chain.'}
                                                 </p>
                                                 {m.txAtomHashes && m.txAtomHashes.length > 0 && (
                                                     <p className="text-xs text-slate-500 font-sans leading-relaxed">
                                                         {m.txAtomHashes.length === 1
-                                                            ? 'Atoms anchored in one batched transaction — see explorer.'
-                                                            : `Signed ${m.txAtomHashes.length} atom transactions — see explorer for details.`}
+                                                            ? 'New identities anchored in one batched transaction. View on explorer.'
+                                                            : `Signed ${m.txAtomHashes.length} identity transactions. View on explorer.`}
                                                     </p>
                                                 )}
                                                 {m.txHash ? (
@@ -1638,7 +1644,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                 ) : (
                                                     <p className="text-xs font-sans text-slate-500">
                                                         {isTripleFromLabelsIntent(m.txIntent) && m.txTermId
-                                                            ? 'No transaction hash — claim already existed (use Open claim).'
+                                                            ? 'No new transaction hash because the claim already existed. Use Open claim.'
                                                             : 'Hash unavailable.'}
                                                     </p>
                                                 )}
@@ -1659,7 +1665,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                                                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-sans text-sm font-bold text-black shadow-[0_10px_36px_rgba(16,185,129,0.35)] transition-transform hover:bg-emerald-400 active:scale-[0.99]"
                                                         >
                                                             <ExternalLink size={16} />
-                                                            {isTripleFromLabelsIntent(m.txIntent) ? 'Open claim' : 'Open atom'}
+                                                            {isTripleFromLabelsIntent(m.txIntent) ? 'Open claim' : 'Open identity'}
                                                         </Link>
                                                     )}
                                                 </div>
@@ -1827,9 +1833,9 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 </div>
                 <div className="mt-2.5 flex snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-visible pb-1 scrollbar-none [-webkit-overflow-scrolling:touch]">
                     {[
-                        { short: 'Create an atom', full: 'Create an atom called IntuRank Sandbox with 0.5 TRUST deposit' },
+                        { short: 'Create an identity', full: 'Create an identity named IntuRank Sandbox with 0.5 TRUST deposit' },
                         { short: 'Alice trusts Bob', full: 'Create a triple: subject Alice, predicate trusts, object Bob, deposit 0.5 TRUST' },
-                        { short: 'Atoms vs triples', full: 'What is the difference between an atom and a triple?' },
+                        { short: 'Identities vs claims', full: 'What is the difference between an identity term and a triple claim?' },
                         { short: 'Contract addresses', full: 'What are the FeeProxy and MultiVault addresses used in this app?' },
                     ].map((suggestion, i) => (
                         <button

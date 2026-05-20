@@ -26,14 +26,14 @@ interface LayoutProps {
 
 const TRUST_SWAP_URL = "https://aero.drome.eth.limo/swap?from=0x833589fcd6edb6e08f4c7c32d4f71b54bda02913&to=0x6cd905df2ed214b22e0d48ff17cd4200c1c6d8a3&chain0=8453&chain1=8453";
 
-/** Module-level nav config — stable icon references so React.memo(NavItem) works and hover doesn’t thrash. */
+/** Module-level nav config keeps icon refs stable so React.memo(NavItem) and hover stay cheap. */
 const MAIN_NAV_ITEMS: Array<{
   label: string;
   path: string;
   icon: React.ReactNode;
   /** Stand-out pricing / trust flows vs default cyan */
   variant?: 'gold' | 'arena';
-  /** Small chip (e.g. HOT) — shown on icon when rail collapsed + after label when expanded */
+  /** HOT-style chip on icon when rail is collapsed, and after label when expanded */
   badge?: 'hot';
   /** Passed to router `Link` (e.g. scroll contest floor on Home). */
   linkState?: Record<string, unknown>;
@@ -80,7 +80,7 @@ interface NavItemProps {
   variant?: 'default' | 'gold' | 'success' | 'arena';
   /** Pill on icon when collapsed; repeats next to label when rail expands */
   badge?: 'hot';
-  /** Opens in new tab (e.g. Get Trust swap) — uses <a>, not router Link */
+  /** External tab links (e.g. Get TRUST) use <a>, not router Link */
   external?: boolean;
   linkState?: Record<string, unknown>;
 }
@@ -341,7 +341,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-intuition-dark text-slate-300 flex font-sans selection:bg-intuition-primary selection:text-black">
-      {/* Desktop side nav — full-height dock (flush left/top/bottom), icon rail expands on hover */}
+      {/* Desktop side nav: full-height dock; icon rail expands on hover */}
       <aside
         ref={sidebarAsideRef}
         className="group/sidebar hidden lg:flex fixed inset-y-0 left-0 z-[105] flex-col rounded-none rounded-r-2xl xl:rounded-r-3xl bg-[#020308] border-y-0 border-l-0 border-r border-slate-800/80 shadow-[2px_0_16px_rgba(0,0,0,0.35)] overflow-hidden contain-[layout] transform-gpu motion-reduce:transition-none motion-reduce:duration-0 transition-[width,box-shadow] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] w-[4.5rem] hover:w-72 xl:hover:w-80 focus-within:w-72 xl:focus-within:w-80 hover:shadow-[4px_0_28px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.04)] focus-within:shadow-[4px_0_28px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.04)]"
@@ -597,13 +597,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={handleNewSignal}
-                    aria-label="Create a new atom or claim"
+                    aria-label="Create a new identity or claim"
                     style={{
                       animationDelay: `${(ALL_MOBILE_NAV_ITEMS.length + 1) * 45}ms`,
                     }}
                     className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-intuition-secondary text-white font-semibold font-sans text-sm normal-case rounded-full shadow-xl mt-2 border-2 border-transparent active:scale-95 transition-transform animate-in fade-in slide-in-from-left-4 duration-300 fill-mode-both"
                   >
-                    <Plus size={18} /> New atom or claim
+                    <Plus size={18} /> New identity or claim
                   </button>
 
                   {walletAddress ? (
@@ -638,14 +638,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </nav>
 
-        {/* Desktop top bar — IntuRank pill cluster: cyan rim + pink CTA, matches sidebar / mobile */}
+        {/* Desktop top bar pill cluster (cyan rim + pink CTA) */}
         <div className="hidden lg:flex h-14 shrink-0 items-center w-full border-b border-intuition-primary/10 bg-[#020308]/90 backdrop-blur-md supports-[backdrop-filter]:bg-[#020308]/82 relative z-[100] overflow-visible">
           <div className="flex w-full min-w-0 items-center justify-end gap-3 pl-4 pr-[max(1rem,env(safe-area-inset-right))] lg:pr-8">
             {walletAddress && chainId !== CHAIN_ID && (
               <button
                 onClick={async () => {
                   playClick();
-                  await switchNetwork();
+                  try {
+                    await switchNetwork();
+                  } catch (e: unknown) {
+                    const msg =
+                      typeof e === 'object' && e !== null && 'message' in e
+                        ? String((e as { message?: string }).message)
+                        : 'Could not switch network';
+                    toast.error(msg.length > 160 ? `${msg.slice(0, 157)}…` : msg);
+                  }
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-intuition-danger text-white text-[11px] font-semibold font-sans rounded-full shrink-0 shadow-[0_0_18px_rgba(255,30,109,0.35)] ring-1 ring-white/10 transition-transform active:scale-[0.98]"
               >
@@ -660,12 +668,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               type="button"
               onClick={handleNewSignal}
               onMouseEnter={playHover}
-              aria-label="Create a new atom or claim"
-              title="Create atom or claim"
+              aria-label="Create a new identity or claim"
+              title="Create identity or claim"
               className="hidden lg:inline-flex items-center gap-2 px-4 sm:px-5 py-2 min-h-0 text-xs font-semibold font-sans text-white rounded-full bg-intuition-secondary hover:brightness-110 active:scale-[0.98] border border-white/15 shadow-[0_0_22px_rgba(255,30,109,0.45)] hover:shadow-[0_0_32px_rgba(255,30,109,0.55)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-secondary/50"
             >
               <Plus size={16} strokeWidth={2.5} className="shrink-0" aria-hidden />
-              <span className="hidden xl:inline whitespace-nowrap">Create atom or claim</span>
+              <span className="hidden xl:inline whitespace-nowrap">Create identity or claim</span>
               <span className="xl:hidden">Create</span>
             </button>
 

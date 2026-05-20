@@ -126,7 +126,7 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
           <span className="block text-[9px] font-mono font-black uppercase tracking-wider text-slate-500">
             Markets
           </span>
-          <span className="block text-[12px] font-bold text-slate-100 truncate">Atoms</span>
+          <span className="block text-[12px] font-bold text-slate-100 truncate">Identities</span>
         </span>
       </Link>
       <Link

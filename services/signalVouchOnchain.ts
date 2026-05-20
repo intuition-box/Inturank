@@ -1,6 +1,6 @@
 /**
- * Phase D — flush queued Signal vouches as one FeeProxy `createTriples` batch.
- * Triple shape: (your Account atom) — vouches for → (target Account or Thing atom).
+ * Flush queued Signal vouches through FeeProxy (`createTriples` batch).
+ * Triple shape: your account term, predicate "vouches for", target account/thing term.
  */
 import { getAddress, isAddress, parseEther } from 'viem';
 import type { SignalVouchPick } from './signalPendingBatch';
@@ -10,6 +10,7 @@ import {
     looksLikeBytes32TermId,
     padTermId,
     resolveAtomReferenceToTermId,
+    switchNetwork,
     type SemanticTripleBatchInput,
 } from './web3';
 
@@ -22,6 +23,8 @@ export async function submitSignalVouchesOnChain(
     onProgress?: (m: string) => void,
 ): Promise<`0x${string}`> {
     if (!picks.length) throw new Error('No vouches to submit.');
+    onProgress?.('Confirming network…');
+    await switchNetwork();
 
     const receiver = getAddress(String(wallet).trim() as `0x${string}`);
     const dep = parseEther(depositTrust.trim());
@@ -37,7 +40,7 @@ export async function submitSignalVouchesOnChain(
 
     for (let i = 0; i < picks.length; i++) {
         const p = picks[i]!;
-        onProgress?.(`Resolving vouch ${i + 1} / ${picks.length} — ${p.label.slice(0, 32)}…`);
+        onProgress?.(`Resolving vouch ${i + 1} / ${picks.length}: ${p.label.slice(0, 32)}…`);
 
         let cacheKey: string;
         if (p.objectTermId && looksLikeBytes32TermId(p.objectTermId.trim())) {

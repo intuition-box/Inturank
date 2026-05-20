@@ -215,14 +215,60 @@ export const getConnectedAccount = async (): Promise<string | null> => {
   } catch { return null; }
 };
 
-function isUserRejectedError(error: unknown): boolean {
+function isUserRejectedError(error: unknown, depth = 0): boolean {
   if (error instanceof UserRejectedRequestError) return true;
+  if (depth > 4) return false;
   if (typeof error === 'object' && error !== null) {
-    const e = error as { code?: number; name?: string };
-    if (e.code === 4001) return true;
+    const e = error as {
+      code?: number | string;
+      name?: string;
+      message?: string;
+      shortMessage?: string;
+      details?: string;
+      cause?: unknown;
+    };
+    if (e.code === 4001 || e.code === 'ACTION_REJECTED') return true;
     if (e.name === 'UserRejectedRequestError') return true;
+    const s =
+      `${e.message ?? ''} ${String(e.shortMessage ?? '')} ${String(e.details ?? '')}`.toLowerCase();
+    if (
+      /user reject|rejected the request|transaction rejected|denied transaction signing|ethers-user-denied|wallet.*reject|user denied|request rejected|action_rejected|\b4001\b|cancelled|\bcancel\b|\bcanceled\b|action canceled/i.test(
+        s
+      )
+    ) {
+      return true;
+    }
+    if (e.cause !== undefined && e.cause !== null) return isUserRejectedError(e.cause, depth + 1);
   }
   return false;
+}
+
+/** Shared UI helper: distinguish user-dismissed prompts from real faults (switch, approvals, txs). */
+export function isUserRejectedWalletError(error: unknown): boolean {
+  return isUserRejectedError(error);
+}
+
+/** Current wallet chain id from the active EIP‑1193 provider, or null if unavailable. */
+export async function readConnectedWalletChainId(): Promise<number | null> {
+  const p = getProvider();
+  if (!p?.request) return null;
+  try {
+    const hex = (await p.request({ method: 'eth_chainId' })) as string;
+    return typeof hex === 'string' ? parseInt(hex, 16) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Throws if the wallet is not on Intuition RPC `CHAIN_ID` (call after prompting switch). */
+export async function assertWalletOnConfiguredChain(): Promise<void> {
+  const id = await readConnectedWalletChainId();
+  if (id == null) {
+    throw new Error('Wallet not connected. Connect your wallet, then retry.');
+  }
+  if (id !== CHAIN_ID) {
+    throw new Error(`Wrong network (chain ${id}). Switch to ${NETWORK_NAME} (chain ${CHAIN_ID}) and try again.`);
+  }
 }
 
 /** MetaMask validates the RPC when adding a chain; Intuition’s JSON-RPC is on `/http` (bare `/` often fails). */
@@ -261,22 +307,23 @@ async function switchNetworkViaInjectedProvider(provider: NonNullable<ReturnType
     await attemptSwitch();
     return;
   } catch (error: unknown) {
-    if (isUserRejectedError(error)) return;
+    if (isUserRejectedError(error)) throw error;
     try {
       await provider.request({
         method: 'wallet_addEthereumChain',
         params: [addParams],
       });
     } catch (addError: unknown) {
-      if (isUserRejectedError(addError)) return;
+      if (isUserRejectedError(addError)) throw addError;
       // Chain may already be registered; still try switching again.
     }
     try {
       await attemptSwitch();
     } catch (e2: unknown) {
-      if (isUserRejectedError(e2)) return;
+      if (isUserRejectedError(e2)) throw e2;
       console.error('SWITCH_NETWORK_ERROR:', error, e2);
-      toast.error('Could not switch network. Try switching to Intuition in your wallet.');
+      toast.error('Could not switch network. Pick Intuition in your wallet manually, then retry.');
+      throw new Error('Could not switch network in your wallet.');
     }
   }
 }
@@ -290,26 +337,32 @@ export const switchNetwork = async () => {
     blockExplorerUrls: [EXPLORER_URL],
   };
 
+  let usedWagmi = false;
   if (typeof window !== 'undefined') {
     try {
       await wagmiSwitchChain(wagmiConfig, {
         chainId: CHAIN_ID,
         addEthereumChainParameter,
       });
-      return;
+      usedWagmi = true;
     } catch (error: unknown) {
-      if (isUserRejectedError(error)) return;
+      if (isUserRejectedError(error)) throw error;
       console.warn('wagmi switchChain failed, falling back to injected provider:', error);
     }
   }
 
-  const provider = getProvider();
-  if (!provider) {
-    toast.error('Wallet not ready. Wait a moment and try again, or switch network in your wallet.');
-    return;
+  if (!usedWagmi) {
+    const provider = getProvider();
+    if (!provider) {
+      const msg = 'Wallet not ready. Open your wallet extension, connect, then try again.';
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
+    await switchNetworkViaInjectedProvider(provider);
   }
 
-  await switchNetworkViaInjectedProvider(provider);
+  await assertWalletOnConfiguredChain();
 };
 
 export type WalletConnector = 'injected' | 'walletconnect';
@@ -356,8 +409,8 @@ export const connectWallet = async (
       if (typeof window !== 'undefined') localStorage.removeItem(DISCONNECT_FLAG_KEY);
       return address;
     } catch (error: any) {
-      if (error?.code === 4001) toast.error("REJECTED_BY_USER");
-      else toast.error(`WALLETCONNECT_ERROR: ${error?.message || 'Failed to connect'}`);
+      if (error?.code === 4001) toast.info('Wallet connection declined.');
+      else toast.error(error?.message || 'WalletConnect failed');
       return null;
     }
   }
@@ -375,14 +428,21 @@ export const connectWallet = async (
     
     const chainIdHex = await provider.request({ method: 'eth_chainId' });
     if (parseInt(chainIdHex, 16) !== CHAIN_ID) {
+      try {
         await switchNetwork();
+      } catch (e: unknown) {
+        if (!isUserRejectedError(e)) {
+          toast.error(parseProtocolError(e) || (e instanceof Error ? e.message : 'Could not switch network'));
+        }
+        // Still unlock account; Wrong network banner in Layout/Mobile prompts again.
+      }
     }
     activeProvider = provider;
     if (typeof window !== 'undefined') localStorage.removeItem(DISCONNECT_FLAG_KEY);
     return address;
   } catch (error: any) {
-    if (error.code === 4001) toast.error("REJECTED_BY_USER");
-    else toast.error(`ERROR: ${error.message}`);
+    if (error.code === 4001) toast.info('Connection declined in wallet.');
+    else toast.error(error?.message?.includes('Wallet not ready') ? error.message : `ERROR: ${error.message}`);
     return null; 
   }
 };
@@ -918,7 +978,7 @@ export const grantProxyApproval = async (walletAddress: string): Promise<void> =
 
     if (fromRead || fromLogs) {
         setProxyApprovalCache(checksumAccount);
-        toast.success("HANDSHAKE_COMPLETE: Protocol enabled.");
+        toast.success('Fee proxy enabled. You can submit to the chain.');
         return;
     }
 
@@ -929,7 +989,7 @@ export const grantProxyApproval = async (walletAddress: string): Promise<void> =
         { hash }
     );
     setProxyApprovalCache(checksumAccount);
-    toast.success("HANDSHAKE_COMPLETE: Protocol enabled.");
+    toast.success('Fee proxy enabled. You can submit to the chain.');
 };
 
 const LOCAL_TX_KEY = 'inturank_ledger_v3';
@@ -2401,7 +2461,7 @@ export const createSemanticTriplesBatch = async (
     const { ok, missing } = await validateTripleAtomsExist(t.subjectId, t.predicateId, t.objectId);
     if (!ok) {
       throw new Error(
-        `Triple row ${i + 1}: atom(s) not on-chain yet — ${missing.join(', ')}. Wait for sync or verify IDs.`
+        `Triple row ${i + 1}: atom(s) not on-chain yet (${missing.join(', ')}). Wait for sync or verify IDs.`
       );
     }
   }

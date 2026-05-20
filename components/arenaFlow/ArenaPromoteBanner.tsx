@@ -10,11 +10,8 @@ type Props = {
 };
 
 /**
- * Informational banner shown above Curate / Rank / Compare when the active
- * contest is off-chain. It tells the player the contest will mint on-chain
- * at the END of the flow (Compare → Submit) — no upfront cost, no separate
- * tx prompt. The actual mint is orchestrated by the commit coordinator at
- * Compare in one wallet sign.
+ * Informational banner above Curate / Rank / Compare when the contest is still off-chain.
+ * Submit at the end of Compare (one wallet sign); browsing stays free.
  */
 export const ArenaPromoteBanner: React.FC<Props> = ({ listCategory, memberCount }) => {
   const palette = useMemo(() => deckPalette(listCategory), [listCategory]);
@@ -50,11 +47,11 @@ export const ArenaPromoteBanner: React.FC<Props> = ({ listCategory, memberCount 
           Off-chain contest
         </p>
         <p className="mt-1 text-[13px] leading-snug text-slate-200">
-          This list isn’t anchored on Intuition yet — we’ll mint it at the end of the flow when you submit.
+          This list is not anchored on Intuition yet. We mint it when you submit at the end of the flow.
         </p>
         <p className="mt-0.5 text-[11px] text-slate-500">
-          Plays write {memberCount} membership triple{memberCount === 1 ? '' : 's'} + the list atom in one
-          wallet sign — no upfront cost for browsing.
+          Plays write {memberCount} membership triple{memberCount === 1 ? '' : 's'} plus the list identity in one
+          wallet sign. No upfront cost for browsing.
         </p>
       </div>
 

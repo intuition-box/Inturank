@@ -37,9 +37,11 @@ dist-ssr
 # Local-only strategy / economy notes (detailed roadmap; not committed)
 XP_GOVERNANCE_PLAN.local.md
 
-# Docs (local notes, not for repo)
-docs/
+# Docs: ignore by default except checked-in runbooks (see README links).
+/docs/*
+!/docs/demo.md
+!/docs/presenter-runbook.md
 
-# Server runtime data (user subs/follows, per-deploy)
+# Server runtime data (user subs/follows, each deploy)
 server/email-subs.json
 server/follows.json

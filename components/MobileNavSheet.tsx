@@ -1,6 +1,6 @@
 /**
- * MobileNavSheet — “More” menu: routes not in the bottom dock, plus Create and wallet.
- * Animated open/close (mobile only — sheet is hidden md+).
+ * Mobile “More” menu: routes not in the bottom dock, Create, wallet.
+ * Animated open on mobile only (hidden from md breakpoint up).
  */
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -80,7 +80,7 @@ const SECTIONS: Array<{ heading: string; items: SheetItem[] }> = [
     items: [
       {
         label: 'Buy TRUST (DEX)',
-        desc: 'Opens Aerodrome in a new tab — not an IntuRank page',
+        desc: 'Opens Aerodrome in a new tab (external swap page)',
         to: TRUST_SWAP_URL,
         icon: <Coins size={20} />,
         accent: 'green',
@@ -238,7 +238,7 @@ const MobileNavSheet: React.FC<Props> = ({ open, onClose, onCreate, onConnect, o
                   <Plus size={24} strokeWidth={2.5} />
                 </span>
                 <span className="text-left flex-1 min-w-0">
-                  <span className="block text-sm font-display font-bold tracking-tight">Create atom or claim</span>
+                  <span className="block text-sm font-display font-bold tracking-tight">Create identity or claim</span>
                   <span className="block text-[11px] font-sans opacity-85 mt-0.5">
                     New identity, triple, or on-chain signal
                   </span>

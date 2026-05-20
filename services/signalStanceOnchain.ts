@@ -1,5 +1,5 @@
 /**
- * Pulse / Signal — submit queued Support (stand) or Oppose stances as FeeProxy vault deposits.
+ * Pulse / Signal: submit queued Support or Oppose stances as FeeProxy vault deposits.
  * Mirrors Arena portal semantics: positive vault vs counter vault, with counter-stake checks.
  */
 import { getAddress, parseEther } from 'viem';
@@ -11,6 +11,7 @@ import {
   getRawShareBalance,
   grantProxyApproval,
   hasCachedProxyApproval,
+  switchNetwork,
 } from './web3';
 import { LINEAR_CURVE_ID, OFFSET_PROGRESSIVE_CURVE_ID } from '../constants';
 
@@ -42,6 +43,8 @@ export async function submitSignalStancesOnChain(
   onProgress?: (m: string) => void,
 ): Promise<`0x${string}`[]> {
   if (!picks.length) throw new Error('No stances to submit.');
+  onProgress?.('Confirming network…');
+  await switchNetwork();
   const receiver = getAddress(String(wallet).trim() as `0x${string}`);
 
   let proxyOk = hasCachedProxyApproval(receiver);

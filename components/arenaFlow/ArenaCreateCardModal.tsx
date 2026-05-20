@@ -258,7 +258,8 @@ const FormBody: React.FC<FormProps> = ({
         <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
       </span>
       <p className="text-[11px] leading-snug text-slate-400">
-        Cards stay in your deck only until you reach Compare. <span className="font-semibold text-slate-200">All on-chain writes happen in one wallet sign at the end</span> — no upfront cost for adding a card.
+        Cards stay in your deck until Compare.{' '}
+        <span className="font-semibold text-slate-200">Every on-chain write batches into one wallet sign at the end</span>; adding a card here costs nothing upfront.
       </p>
     </div>
 

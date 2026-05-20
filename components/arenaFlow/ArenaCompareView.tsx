@@ -38,15 +38,15 @@ type Props = {
   peersLoading: boolean;
   /** Whether this list lives on-chain (only then is comparison meaningful). */
   listIsOnChain: boolean;
-  /** Aggregated similarity vs the comparable peer set — `null` when no data. */
+  /** Aggregated similarity versus peers, or null when unavailable. */
   similarityPct: number | null;
   /** Player's position in the global leaderboard, if known. */
   progressionPct: number | null;
   /** Games-to-top-10 (0 if already inside top-10, `null` when place unknown). */
   gamesToTop10Hint: number | null;
-  /** Contest is off-chain — submitting will promote the list (mint atom + member triples). */
+  /** Pending promote ties on-chain mint (list identity + memberships). */
   pendingPromote: boolean;
-  /** Locally created deck rows (`pending-card-…`) — session placeholders, not signing targets yet. */
+  /** Rows from Create Card (pending-card-…) are placeholders until Compare. */
   pendingCardCount: number;
   /** Number of rank-stake rows queued in the batch cart. */
   pendingStakeCount: number;
@@ -54,7 +54,7 @@ type Props = {
   batchMode?: boolean;
   /** Whether a wallet is connected. Affects CTA copy. */
   isWalletConnected?: boolean;
-  /** Primary CTA — runs the commit chain then advances to the next game. */
+  /** Primary commit action that picks the next game afterward. */
   onSubmitAndContinue: () => void;
   onRandomGame: () => void;
   onPickNextGame: () => void;
@@ -69,7 +69,7 @@ type Props = {
 
 function shortAddr(a: string): string {
   const t = a.trim();
-  if (t.length < 12) return t || '—';
+  if (t.length < 12) return t || '…';
   return `${t.slice(0, 6)}…${t.slice(-4)}`;
 }
 
@@ -85,7 +85,7 @@ function peerDisplayName(label: string, address: string): string {
  * Step 3 · Similarity. Two-column composition (deck preview | similarity rail)
  * with an honest peer list below. All numbers come from on-chain claims; if
  * the contest is off-chain or no overlap exists, the section is hidden or
- * clearly labelled as such — never fabricated.
+ * clearly labelled when missing so nothing is fabricated.
  */
 export const ArenaCompareView: React.FC<Props> = ({
   deck,
@@ -116,7 +116,7 @@ export const ArenaCompareView: React.FC<Props> = ({
   const totalPeers = peers.length;
   const topPeer = peers[0] ?? null;
 
-  /** Wallet-sign targets only: contest promotion + queued rank stakes — not Create Card rows alone. */
+  /** Submit path includes promote + queued stakes only (session Create Card rows are not targets yet). */
   const hasPendingWrites = pendingPromote || pendingStakeCount > 0;
   /** Lines included in the wallet-sign batch (promote modal + rank batch only). */
   const queuedChainItems: string[] = [];
@@ -125,10 +125,10 @@ export const ArenaCompareView: React.FC<Props> = ({
     queuedChainItems.push(
       `Stake ${pendingStakeCount} rank deposit${pendingStakeCount === 1 ? '' : 's'} on-chain`,
     );
-  /** Deck rows from Create Card — session-local placeholders; not yet submitted as atoms in Compare. */
+  /** Create Card placeholders sit in-session until Compare submits. */
   const sessionDeckNote =
     pendingCardCount > 0
-      ? `${pendingCardCount} card${pendingCardCount === 1 ? '' : 's'} from Create Card — in your deck for this session only (not part of signing yet)`
+      ? `${pendingCardCount} card${pendingCardCount === 1 ? '' : 's'} from Create Card (session deck only until you submit)`
       : null;
 
   return (
@@ -175,7 +175,7 @@ export const ArenaCompareView: React.FC<Props> = ({
         ) : null}
         <p className="max-w-2xl text-[13px] leading-relaxed text-slate-400">
           {listIsOnChain
-            ? 'Every peer here actually staked on this list on-chain. Similarity is computed against their real picks — not a guess.'
+            ? 'Every peer here actually staked on this list on-chain. Similarity uses those real picks, not guesses.'
             : 'This contest isn’t on-chain yet, so we can’t pair you with verified rankers. Numbers shown below are scoped to your own deck only.'}
         </p>
         <p className="max-w-2xl text-[12px] leading-relaxed text-slate-500 border-l-2 border-white/[0.08] pl-3">
@@ -193,14 +193,14 @@ export const ArenaCompareView: React.FC<Props> = ({
           .{' '}
           <span className="text-slate-500">
             Closest rankers compares your deck to others who have indexed stakes on this list (not only global leaderboard).
-            Similarity stays empty until someone else overlaps your picks — after you sign, wait for the indexer or refresh Compare.
+            Similarity stays empty until someone else overlaps your picks. After you sign, wait for the indexer or refresh Compare.
           </span>
         </p>
       </div>
 
       {/* 2-COLUMN COMPOSITION */}
       <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7">
-        {/* ============================ LEFT — DECK + PEERS ============================ */}
+        {/* ============================ LEFT COLUMN: DECK + PEERS ============================ */}
         <div className="flex min-w-0 flex-col gap-5">
           {/* ── Your top-5 mini deck preview ─────────────────── */}
           <div
@@ -224,7 +224,7 @@ export const ArenaCompareView: React.FC<Props> = ({
             </div>
             {topFive.length === 0 ? (
               <p className="mt-3 text-[12px] italic text-slate-500">
-                You haven’t ranked any cards yet — go back to Rank to build a deck.
+                You haven’t ranked any cards yet. Go back to Rank to build a deck.
               </p>
             ) : (
               <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -296,7 +296,7 @@ export const ArenaCompareView: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* ============================ RIGHT — RICH RAIL ============================ */}
+        {/* ============================ RIGHT COLUMN: SUMMARY ============================ */}
         <aside className="flex min-w-0 flex-col gap-4">
           {/* 1) SIMILARITY HEADLINE */}
           <div
@@ -322,10 +322,10 @@ export const ArenaCompareView: React.FC<Props> = ({
                 <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                   {listIsOnChain
                     ? batchMode && pendingStakeCount < 1
-                      ? 'We only score overlap when another wallet has indexed YES/NO stakes on this list that match subjects in your deck. Empty right after you sign is normal until the subgraph catches up — and until someone else ranks overlapping entries.'
+                      ? 'Overlap needs another wallet with indexed YES/NO stakes that match subjects in your deck. Right after you sign it can stay empty until the subgraph updates and someone else ranks overlapping picks.'
                       : batchMode && pendingStakeCount > 0
                         ? 'After you sign your queued deposits, similarities can populate as peers appear on-chain.'
-                        : 'No overlapping rankers loaded yet — keep playing or check back after indexer sync.'
+                        : 'No overlapping rankers yet. Keep playing or check back after indexer sync.'
                     : 'Mint this contest on-chain to unlock real comparison vs other players.'}
                 </p>
               </div>
@@ -388,7 +388,7 @@ export const ArenaCompareView: React.FC<Props> = ({
             </div>
             {progressionPct === null ? (
               <p className="mt-3 text-[11px] italic leading-relaxed text-slate-500">
-                Rank a few lists on-chain to appear on the leaderboard — your progression will track from there.
+                Rank a few lists on-chain to show on the leaderboard. Progression fills in once you land there.
               </p>
             ) : (
               <>
@@ -405,7 +405,7 @@ export const ArenaCompareView: React.FC<Props> = ({
                 {gamesToTop10Hint !== null ? (
                   <p className="mt-3 text-[11px] leading-snug text-slate-400">
                     {gamesToTop10Hint === 0 ? (
-                      <span className="font-semibold text-slate-200">You’re inside the top 10 — defend it.</span>
+                      <span className="font-semibold text-slate-200">You’re in the top 10. Stay there.</span>
                     ) : (
                       <>
                         <span className="font-semibold text-slate-200 tabular-nums">{gamesToTop10Hint}</span>{' '}
@@ -426,7 +426,7 @@ export const ArenaCompareView: React.FC<Props> = ({
               borderColor: hasPendingWrites ? palette.line : ARENA_CARD_SURFACE.edgeMuted,
             }}
           >
-            {/* Queued writes preview — only when there is something to commit */}
+            {/* Queued writes preview when something is ready to commit */}
             {queuedChainItems.length > 0 ? (
               <div
                 className="mb-1 rounded-xl border px-3 py-2.5"
@@ -474,13 +474,12 @@ export const ArenaCompareView: React.FC<Props> = ({
                 <p className="text-[11px] leading-snug text-slate-400">
                   <span className="font-semibold text-slate-200">Signing</span> runs from{' '}
                   <span className="text-slate-200">queued rank deposits</span> (Curate + wallet + Agree). None are queued
-                  for this list yet, so you only see Pick next — or open the cart below to review / submit anything queued
-                  for other contests.
+                  for this list yet, so you only see Pick next, or open the conviction cart below to review other contests.
                 </p>
               </div>
             ) : null}
 
-            {/* PRIMARY — adapts to whether there are pending writes */}
+            {/* Primary CTA: sign when needed, otherwise pick another game */}
             <button
               type="button"
               onClick={() => {
@@ -510,7 +509,7 @@ export const ArenaCompareView: React.FC<Props> = ({
               <ArrowRight size={14} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </button>
 
-            {/* Skip signing — quieter so the rail matches “one job” */}
+            {/* Optional escape hatch when something is queued */}
             {hasPendingWrites ? (
               <button
                 type="button"
@@ -520,7 +519,7 @@ export const ArenaCompareView: React.FC<Props> = ({
                 }}
                 className="w-full py-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
               >
-                Skip without signing · next game
+                Skip without signing (next game)
               </button>
             ) : null}
 
@@ -611,13 +610,13 @@ const PeerList: React.FC<{
   }
   if (peers.length === 0) {
     const copyQueued =
-      'Queued deposits are not live until you tap Sign + pick next game. Overlap scores need indexed YES/NO stakes on this list from other wallets — we scan leaderboard rankers and recent list rankers; give the subgraph a minute after signing.';
+      'Queued deposits are live after Sign + pick next game. Overlap scores need YES/NO stakes from other wallets on this list. We scan leaderboard and recent rankers; give the subgraph a short moment after signing.';
     const copyNobodyElseOverlap =
-      'We compare your deck to other wallets that have stakes on this list (leaderboard + recent list rankers). You never appear beside yourself — stays empty until someone else overlaps your entries or the indexer catches up.';
+      'We compare your deck to wallets with stakes here (leaderboard + recent rankers). You never sit beside yourself, so this stays quiet until someone overlaps your picks or indexing finishes.';
     const copyDisconnected =
       'Connect your wallet, then Curate → Agree to queue rank stakes. After you sign from Compare, overlaps can populate here.';
     const copyLegacy =
-      'Closest rankers needs overlapping indexed stakes on this list — not guesses.';
+      'Closest rankers needs overlapping indexed stakes on this list from real wallets.';
 
     let title = 'No overlaps yet';
     let copyPeer = copyLegacy;
@@ -676,7 +675,7 @@ const PeerRow: React.FC<{ peer: ArenaComparePeer; idx: number; palette: DeckPale
 }) => {
   const { player, similarity } = peer;
   const name = peerDisplayName(player.label, player.address);
-  const initial = name.replace(/^0x/, '').slice(0, 1).toUpperCase() || '–';
+  const initial = name.replace(/^0x/, '').slice(0, 1).toUpperCase() || '?';
   const sharedTop = similarity.sharedSubjects.slice(0, 3);
 
   return (

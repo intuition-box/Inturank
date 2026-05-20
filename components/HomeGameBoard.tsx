@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, Swords, UserPlus } from 'lucide-react';
-import { ARENA_LISTS, getArenaListConstituents, type ArenaListEntry } from '../services/arenaListsRegistry';
+import { ARENA_LISTS, getArenaDataSourceFootprint, getArenaListConstituents, type ArenaListEntry } from '../services/arenaListsRegistry';
+import { countListMembersForObject } from '../services/graphql';
 import {
   buildContestHubSections,
   pluralizeArenaListCount,
@@ -10,7 +11,7 @@ import {
 import { ARENA_HUB_LANE_PAGE_SIZE } from '../services/arenaHubPagination';
 import { playClick, playHover } from '../services/audio';
 
-/** Short GPU-friendly pager hover — no always-on animations. */
+/** Short pager hover tweak; no always-on motion. */
 const HOME_PAGER_MOTION =
   'transition-colors duration-150 motion-safe:transition-[transform,border-color,background-color] motion-safe:duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0';
 
@@ -50,11 +51,31 @@ function useRevealOnce(threshold = 0.12) {
 }
 
 /**
- * Homepage contest rows: tap a card → Arena curate (Step 1).
+ * Homepage contest rows: tap a card to open Arena curate.
  */
 export const HomeGameBoard: React.FC<HomeGameBoardProps> = ({ compact }) => {
   const sections = React.useMemo(() => buildContestHubSections(dedupeEntries([...ARENA_LISTS])), []);
+  const [livePortalMemberCounts, setLivePortalMemberCounts] = useState<Record<string, number>>({});
   const [headRef, headOn] = useRevealOnce(0.15);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (const e of ARENA_LISTS) {
+        if (e.source !== 'portal') continue;
+        try {
+          const n = await countListMembersForObject(e.listObjectTermId);
+          if (cancelled) return;
+          setLivePortalMemberCounts((p) => ({ ...p, [e.id]: n }));
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (sections.length === 0) return null;
 
@@ -80,7 +101,7 @@ export const HomeGameBoard: React.FC<HomeGameBoardProps> = ({ compact }) => {
             <span className="text-slate-400 font-bold text-lg sm:text-xl md:text-2xl">Curate next.</span>
           </h2>
           <p className="mt-2 max-w-xl text-sm text-slate-500 leading-relaxed">
-            Each card opens the Arena on that list — stack, rank, and (when you want) put conviction on-chain with TRUST.
+            Each card sends you to Arena for that list: stack picks, reorder, optionally stake TRUST on-chain when you submit.
           </p>
         </div>
         <button
@@ -99,7 +120,7 @@ export const HomeGameBoard: React.FC<HomeGameBoardProps> = ({ compact }) => {
 
       <div className="flex flex-col gap-8 sm:gap-9" id="arena-contest-floor">
         {sections.map((sec, si) => (
-          <GameRow key={sec.id} section={sec} rowIndex={si} compact={compact} />
+          <GameRow key={sec.id} section={sec} rowIndex={si} compact={compact} livePortalMemberCounts={livePortalMemberCounts} />
         ))}
       </div>
     </section>
@@ -110,7 +131,8 @@ const GameRow: React.FC<{
   section: ContestHubSection;
   rowIndex: number;
   compact?: boolean;
-}> = ({ section, rowIndex, compact }) => {
+  livePortalMemberCounts: Record<string, number>;
+}> = ({ section, rowIndex, compact, livePortalMemberCounts }) => {
   const [ref, on] = useRevealOnce(0.08);
   const [page, setPage] = useState(0);
   const lists = section.lists;
@@ -155,18 +177,18 @@ const GameRow: React.FC<{
         }`}
       >
         {visible.map((L) => (
-          <ContestCard key={L.id} entry={L} compact={compact} />
+          <ContestCard key={L.id} entry={L} compact={compact} livePickCount={livePortalMemberCounts[L.id]} />
         ))}
       </div>
       {needPaging ? (
         <nav
           className="mt-5 flex flex-col items-stretch gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between"
-          aria-label={`${section.title} — pagination`}
+          aria-label={`${section.title}, pagination`}
         >
           <p className="text-center font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500 sm:text-left">
             Showing{' '}
             <span className="tabular-nums text-slate-300">
-              {total === 0 ? 0 : start + 1}–{endIdx}
+              {total === 0 ? 0 : start + 1} to {endIdx}
             </span>{' '}
             of <span className="tabular-nums text-slate-300">{total}</span>
           </p>
@@ -215,7 +237,21 @@ const GameRow: React.FC<{
   );
 };
 
-const ContestCard: React.FC<{ entry: ArenaListEntry; compact?: boolean }> = ({ entry, compact }) => {
+const ContestCard: React.FC<{
+  entry: ArenaListEntry;
+  compact?: boolean;
+  livePickCount?: number;
+}> = ({ entry, compact, livePickCount }) => {
+  const fp = getArenaDataSourceFootprint(entry);
+  const pickTotal =
+    typeof livePickCount === 'number' && livePickCount >= 0 ? livePickCount : getArenaListConstituents(entry);
+  const fpTone =
+    fp.kind === 'live_indexer'
+      ? 'border-emerald-400/35 text-emerald-100/95 bg-emerald-500/[0.1]'
+      : fp.kind === 'portal_chain'
+        ? 'border-violet-400/35 text-violet-100/95 bg-violet-500/[0.1]'
+        : 'border-amber-400/35 text-amber-100/95 bg-amber-500/[0.1]';
+
   return (
     <Link
       to={`/climb?list=${encodeURIComponent(entry.id)}`}
@@ -238,6 +274,16 @@ const ContestCard: React.FC<{ entry: ArenaListEntry; compact?: boolean }> = ({ e
         {entry.tag}
       </p>
       <p
+        className="relative z-[1] mt-1 inline-flex items-center gap-1.5"
+        title={fp.detailLine}
+      >
+        <span
+          className={`rounded border px-1.5 py-0.5 text-[8px] font-mono font-black uppercase tracking-[0.16em] ${fpTone}`}
+        >
+          {fp.badgeShort}
+        </span>
+      </p>
+      <p
         className={`relative z-[1] mt-1.5 font-display font-bold leading-snug text-white ${
           compact ? 'text-[15px]' : 'text-[15px] sm:text-[17px]'
         }`}
@@ -247,8 +293,8 @@ const ContestCard: React.FC<{ entry: ArenaListEntry; compact?: boolean }> = ({ e
       <p className="relative z-[1] mt-2 line-clamp-2 text-[11px] text-slate-500">{entry.description}</p>
       <div className="relative z-[1] mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2.5">
         <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
-          <span className="text-emerald-200/95">{getArenaListConstituents(entry)}</span> pick
-          {getArenaListConstituents(entry) === 1 ? '' : 's'}
+          <span className="text-emerald-200/95">{pickTotal}</span> pick
+          {pickTotal === 1 ? '' : 's'}
         </span>
         <span className="inline-flex flex-wrap items-center justify-end gap-1">
           <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.05] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-200">
