@@ -337,7 +337,7 @@ const PROTOCOL_MIN_CLAIM_DEPOSIT_LABEL = formatEther(CURVE_OFFSET);
 
 /**
  * Discrete stake tiers. With batch submissions, **each queued row’s on-chain deposit** is
- * `preset TRUST × row units`; every row must be ≥ protocol minimum (`CURVE_OFFSET`, 0.1 TRUST at 1 unit with default preset).
+ * `preset TRUST × row units`; every row must be ≥ protocol minimum (`CURVE_OFFSET`; first tier is usually 0.1 TRUST at weight 1).
  */
 const ARENA_STAKE_PRESETS_BATCH = [0.1, 0.25, 0.5, 1, 2.5, 5] as const;
 const ARENA_STAKE_PRESETS_LEGACY = [0.1, 0.25, 0.5, 1, 2.5, 10] as const;
@@ -961,28 +961,26 @@ function getTreasury(): `0x${string}` | null {
   }
 }
 
-/** Index into `ARENA_STAKE_PRESETS` (defaults to `CURVE_OFFSET`, 0.1 TRUST). */
+/** Index into `ARENA_STAKE_PRESETS`: smallest tier ≥ protocol floor (default), or ≥ env override. */
 function defaultStakePresetIndex(): number {
   const raw = (import.meta.env.VITE_ARENA_DEFAULT_STAKE_TRUST as string | undefined)?.trim();
   /** Earlier builds documented `0.5` as the example default; ignore so testers land on 0.1 unless they pick another value. */
   const env = raw && raw !== '0.5' ? raw : '';
   const floorTrust = parseFloat(formatEther(CURVE_OFFSET));
-  const target = (() => {
-    if (!env) return Number.isFinite(floorTrust) && floorTrust > 0 ? floorTrust : 0.1;
+  const protocolMin = Number.isFinite(floorTrust) && floorTrust > 0 ? floorTrust : 0.1;
+
+  /** Desired TRUST per unit; never below protocol minimum once env parses. */
+  const targetTrust = (() => {
+    if (!env) return protocolMin;
     const n = parseFloat(env.replace(',', '.'));
-    if (!Number.isFinite(n) || n <= 0) return Number.isFinite(floorTrust) && floorTrust > 0 ? floorTrust : 0.1;
-    return n;
+    if (!Number.isFinite(n) || n <= 0) return protocolMin;
+    return Math.max(protocolMin, n);
   })();
-  let best = 0;
-  let bestD = Infinity;
-  ARENA_STAKE_PRESETS.forEach((v, i) => {
-    const d = Math.abs(v - target);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
-  });
-  return best;
+
+  const cap = ARENA_STAKE_PRESETS.length - 1;
+  let idx = ARENA_STAKE_PRESETS.findIndex((v) => v + 1e-12 >= targetTrust);
+  if (idx < 0) idx = cap;
+  return Math.min(Math.max(0, idx), cap);
 }
 
 const RankedList: React.FC = () => {
@@ -994,7 +992,7 @@ const RankedList: React.FC = () => {
   const [round, setRound] = useState<ArenaRound | null>(null);
   const [duels, setDuels] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [stakePresetIdx, setStakePresetIdx] = useState(defaultStakePresetIndex);
+  const [stakePresetIdx, setStakePresetIdx] = useState(() => defaultStakePresetIndex());
   const [stakingTx, setStakingTx] = useState(false);
   const [submitProgress, setSubmitProgress] = useState<string | null>(null);
   const [arenaCategoryId, setArenaCategoryId] = useState<string>('all');
@@ -3229,7 +3227,7 @@ const RankedList: React.FC = () => {
                   )}
 
                   <div
-                    className="rounded-xl border border-white/[0.09] px-3 py-2.5 backdrop-blur-sm min-h-[3.75rem] flex items-center"
+                    className="rounded-xl border border-white/[0.09] px-3 py-2.5 backdrop-blur-sm min-h-[3.75rem] flex flex-col justify-center"
                     style={{
                       background:
                         'linear-gradient(90deg, rgba(8,8,12,0.88) 0%, rgba(0,243,255,0.07) 100%)',
@@ -3237,7 +3235,8 @@ const RankedList: React.FC = () => {
                     }}
                   >
                     {listId && climbViewMode === 'arena' ? (
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] sm:text-[11px] w-full">
+                      <>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] sm:text-[11px] w-full">
                         <span className="font-mono font-black uppercase tracking-[0.2em] text-slate-600 w-full sm:w-auto">
                           Session
                         </span>
@@ -3283,6 +3282,42 @@ const RankedList: React.FC = () => {
                           </div>
                         </div>
                       </div>
+                        <div
+                          className="mt-2 w-full flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-white/[0.06] pt-2"
+                          role="group"
+                          aria-label="Arena stake amount per queued line"
+                        >
+                          <span className="font-mono font-black uppercase tracking-[0.18em] text-slate-600 text-[9px] shrink-0">
+                            Stake
+                          </span>
+                          <div className="flex flex-wrap gap-1 min-w-0">
+                            {ARENA_STAKE_PRESETS.map((amt, idx) => {
+                              const on = idx === stakePresetIdx;
+                              return (
+                                <button
+                                  key={`arena-stake-${amt}`}
+                                  type="button"
+                                  onClick={() => {
+                                    playArenaUiClick();
+                                    setStakePresetIdx(idx);
+                                  }}
+                                  title={`${amt} TRUST per unit · cart line deposit = preset × weight`}
+                                  className={`rounded-md px-2 py-0.5 text-[9px] font-bold tabular-nums transition-colors ${
+                                    on
+                                      ? 'bg-cyan-500/25 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45)]'
+                                      : 'bg-white/[0.04] text-slate-500 hover:text-slate-200 hover:bg-white/[0.07]'
+                                  }`}
+                                >
+                                  {amt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <span className="text-[9px] text-slate-600 font-mono">
+                            TRUST/unit · batch: preset × weight
+                          </span>
+                        </div>
+                      </>
                     ) : (
                       <p className="w-full text-[10px] sm:text-[11px] font-mono text-slate-500 leading-relaxed px-0.5">
                         <span className="font-black uppercase tracking-[0.2em] text-slate-600 mr-2">Session</span>
