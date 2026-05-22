@@ -13,8 +13,129 @@
  *  - For portal lists with no peer claims we return `null` (no overlap).
  *  - Only when there is real overlap do we return a similarity score.
  */
-import type { UserArenaRankingClaim } from './graphql';
+import { formatEther } from 'viem';
+import type { ArenaProxyDepositRow, UserArenaRankingClaim } from './graphql';
 import type { RankItem } from '../pages/RankedList';
+
+/** One row in a peer's full list ranking (ordered by accumulated TRUST on this list). */
+export type PortalListRankRow = {
+  rank: number;
+  subjectId: string;
+  label: string;
+  image?: string;
+  support: boolean;
+  trustWei: bigint;
+  trustLabel: string;
+};
+
+function formatTrustWei(wei: bigint): string {
+  if (wei <= 0n) return '—';
+  const t = parseFloat(formatEther(wei));
+  if (!Number.isFinite(t) || t <= 0) return '—';
+  if (t >= 100) return `${Math.round(t)}`;
+  const rounded = Math.round(t * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function listTermMatches(a: string, b: string): boolean {
+  return String(a).toLowerCase() === String(b).toLowerCase();
+}
+
+/**
+ * Build a peer's ordered ranking for one portal list: total TRUST per identity
+ * (all FeeProxy deposits on YES vaults add up), highest first. Latest YES/NO per
+ * subject comes from their indexed claims.
+ */
+export function buildPortalListRankingByAccumulatedTrust(
+  wallet: string,
+  listTermId: string,
+  peerClaims: UserArenaRankingClaim[],
+  deposits: ArenaProxyDepositRow[],
+  stanceByVault: Map<
+    string,
+    {
+      support: boolean;
+      stance: {
+        listTermId: string;
+        subjectId: string;
+        subjectLabel: string;
+        subjectImage?: string;
+      };
+    }
+  >,
+): PortalListRankRow[] {
+  const walletLc = wallet.trim().toLowerCase();
+  if (!walletLc || !listTermId) return [];
+
+  const latestSupport = new Map<string, boolean>();
+  const meta = new Map<string, { label: string; image?: string }>();
+  for (const c of peerClaims) {
+    if (!listTermMatches(c.listTermId, listTermId)) continue;
+    const sid = String(c.subjectId).toLowerCase();
+    latestSupport.set(sid, Boolean(c.support));
+    if (!meta.has(sid)) {
+      meta.set(sid, { label: c.subjectLabel, image: c.subjectImage });
+    }
+  }
+
+  const trustBySubject = new Map<string, bigint>();
+  for (const dep of deposits) {
+    if (normalizeReceiver(dep.receiverId) !== walletLc) continue;
+    const stance = stanceByVault.get(dep.vaultTermId);
+    if (!stance || !listTermMatches(stance.stance.listTermId, listTermId)) continue;
+    if (!stance.support) continue;
+    const wei = dep.assetsAfterFeesWei ?? 0n;
+    if (wei <= 0n) continue;
+    const sid = String(stance.stance.subjectId).toLowerCase();
+    trustBySubject.set(sid, (trustBySubject.get(sid) ?? 0n) + wei);
+    if (!meta.has(sid)) {
+      meta.set(sid, {
+        label: stance.stance.subjectLabel,
+        image: stance.stance.subjectImage,
+      });
+    }
+  }
+
+  /** Fallback when deposit amounts are missing: order by latest YES stakes. */
+  if (trustBySubject.size === 0) {
+    const yesRows = peerClaims
+      .filter((c) => listTermMatches(c.listTermId, listTermId) && c.support)
+      .sort((a, b) => b.blockNumber - a.blockNumber);
+    return yesRows.map((c, i) => ({
+      rank: i + 1,
+      subjectId: c.subjectId,
+      label: c.subjectLabel,
+      image: c.subjectImage,
+      support: true,
+      trustWei: 0n,
+      trustLabel: '—',
+    }));
+  }
+
+  const sorted = [...trustBySubject.entries()].sort((a, b) => {
+    if (b[1] > a[1]) return 1;
+    if (b[1] < a[1]) return -1;
+    return 0;
+  });
+
+  return sorted.map(([sid, wei], i) => {
+    const m = meta.get(sid);
+    return {
+      rank: i + 1,
+      subjectId: sid,
+      label: m?.label ?? 'Pick',
+      image: m?.image,
+      support: latestSupport.get(sid) ?? true,
+      trustWei: wei,
+      trustLabel: formatTrustWei(wei),
+    };
+  });
+}
+
+function normalizeReceiver(id: string): string {
+  const t = id.trim().toLowerCase();
+  return t.startsWith('0x') ? t : t;
+}
 
 export type ArenaSimilarityResult = {
   /** 0–100, weighted agreement on items in your deck. */

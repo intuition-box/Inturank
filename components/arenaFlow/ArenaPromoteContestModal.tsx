@@ -59,6 +59,15 @@ type Props = {
   isWalletConnected?: boolean;
   /** Called once the promote tx succeeds. Caller registers the new portal list. */
   onPromoted: (result: ArenaPromoteListResult) => void;
+  /**
+   * When set (Rank → Publish and compare), runs promote + rank vault deposits in one
+   * click so the wallet always prompts even if list/atoms/triples already exist.
+   */
+  onMintContest?: (input: {
+    wallet: string;
+    depositPerLeg: string;
+    onProgress: (msg: string) => void;
+  }) => Promise<ArenaPromoteListResult>;
 };
 
 const DEFAULT_DEPOSIT_FALLBACK = formatEther(CURVE_OFFSET);
@@ -78,6 +87,7 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
   walletAddress,
   isWalletConnected,
   onPromoted,
+  onMintContest,
 }) => {
   const palette = useMemo(() => deckPalette(listCategory), [listCategory]);
   const [minDeposit, setMinDeposit] = useState<string>(DEFAULT_DEPOSIT_FALLBACK);
@@ -155,25 +165,27 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
 
     try {
       setTxStatus('SIGNING');
-      const result = await promoteArenaListOnChain({
-        title: contestTitle,
-        description: contestDescription,
-        items: effectiveItems,
-        wallet: walletAddress,
-        depositPerLeg: minDeposit,
-        onProgress: (m) => {
-          setTxProgress(m);
-          /** Heuristic: bump status as the service moves through phases. */
-          const lower = m.toLowerCase();
-          if (lower.includes('signature') || lower.includes('signing') || lower.includes('awaiting')) {
-            setTxStatus('SIGNING');
-          } else if (lower.includes('broadcast') || lower.includes('total send') || lower.includes('preparing')) {
-            setTxStatus('BROADCASTING');
-          } else if (lower.includes('anchored') || lower.includes('confirmation') || lower.includes('confirming')) {
-            setTxStatus('CONFIRMING');
-          }
-        },
-      });
+      const progress = (m: string) => {
+        setTxProgress(m);
+        const lower = m.toLowerCase();
+        if (lower.includes('signature') || lower.includes('signing') || lower.includes('awaiting')) {
+          setTxStatus('SIGNING');
+        } else if (lower.includes('broadcast') || lower.includes('total send') || lower.includes('preparing')) {
+          setTxStatus('BROADCASTING');
+        } else if (lower.includes('anchored') || lower.includes('confirmation') || lower.includes('confirming')) {
+          setTxStatus('CONFIRMING');
+        }
+      };
+      const result = onMintContest
+        ? await onMintContest({ wallet: walletAddress, depositPerLeg: minDeposit, onProgress: progress })
+        : await promoteArenaListOnChain({
+            title: contestTitle,
+            description: contestDescription,
+            items: effectiveItems,
+            wallet: walletAddress,
+            depositPerLeg: minDeposit,
+            onProgress: progress,
+          });
       markProxyApproved(walletAddress);
       setTxLastHash(result.triplesTxHash);
       setTxStatus('SUCCESS');

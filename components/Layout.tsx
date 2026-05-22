@@ -750,7 +750,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </main>
 
-        {ARENA_BATCH_MODE && <ArenaBatchFab />}
+        {ARENA_BATCH_MODE && !pathname.startsWith('/climb') && <ArenaBatchFab />}
 
         <SiteFooter />
       </div>

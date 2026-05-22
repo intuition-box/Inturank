@@ -34,9 +34,11 @@ import {
   predicateLooksLikeBattlePredicateLoose,
   resolveMetadata,
   registerArenaPortalListTermsForIndexing,
-  fetchUserArenaRankingClaims,
   fetchDistinctRankingCreatorsForPortalList,
-  fetchDistinctReceiversForPortalListFromProxyDeposits,
+  fetchArenaCompareGraphBundle,
+  discoverPortalListRankerReceiversFromDeposits,
+  buildArenaRankingClaimsForReceivers,
+  invalidateProxyArenaRankDepositsCache,
   fetchApproxDistinctPortalListRankerCount,
   fetchArenaLiveAtomsFromGraph,
   countListMembersForObject,
@@ -85,7 +87,9 @@ import { fetchArenaPlayerLeaderboard, inturankLeaderboardTotalXp, type ArenaPlay
 import {
   aggregateSimilarity,
   computeArenaListSimilarity,
+  buildPortalListRankingByAccumulatedTrust,
   type ArenaSimilarityResult,
+  type PortalListRankRow,
 } from '../services/arenaSimilarity';
 import {
   ARENA_BATCH_MODE,
@@ -94,6 +98,7 @@ import {
   ARENA_XP_PER_RANK_PICK,
   BUILT_ON_INTUITION_PORTAL_LIST_OBJECT_TERM_ID,
   CURVE_OFFSET,
+  LIST_PREDICATE_ID,
   LINEAR_CURVE_ID,
   OFFSET_PROGRESSIVE_CURVE_ID,
   PROTOCOL_XP_ARENA_RANK_ADD_TO_LIST_MULT,
@@ -104,10 +109,13 @@ import {
   clearPendingStorage,
   getFirstListIdWithPending,
   getTotalPendingCount,
+  buildArenaRankStakeRows,
   loadAllPendingRowsLive,
   loadPendingForList,
+  remapPendingRowsMemberTermIds,
   savePendingForList,
   type ArenaPendingRow,
+  type ArenaPendingRowWithSource,
 } from '../services/arenaPendingBatch';
 import {
   ARENA_CATEGORY_PILLS,
@@ -148,7 +156,10 @@ import { ArenaCompareView } from '../components/arenaFlow/ArenaCompareView';
 import { ArenaPortraitImg } from '../components/arenaFlow/ArenaPortraitImg';
 import { ArenaPromoteBanner } from '../components/arenaFlow/ArenaPromoteBanner';
 import { ArenaPromoteContestModal } from '../components/arenaFlow/ArenaPromoteContestModal';
-import type { ArenaPromoteListResult } from '../services/arenaPromoteList';
+import {
+  promoteArenaListOnChain,
+  type ArenaPromoteListResult,
+} from '../services/arenaPromoteList';
 import ArenaStarredRail from '../components/ArenaStarredRail';
 import { XpEarnHint } from '../components/XpEarnHint';
 import IntuRankXpBadge from '../components/IntuRankXpBadge';
@@ -174,6 +185,8 @@ export type ArenaComparePeer = {
   player: ArenaPlayerRow;
   claims: UserArenaRankingClaim[];
   similarity: ArenaSimilarityResult;
+  /** Full list order for this peer on this contest (TRUST-weighted). */
+  listRanking: PortalListRankRow[];
 };
 
 export type RankItemKind = 'claim' | 'atom' | 'token';
@@ -1017,7 +1030,7 @@ const RankedList: React.FC = () => {
    * modal's success callback knows to chain into the rank-batch step instead
    * of just navigating away. Stays `'idle'` until the user hits Submit.
    */
-  const [commitPhase, setCommitPhase] = useState<'idle' | 'promote' | 'rank-batch'>('idle');
+  const [commitPhase, setCommitPhase] = useState<'idle' | 'promote' | 'rank-publish' | 'rank-batch'>('idle');
   /** Per ranked card: TRUST weight = session preset × units (batch rows). */
   const [rankTrustUnits, setRankTrustUnits] = useState<Record<string, number>>({});
   /** Tracks latest trust units for reorder handlers (avoid nested setState drift). */
@@ -1030,6 +1043,9 @@ const RankedList: React.FC = () => {
   const bumpDeckEngagement = useCallback(() => setDeckEngagementTuneCount((c) => c + 1), []);
   const curateInitForListRef = useRef<string | null>(null);
   const prevListIdForFlowRef = useRef<string | null>(null);
+  /** After promote, `listId` changes static → portal; skip the curate reset in the listId effect. */
+  const portalPromoteLandingRef = useRef<string | null>(null);
+  const submitArenaBatchRef = useRef<(() => Promise<void>) | null>(null);
   const guestCurateNudgeRef = useRef(false);
   /** Deeplink vs hub: avoid double-playing the floor-enter stinger for the same list. */
   const arenaFloorStingerPlayedForListRef = useRef<string | null>(null);
@@ -1197,6 +1213,7 @@ const RankedList: React.FC = () => {
 
   useEffect(() => {
     const bump = () => {
+      invalidateProxyArenaRankDepositsCache();
       setComparePeersVersion((v) => v + 1);
       setListRankersTick((t) => t + 1);
     };
@@ -1407,26 +1424,35 @@ const RankedList: React.FC = () => {
         .slice(0, 8)
         .map((p) => p.address);
 
+      const listTermId = activeList.listObjectTermId!;
+
+      let bundle: Awaited<ReturnType<typeof fetchArenaCompareGraphBundle>> | null = null;
       let fromList: string[] = [];
       try {
-        fromList = await fetchDistinctRankingCreatorsForPortalList(
-          activeList.listObjectTermId!,
-          address,
-          20,
-        );
+        const [graphBundle, listCreators] = await Promise.all([
+          fetchArenaCompareGraphBundle(),
+          fetchDistinctRankingCreatorsForPortalList(listTermId, address, 20),
+        ]);
+        if (cancelled) return;
+        bundle = graphBundle;
+        fromList = listCreators;
       } catch (e) {
-        console.warn('[comparePeers] list rankers fetch failed', e);
+        console.warn('[comparePeers] graph bundle / list rankers failed', e);
       }
 
       let fromDeposits: string[] = [];
-      try {
-        fromDeposits = await fetchDistinctReceiversForPortalListFromProxyDeposits(
-          activeList.listObjectTermId!,
-          address,
-          26,
-        );
-      } catch (e) {
-        console.warn('[comparePeers] deposit list rankers fetch failed', e);
+      if (bundle) {
+        try {
+          fromDeposits = discoverPortalListRankerReceiversFromDeposits(
+            listTermId,
+            address,
+            26,
+            bundle.deposits,
+            bundle.stanceByVault,
+          );
+        } catch (e) {
+          console.warn('[comparePeers] deposit list rankers derive failed', e);
+        }
       }
 
       const merged: string[] = [];
@@ -1439,7 +1465,7 @@ const RankedList: React.FC = () => {
         if (merged.length >= 22) break;
       }
 
-      if (merged.length === 0) {
+      if (merged.length === 0 || !bundle) {
         if (!cancelled) {
           setComparePeers([]);
           setComparePeersLoading(false);
@@ -1447,22 +1473,33 @@ const RankedList: React.FC = () => {
         return;
       }
 
-      const results = await Promise.all(
-        merged.map(async (wallet) => {
-          try {
-            const claims = await fetchUserArenaRankingClaims(wallet);
-            const sim = computeArenaListSimilarity(
-              rankDeckItems,
-              claims,
-              activeList.listObjectTermId,
-            );
-            return { player: syntheticRow(wallet), claims, similarity: sim };
-          } catch (e) {
-            console.warn('[comparePeers] failed for', wallet, e);
-            return { player: syntheticRow(wallet), claims: [] as UserArenaRankingClaim[], similarity: null };
-          }
-        }),
-      );
+      const { deposits: rankDeposits, stanceByVault, allow } = bundle;
+      let claimsByWallet: Map<string, UserArenaRankingClaim[]>;
+      try {
+        claimsByWallet = buildArenaRankingClaimsForReceivers(
+          merged,
+          rankDeposits,
+          stanceByVault,
+          allow,
+        );
+      } catch (e) {
+        console.warn('[comparePeers] batch claims build failed', e);
+        claimsByWallet = new Map();
+      }
+
+      const results = merged.map((wallet) => {
+        const walletKey = wallet.toLowerCase();
+        const claims = claimsByWallet.get(walletKey) ?? [];
+        const sim = computeArenaListSimilarity(rankDeckItems, claims, listTermId);
+        const listRanking = buildPortalListRankingByAccumulatedTrust(
+          wallet,
+          listTermId,
+          claims,
+          rankDeposits,
+          stanceByVault,
+        );
+        return { player: syntheticRow(wallet), claims, similarity: sim, listRanking };
+      });
 
       if (cancelled) return;
       const peers: ArenaComparePeer[] = results
@@ -1746,6 +1783,11 @@ const RankedList: React.FC = () => {
     }
     const prev = prevListIdForFlowRef.current;
     if (prev !== listId) {
+      if (portalPromoteLandingRef.current === listId) {
+        portalPromoteLandingRef.current = null;
+        prevListIdForFlowRef.current = listId;
+        return;
+      }
       if (prev != null) {
         clearPersistedContestFlow(prev);
         setArenaFlowPhase('curate');
@@ -1810,9 +1852,17 @@ const RankedList: React.FC = () => {
     if (!persisted || (persisted.phase !== 'rank' && persisted.phase !== 'compare')) return;
 
     const rebuilt = persisted.rankOrderIds
-      .map((id) => pool.find((x) => x.id === id))
+      .map((id) => {
+        const byId = pool.find((x) => x.id === id);
+        if (byId) return byId;
+        const norm = id.trim().toLowerCase();
+        return pool.find((x) => x.label.trim().toLowerCase() === norm);
+      })
       .filter(Boolean) as RankItem[];
     if (rebuilt.length < 1) {
+      if (persisted.phase === 'compare') {
+        return;
+      }
       clearPersistedContestFlow(listId);
       setArenaFlowPhase('curate');
       curateInitForListRef.current = null;
@@ -1853,7 +1903,9 @@ const RankedList: React.FC = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    if (ARENA_CONTEST_FLOW_V2) return;
     if (!listId || loading) return;
+    if (!openBatchAfterLoad) return;
     setOpenBatchAfterLoad(false);
     if (getTotalPendingCount() > 0) {
       setBatchModalOpen(true);
@@ -1864,25 +1916,6 @@ const RankedList: React.FC = () => {
     if (!listId) return;
     savePendingForList(listId, pendingRows);
   }, [listId, pendingRows]);
-
-  useEffect(() => {
-    const onFabToggle = () => {
-      if (!ARENA_BATCH_MODE) return;
-      if (!listId) {
-        const lid = getFirstListIdWithPending();
-        if (lid && getArenaListById(lid)) {
-          navigate(`/climb?list=${encodeURIComponent(lid)}`, { replace: true });
-          setListId(lid);
-          setOpenBatchAfterLoad(true);
-        }
-        return;
-      }
-      if (getTotalPendingCount() < 1) return;
-      setBatchModalOpen((v) => !v);
-    };
-    window.addEventListener('arena-batch-fab-toggle', onFabToggle as EventListener);
-    return () => window.removeEventListener('arena-batch-fab-toggle', onFabToggle as EventListener);
-  }, [listId, navigate]);
 
   const initScoresForPool = useCallback(
     (items: RankItem[]) => {
@@ -1995,19 +2028,27 @@ const RankedList: React.FC = () => {
     [listId, pool]
   );
 
-  const submitArenaBatch = useCallback(async () => {
-    const rowsToSend = loadAllPendingRowsLive(listId, pendingRows);
-    if (rowsToSend.length === 0) return;
+  type SubmitArenaBatchOpts = {
+    rowsOverride?: ArenaPendingRowWithSource[];
+    portalListObjectTermId?: `0x${string}`;
+    listTitle?: string;
+    onProgress?: (msg: string) => void;
+    skipSuccessModal?: boolean;
+  };
+
+  const submitArenaBatch = useCallback(async (opts?: SubmitArenaBatchOpts): Promise<boolean> => {
+    const rowsToSend = opts?.rowsOverride ?? loadAllPendingRowsLive(listId, pendingRows);
+    if (rowsToSend.length === 0) return false;
     if (!isConnected || !address) {
       toast.error('Connect your wallet to submit your batch.');
-      return;
+      return false;
     }
     let baseWei: bigint;
     try {
       baseWei = parseEther((stakeTRUST || '0').trim() || '0');
     } catch {
       toast.error('Invalid stake amount');
-      return;
+      return false;
     }
     for (const row of rowsToSend) {
       const rowWei = baseWei * BigInt(row.units);
@@ -2017,7 +2058,7 @@ const RankedList: React.FC = () => {
             `Each row deposit is stake × units; one row totals ${formatEther(rowWei)} TRUST (${stakeTRUST}×${row.units}). ` +
             `Raise the stake preset or bump units until every line reaches at least ${PROTOCOL_MIN_CLAIM_DEPOSIT_LABEL}.`
         );
-        return;
+        return false;
       }
     }
     const allSubjectsResolvable = rowsToSend.every(
@@ -2025,7 +2066,7 @@ const RankedList: React.FC = () => {
     );
     if (!allSubjectsResolvable) {
       toast.error('Some rows are missing valid term ids/labels for claim creation.');
-      return;
+      return false;
     }
 
     setStakingTx(true);
@@ -2075,18 +2116,43 @@ const RankedList: React.FC = () => {
       const legacyJobs: Array<{ listRows: typeof rowsToSend; listEntry: ReturnType<typeof getArenaListById> }> =
         [];
 
-      for (const [, lr] of byList) {
-        const listEntry = getArenaListById(lr[0]!.sourceListId);
-        const portalListObjectId =
-          listEntry?.source === 'portal' && TERM_ID_RE.test(listEntry.listObjectTermId)
-            ? listEntry.listObjectTermId
-            : null;
+      if (opts?.rowsOverride && opts.portalListObjectTermId) {
+        const portalListObjectId = opts.portalListObjectTermId;
+        const listEntry = getArenaListById(rowsToSend[0]!.sourceListId);
+        const portalEntry: Extract<ArenaListEntry, { source: 'portal' }> =
+          listEntry?.source === 'portal'
+            ? listEntry
+            : {
+                id: portalListIdFromTermId(portalListObjectId),
+                source: 'portal',
+                listObjectTermId: portalListObjectId,
+                title: opts.listTitle ?? activeList?.title ?? 'Arena contest',
+                description: '',
+                tag: 'Live',
+                arenaCategory: activeList?.arenaCategory ?? 'network',
+                listGlyph: activeList?.listGlyph ?? '◆',
+                totalItems: rowsToSend.length,
+                previewItemsData: [],
+              };
+        portalJobs.push({
+          portalListObjectId,
+          listRows: rowsToSend,
+          listEntry: portalEntry,
+        });
+      } else {
+        for (const [, lr] of byList) {
+          const listEntry = getArenaListById(lr[0]!.sourceListId);
+          const portalListObjectId =
+            listEntry?.source === 'portal' && TERM_ID_RE.test(listEntry.listObjectTermId)
+              ? listEntry.listObjectTermId
+              : null;
 
-        if (portalListObjectId && lr.every((row) => TERM_ID_RE.test(row.item.id))) {
-          if (!listEntry) continue;
-          portalJobs.push({ portalListObjectId, listRows: lr, listEntry });
-        } else {
-          legacyJobs.push({ listRows: lr, listEntry });
+          if (portalListObjectId && lr.every((row) => TERM_ID_RE.test(row.item.id))) {
+            if (!listEntry) continue;
+            portalJobs.push({ portalListObjectId, listRows: lr, listEntry });
+          } else {
+            legacyJobs.push({ listRows: lr, listEntry });
+          }
         }
       }
 
@@ -2104,7 +2170,10 @@ const RankedList: React.FC = () => {
         }
       }
 
-      const progressCb = (m: string) => setSubmitProgress(m);
+      const progressCb = (m: string) => {
+        opts?.onProgress?.(m);
+        setSubmitProgress(m);
+      };
 
       const mergedDepositLegs: { termId: string; assetsWei: bigint }[] = [];
       const depositXpRows: Array<{ rowKey: string; rowWei: bigint }> = [];
@@ -2142,7 +2211,18 @@ const RankedList: React.FC = () => {
         const resolved = await Promise.all(
           listRows.map(async (row) => {
             const rowWei = baseWei * BigInt(row.units);
-            const membershipVault = await getListMembershipTripleTermId(row.item.id, portalListObjectId);
+            let membershipVault = await getListMembershipTripleTermId(row.item.id, portalListObjectId);
+            if (
+              !membershipVault &&
+              TERM_ID_RE.test(row.item.id) &&
+              TERM_ID_RE.test(portalListObjectId)
+            ) {
+              membershipVault = calculateTripleId(
+                row.item.id as `0x${string}`,
+                LIST_PREDICATE_ID as `0x${string}`,
+                portalListObjectId as `0x${string}`,
+              );
+            }
             if (!membershipVault) return { row, rowWei, membershipVault: null, counterShares: 0n };
             const yesVault = membershipVault;
             const noVault = calculateCounterTripleId(yesVault);
@@ -2351,7 +2431,7 @@ const RankedList: React.FC = () => {
       setStakingTx(false);
       setSubmitProgress(null);
     }
-    if (!sent) return;
+    if (!sent) return false;
 
     if (address) {
       recordArenaRankingPicks(address, rowsToSend.length);
@@ -2415,16 +2495,18 @@ const RankedList: React.FC = () => {
       }
       /** Arena XP: fixed pick credit per queued row (matches `arenaPickCreditXp` / indexer attribution). */
       const arenaXpDelta = rowsToSend.length * ARENA_XP_PER_RANK_PICK;
-      setArenaBatchSuccess({
-        itemCount: rowsToSend.length,
-        trustLabel: formatEther(totalWei),
-        themeShort: successThemeShort,
-        contextSuffix: successContextSuffix,
-        ...(humanLine ? { humanLine } : {}),
-        ...(activityXpDelta > 0 ? { activityXpEarned: activityXpDelta } : {}),
-        ...(arenaXpDelta > 0 ? { arenaXpEarned: arenaXpDelta } : {}),
-        ...(xpdnGrantsPerTx.length > 0 ? { xpdnByTx: xpdnGrantsPerTx } : {}),
-      });
+      if (!opts?.skipSuccessModal) {
+        setArenaBatchSuccess({
+          itemCount: rowsToSend.length,
+          trustLabel: formatEther(totalWei),
+          themeShort: successThemeShort,
+          contextSuffix: successContextSuffix,
+          ...(humanLine ? { humanLine } : {}),
+          ...(activityXpDelta > 0 ? { activityXpEarned: activityXpDelta } : {}),
+          ...(arenaXpDelta > 0 ? { arenaXpEarned: arenaXpDelta } : {}),
+          ...(xpdnGrantsPerTx.length > 0 ? { xpdnByTx: xpdnGrantsPerTx } : {}),
+        });
+      }
       void refreshPlayers({ silent: true });
       void refreshArenaXpSelf();
       try {
@@ -2442,10 +2524,38 @@ const RankedList: React.FC = () => {
       toast.success('Claims written on Intuition.');
     }
 
+    const touchedListIds = new Set(rowsToSend.map((r) => r.sourceListId));
+    if (listId) touchedListIds.add(listId);
     clearPendingStorage();
+    for (const lid of touchedListIds) clearPendingForList(lid);
     setPendingRows([]);
     setBatchModalOpen(false);
-  }, [pendingRows, listId, isConnected, address, stakeTRUST, refreshPlayers, refreshArenaXpSelf]);
+    setPendingArenaClear(null);
+    setCommitPhase('idle');
+
+    if (
+      ARENA_CONTEST_FLOW_V2 &&
+      listId &&
+      (arenaFlowPhase === 'curate' || arenaFlowPhase === 'rank' || arenaFlowPhase === 'compare')
+    ) {
+      setArenaFlowPhase('compare');
+    }
+    return true;
+  }, [
+    pendingRows,
+    listId,
+    arenaFlowPhase,
+    activeList,
+    isConnected,
+    address,
+    stakeTRUST,
+    refreshPlayers,
+    refreshArenaXpSelf,
+  ]);
+
+  useEffect(() => {
+    submitArenaBatchRef.current = () => submitArenaBatch();
+  }, [submitArenaBatch]);
 
   const updatePendingUnits = useCallback((sourceListId: string, key: string, units: number) => {
     const rows = loadPendingForList(sourceListId);
@@ -2592,16 +2702,18 @@ const RankedList: React.FC = () => {
 
       if (ARENA_BATCH_MODE) {
         applyLocalYesNo(item, support);
-        if (!ARENA_CONTEST_FLOW_V2 || support) {
-          setPendingRows((prev) => [
-            ...prev,
-            {
-              key: `q-${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-              item: rankItemToPendingSnapshot(item),
-              support,
-              units: 1,
-            },
-          ]);
+        if (!ARENA_CONTEST_FLOW_V2) {
+          if (support) {
+            setPendingRows((prev) => [
+              ...prev,
+              {
+                key: `q-${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                item: rankItemToPendingSnapshot(item),
+                support,
+                units: 1,
+              },
+            ]);
+          }
         }
         return true;
       }
@@ -2712,7 +2824,7 @@ const RankedList: React.FC = () => {
       const merged = autoDistributeStakeUnitsAlongOrder(next, prevTrust, 1, RANK_TRUST_UNITS_MAX);
       setRankDeckItems(next);
       setRankTrustUnits(merged);
-      if (ARENA_BATCH_MODE && listId) {
+      if (ARENA_BATCH_MODE && listId && !ARENA_CONTEST_FLOW_V2) {
         setPendingRows((prevRows) => alignPendingRowsToDeck(next, prevRows, merged));
       }
       bumpDeckEngagement();
@@ -2821,10 +2933,82 @@ const RankedList: React.FC = () => {
     setBatchModalOpen(true);
   }, [isConnected, address, rankFlowCartCount]);
 
-  const onCompareFromRank = useCallback(() => {
+  /**
+   * Rank sidebar CTA. Off-chain contests open the mint modal first; on success we land on Compare.
+   * Portal lists skip straight to Compare (nothing to publish).
+   */
+  const onPublishAndCompareFromRank = useCallback(() => {
     playArenaUiClick();
+
+    if (!isConnected || !address) {
+      void connectWallet();
+      return;
+    }
+
+    if (activeList && activeList.source !== 'portal') {
+      setCommitPhase('rank-publish');
+      setPromoteContestOpen(true);
+      return;
+    }
+
     setArenaFlowPhase('compare');
-  }, []);
+  }, [activeList, isConnected, address]);
+
+  /**
+   * Rank → Mint: promote contest, then vault-deposit rank stakes in the same wallet
+   * session (so a re-promote with reused atoms still prompts for deposits).
+   */
+  const handleArenaMintContest = useCallback(
+    async ({
+      wallet,
+      depositPerLeg,
+      onProgress,
+    }: {
+      wallet: string;
+      depositPerLeg: string;
+      onProgress: (msg: string) => void;
+    }): Promise<ArenaPromoteListResult> => {
+      const promoteItems = rankDeckItems.map((p) => ({
+        id: p.id,
+        label: p.label,
+        subtitle: p.subtitle,
+        image: p.image,
+      }));
+      const result = await promoteArenaListOnChain({
+        title: activeList?.title ?? 'New contest',
+        description:
+          activeList && 'description' in activeList && activeList.description
+            ? activeList.description
+            : undefined,
+        items: promoteItems,
+        wallet,
+        depositPerLeg,
+        onProgress,
+      });
+      const portalId = portalListIdFromTermId(result.listTermId);
+      const stakeRows = buildArenaRankStakeRows({
+        deck: rankDeckItems,
+        rankTrustUnits,
+        memberTermIds: result.memberTermIds,
+        sourceListId: portalId,
+      });
+      if (stakeRows.length > 0) {
+        onProgress('Confirm rank stakes in your wallet…');
+        const stakesOk = await submitArenaBatch({
+          rowsOverride: stakeRows,
+          portalListObjectTermId: result.listTermId,
+          listTitle: activeList?.title,
+          onProgress,
+          skipSuccessModal: true,
+        });
+        if (!stakesOk) {
+          throw new Error('Rank stake signing did not complete. Your contest is on-chain; try again from Rank.');
+        }
+      }
+      return result;
+    },
+    [activeList, rankDeckItems, rankTrustUnits, submitArenaBatch],
+  );
 
   const onYesNo = (item: RankItem, support: boolean) => {
     if (!round) return;
@@ -2970,7 +3154,7 @@ const RankedList: React.FC = () => {
       return;
     }
 
-    if (ARENA_BATCH_MODE && rankFlowCartCount > 0) {
+    if (!ARENA_CONTEST_FLOW_V2 && ARENA_BATCH_MODE && rankFlowCartCount > 0) {
       setCommitPhase('rank-batch');
       setBatchModalOpen(true);
       return;
@@ -3738,36 +3922,6 @@ const RankedList: React.FC = () => {
                     style={{ color: false ? '#0f172a' : ARENA_THEME.cyanMuted }}
                   />
                 </button>
-                {ARENA_BATCH_MODE && batchModalRows.length > 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playArenaUiClick();
-                        setBatchModalOpen(true);
-                      }}
-                      className={
-                        false
-                          ? 'rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-sky-900 transition-colors hover:border-sky-300'
-                          : 'rounded-xl border border-cyan-500/35 bg-cyan-500/[0.1] px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:border-cyan-400/50'
-                      }
-                    >
-                      Cart ({batchModalRows.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playArenaUiClick();
-                        setPendingArenaClear((k) => (k === 'cart' ? null : 'cart'));
-                      }}
-                      aria-label="Clear entire conviction cart"
-                      title="Clear all queued stances (every list)"
-                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.12] bg-black/35 text-slate-400 transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200"
-                    >
-                      <Trash2 size={17} strokeWidth={2.2} aria-hidden />
-                    </button>
-                  </>
-                ) : null}
                 {hasClearableContestPicks ? (
                   <button
                     type="button"
@@ -3947,28 +4101,6 @@ const RankedList: React.FC = () => {
               </div>
             ) : null}
 
-            {ARENA_BATCH_MODE && batchModalRows.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  playArenaUiClick();
-                  setBatchModalOpen(true);
-                }}
-                className="mt-3 w-full text-center rounded-xl py-2.5 px-3 border transition-colors hover:border-intuition-primary/45 hover:bg-intuition-primary/[0.08]"
-                style={{
-                  borderColor: `${ARENA_THEME.cyan}44`,
-                  background: `linear-gradient(135deg, ${ARENA_THEME.cyan}10, rgba(8,8,12,0.85))`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 0 20px ${ARENA_THEME.redDim}`,
-                }}
-              >
-                <span className="block text-[11px] font-bold" style={{ color: ARENA_THEME.cyanMuted }}>
-                  Review conviction cart ({batchModalRows.length} queued)
-                </span>
-                <span className="block text-[9px] text-slate-500 mt-1 font-semibold uppercase tracking-wide">
-                  TRUST settles when you submit the batch
-                </span>
-              </button>
-            ) : null}
           </div>
           )}
 
@@ -4023,14 +4155,18 @@ const RankedList: React.FC = () => {
                   reduceMotion={reduceMotion}
                   onReorder={onRankReorder}
                   onRemoveItem={onRankRemoveItem}
-                  onCompare={onCompareFromRank}
+                  onCompare={onPublishAndCompareFromRank}
+                  compareCtaLabel={
+                    activeList && activeList.source !== 'portal'
+                      ? 'Publish and compare'
+                      : 'Compare with others'
+                  }
                   /**
                    * On-chain writes (list promotion, identity mints, membership
                    * triples, rank stakes) finish in one Compare commit. Rank no longer
                    * shows a sign button (`onSignSubmit` omitted on purpose).
                    */
                   signDisabled={stakingTx}
-                  queuedStanceCount={rankFlowCartCount}
                   listTitle={activeList?.title}
                   poolParticipantCount={pool.length}
                   listStakersCount={portalListRankerCount}
@@ -4044,6 +4180,8 @@ const RankedList: React.FC = () => {
               ) : (
                 <ArenaCompareView
                   deck={rankDeckItems}
+                  rankTrustUnits={rankTrustUnits}
+                  stakeBaseLabel={stakeTRUST}
                   listCategory={activeList?.arenaCategory}
                   peers={comparePeers}
                   peersLoading={comparePeersLoading}
@@ -4053,7 +4191,7 @@ const RankedList: React.FC = () => {
                   gamesToTop10Hint={compareGamesToTop10}
                   pendingPromote={Boolean(activeList && activeList.source !== 'portal')}
                   pendingCardCount={pendingCardCount}
-                  pendingStakeCount={ARENA_BATCH_MODE ? rankFlowCartCount : 0}
+                  pendingStakeCount={0}
                   batchMode={ARENA_BATCH_MODE}
                   isWalletConnected={isConnected}
                   contestTitle={activeList?.title}
@@ -4063,10 +4201,7 @@ const RankedList: React.FC = () => {
                   onSubmitAndContinue={beginArenaCommit}
                   onRandomGame={onCompareRandomGame}
                   onPickNextGame={exitToArenaBrowse}
-                  onOpenConvictionCart={() => {
-                    playArenaUiClick();
-                    setBatchModalOpen(true);
-                  }}
+                  gameActionsOnly={ARENA_CONTEST_FLOW_V2}
                   onOpenSignal={() => {
                     playArenaUiClick();
                     setClimbViewMode('signal');
@@ -4155,17 +4290,19 @@ const RankedList: React.FC = () => {
               </div>
             </div>
           )}
-          <ArenaClimbTerrace
-            queuedBatchCount={ARENA_BATCH_MODE ? batchModalRows.length : 0}
-            onReviewBatch={
-              ARENA_BATCH_MODE
-                ? () => {
-                    playArenaUiClick();
-                    setBatchModalOpen(true);
-                  }
-                : undefined
-            }
-          />
+          {!ARENA_CONTEST_FLOW_V2 ? (
+            <ArenaClimbTerrace
+              queuedBatchCount={ARENA_BATCH_MODE ? batchModalRows.length : 0}
+              onReviewBatch={
+                ARENA_BATCH_MODE
+                  ? () => {
+                      playArenaUiClick();
+                      setBatchModalOpen(true);
+                    }
+                  : undefined
+              }
+            />
+          ) : null}
                 </>
               </div>
             )}
@@ -4435,7 +4572,7 @@ const RankedList: React.FC = () => {
         </div>
       )}
 
-      {ARENA_BATCH_MODE && listId && (
+      {ARENA_BATCH_MODE && listId && !ARENA_CONTEST_FLOW_V2 && (
         <ArenaBatchReviewModal
           open={batchModalOpen}
           onClose={() => {
@@ -4469,13 +4606,15 @@ const RankedList: React.FC = () => {
         payload={arenaBatchSuccess}
         onClose={() => {
           setArenaBatchSuccess(null);
-          /**
-           * Dismissing batch success ends the Compare chain: jump back to contests.
-           */
-          if (commitPhase === 'rank-batch') {
-            setCommitPhase('idle');
-            exitToArenaBrowse();
+          /** Stay on Compare after signing — do not kick the user back to the hub. */
+          if (
+            ARENA_CONTEST_FLOW_V2 &&
+            listId &&
+            (arenaFlowPhase === 'curate' || arenaFlowPhase === 'rank' || arenaFlowPhase === 'compare')
+          ) {
+            setArenaFlowPhase('compare');
           }
+          setCommitPhase('idle');
         }}
       />
 
@@ -4648,7 +4787,7 @@ const RankedList: React.FC = () => {
            * commit chain so the Compare CTA stays "Sign + pick next game"
            * rather than silently advancing.
            */
-          if (commitPhase === 'promote') {
+          if (commitPhase === 'promote' || commitPhase === 'rank-publish') {
             setCommitPhase('idle');
           }
         }}
@@ -4656,15 +4795,18 @@ const RankedList: React.FC = () => {
         contestTitle={activeList?.title ?? 'New contest'}
         contestDescription={activeList && 'description' in activeList ? activeList.description : undefined}
         items={
-          /** Prefer the curated pool (broader on-chain canvas); fall back to the user's deck. */
-          pool.length > 0
-            ? pool.map((p) => ({
+          /**
+           * Rank → Publish and compare: mint only the user's deck (not the full curate pool).
+           * Compare-step promote keeps the broader pool when the deck is empty.
+           */
+          commitPhase === 'rank-publish' || rankDeckItems.length > 0
+            ? rankDeckItems.map((p) => ({
                 id: p.id,
                 label: p.label,
                 subtitle: p.subtitle,
                 image: p.image,
               }))
-            : rankDeckItems.map((p) => ({
+            : pool.map((p) => ({
                 id: p.id,
                 label: p.label,
                 subtitle: p.subtitle,
@@ -4673,6 +4815,7 @@ const RankedList: React.FC = () => {
         }
         walletAddress={address ?? null}
         isWalletConnected={isConnected}
+        onMintContest={commitPhase === 'rank-publish' ? handleArenaMintContest : undefined}
         onPromoted={(result: ArenaPromoteListResult) => {
           /** Register the freshly minted list so Hub / Compare / portfolio all see it. */
           const arenaCategory = activeList?.arenaCategory ?? 'network';
@@ -4710,7 +4853,10 @@ const RankedList: React.FC = () => {
           const oldListId = listId;
           if (oldListId && oldListId !== portalId) {
             try {
-              const rows = loadPendingForList(oldListId);
+              const rows = remapPendingRowsMemberTermIds(
+                loadPendingForList(oldListId),
+                result.memberTermIds,
+              );
               if (rows.length > 0) savePendingForList(portalId, rows);
               clearPendingForList(oldListId);
             } catch (e) {
@@ -4718,28 +4864,80 @@ const RankedList: React.FC = () => {
             }
           }
 
-          setPromoteContestOpen(false);
-          toast.success(`"${portalEntry.title}" is live on-chain.`);
+          /** Rank step: mint + rank stakes (in modal), then Compare. */
+          if (commitPhase === 'rank-publish') {
+            const remappedDeck = rankDeckItems.map((it) => {
+              const tid = result.memberTermIds.get(it.id);
+              return tid ? { ...it, id: tid } : it;
+            });
+            const remappedTrust: Record<string, number> = {};
+            for (const it of rankDeckItems) {
+              const newId = result.memberTermIds.get(it.id) ?? it.id;
+              remappedTrust[newId] = rankTrustUnits[it.id] ?? 1;
+            }
+            setRankDeckItems(remappedDeck);
+            setRankTrustUnits(remappedTrust);
+            writePersistedContestFlow(portalId, {
+              phase: 'compare',
+              rankOrderIds: remappedDeck.map((x) => x.id),
+              rankTrustUnits: remappedTrust,
+            });
+            if (oldListId) clearPersistedContestFlow(oldListId);
 
-          /**
-           * Promote-only exits here. Mid-commit replaces URL/listId and continues to rank-batch
-           * so signing stays one flow.
-           */
-          if (commitPhase !== 'promote') {
-            navigate(`/climb?list=${encodeURIComponent(portalId)}`);
+            clearPendingStorage();
+            clearPendingForList(portalId);
+            if (oldListId) clearPendingForList(oldListId);
+            setPendingRows([]);
+
+            portalPromoteLandingRef.current = portalId;
+            setPromoteContestOpen(false);
+            setBatchModalOpen(false);
+            setCommitPhase('idle');
+            setArenaFlowPhase('compare');
+            toast.success(`"${portalEntry.title}" is live — rank stakes confirmed.`);
+            navigate(`/climb?list=${encodeURIComponent(portalId)}`, { replace: true });
+            setListId(portalId);
+
+            if (address) {
+              recordArenaRankingPicks(address, remappedDeck.length);
+              recordArenaStreakPicks(address, remappedDeck.length);
+              setPickCreditTick((n) => n + 1);
+              void refreshArenaXpSelf();
+              void refreshPlayers({ silent: true });
+              try {
+                window.dispatchEvent(new Event('inturank-arena-onchain-updated'));
+              } catch {
+                /* ignore */
+              }
+            }
             return;
           }
 
-          /** Stay on Compare; update URL + listId so the page picks up portal data. */
+          setRankDeckItems((prev) =>
+            prev.map((it) => {
+              const tid = result.memberTermIds.get(it.id);
+              return tid ? { ...it, id: tid } : it;
+            }),
+          );
+
+          setPromoteContestOpen(false);
+          toast.success(`"${portalEntry.title}" is live on-chain.`);
+
           navigate(`/climb?list=${encodeURIComponent(portalId)}`, { replace: true });
           setListId(portalId);
+
+          /**
+           * Compare-step promote: stay on Compare; optionally continue to rank-batch sign.
+           */
+          if (commitPhase !== 'promote') {
+            return;
+          }
 
           const hasQueuedStakes = ARENA_BATCH_MODE && oldListId
             ? loadPendingForList(portalId).length > 0
             : false;
           if (hasQueuedStakes) {
             setCommitPhase('rank-batch');
-            /** Wait a tick so the listId state propagates before the batch modal reads it. */
             setTimeout(() => setBatchModalOpen(true), 60);
           } else {
             setCommitPhase('idle');

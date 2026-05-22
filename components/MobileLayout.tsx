@@ -355,7 +355,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
         <SiteFooter compact />
       </main>
 
-      {ARENA_BATCH_MODE && <ArenaBatchFab />}
+      {ARENA_BATCH_MODE && !location.pathname.startsWith('/climb') && <ArenaBatchFab />}
 
       {/* Floating bottom tab bar — pill, five equal tabs (matches mobile reference pattern). */}
       <nav

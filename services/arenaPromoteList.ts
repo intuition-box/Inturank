@@ -21,7 +21,7 @@ import { parseEther } from 'viem';
 import {
   atomRefJobKey,
   batchEnsureAtomTermIds,
-  createIdentityAtom,
+  ensureIdentityAtom,
   createSemanticTriplesBatch,
   publicClient,
   type SemanticTripleBatchInput,
@@ -85,8 +85,15 @@ export async function promoteArenaListOnChain(
   if (!wallet || !wallet.startsWith('0x')) throw new Error('Wallet not connected.');
   if (!items.length) throw new Error('Need at least one member to promote this contest.');
 
+  const seenLabels = new Set<string>();
   const trimmedItems = items
     .filter((it) => it.label && it.label.trim().length > 0)
+    .filter((it) => {
+      const key = it.label.trim().toLowerCase();
+      if (seenLabels.has(key)) return false;
+      seenLabels.add(key);
+      return true;
+    })
     .slice(0, ARENA_PROMOTE_MAX_MEMBERS);
   if (!trimmedItems.length) throw new Error('No member labels to anchor.');
 
@@ -97,18 +104,20 @@ export async function promoteArenaListOnChain(
     description: description?.trim() || undefined,
     type: 'List' as const,
   };
-  const { hash: listTxHash, termId: listTermId } = await createIdentityAtom(
+  const { hash: listTxHash, termId: listTermId } = await ensureIdentityAtom(
     listMeta,
     depositPerLeg,
     wallet,
     (m) => onProgress?.(`List atom · ${m}`),
   );
   if (!listTermId) {
-    throw new Error('List atom transaction confirmed but the term id was not resolved.');
+    throw new Error('List atom could not be resolved on-chain.');
   }
   onProgress?.(`List atom anchored · ${listTermId.slice(0, 10)}…`);
-  /** Belt-and-suspenders: wait for the receipt so the triple step has a real anchor. */
-  await publicClient.waitForTransactionReceipt({ hash: listTxHash });
+  /** Wait only when we actually broadcast a new list atom (reuse skips the tx). */
+  if (listTxHash && !/^0x0{64}$/i.test(listTxHash)) {
+    await publicClient.waitForTransactionReceipt({ hash: listTxHash });
+  }
 
   /* ────────── 2) Resolve / mint member atoms (batched) ────────── */
   onProgress?.(`Resolving ${trimmedItems.length} member atom(s)…`);
@@ -149,11 +158,18 @@ export async function promoteArenaListOnChain(
   const triplesTxHash = await createSemanticTriplesBatch(tripleLegs, wallet, (m) =>
     onProgress?.(`Triples · ${m}`),
   );
+  if (triplesTxHash && !/^0x0{64}$/i.test(triplesTxHash)) {
+    try {
+      await publicClient.waitForTransactionReceipt({ hash: triplesTxHash });
+    } catch {
+      /* receipt polling is best-effort; triples may still be indexed */
+    }
+  }
   onProgress?.('Contest is live on-chain.');
 
   return {
     listTermId,
-    listTxHash,
+    listTxHash: listTxHash ?? ('0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`),
     triplesTxHash,
     memberTermIds,
     members: trimmedItems,

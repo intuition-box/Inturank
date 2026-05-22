@@ -3031,40 +3031,64 @@ export async function fetchDistinctReceiversForPortalListFromProxyDeposits(
 
   const depLimit = Math.min(5200, Math.max(1800, maxWallets * 80));
   try {
-    const deposits = await fetchProxyArenaRankDeposits(depLimit);
-    if (!deposits.length) return [];
-
+    const deposits = await fetchProxyArenaRankDepositsCached(depLimit);
     const vaultIds = Array.from(new Set(deposits.map((d) => d.vaultTermId)));
     const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
-    if (!stanceByVault.size) return [];
-
-    const out: string[] = [];
-    const seenRecv = new Set<string>();
-
-    for (const dep of deposits) {
-      const stance = stanceByVault.get(dep.vaultTermId);
-      if (!stance) continue;
-      if (minBnLb != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBnLb) continue;
-      if (!portalListStanceMatchesListObject(stance.stance.listTermId, listObjectTermId)) continue;
-
-      let recv: string;
-      try {
-        recv = getAddress(dep.receiverId as `0x${string}`);
-      } catch {
-        continue;
-      }
-      const lc = recv.toLowerCase();
-      if (exclude.has(lc) || operators.has(lc)) continue;
-      if (seenRecv.has(lc)) continue;
-      seenRecv.add(lc);
-      out.push(recv);
-      if (out.length >= maxWallets) break;
-    }
-    return out;
+    return discoverPortalListRankerReceiversFromDeposits(
+      listObjectTermId,
+      excludeWallet,
+      maxWallets,
+      deposits,
+      stanceByVault,
+    );
   } catch (e) {
     console.warn('[fetchDistinctReceiversForPortalListFromProxyDeposits]', e);
     return [];
   }
+}
+
+/**
+ * Derive human ranker wallets for one portal list from an already-fetched deposit + stance bundle
+ * (avoids a second full-graph deposit scan during Compare).
+ */
+export function discoverPortalListRankerReceiversFromDeposits(
+  listObjectTermId: string,
+  excludeWallet: string | undefined,
+  maxWallets: number,
+  deposits: ArenaProxyDepositRow[],
+  stanceByVault: Map<string, ArenaVaultStance>,
+): string[] {
+  const ids = prepareQueryIds(listObjectTermId.trim());
+  if (!ids.length || maxWallets <= 0 || !deposits.length) return [];
+
+  const exclude = new Set((excludeWallet ? prepareQueryIds(excludeWallet) : []).map((x) => normalize(x)));
+  const operators = protocolOperatorCreatorIdsNormalized();
+  const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
+  if (!stanceByVault.size) return [];
+
+  const out: string[] = [];
+  const seenRecv = new Set<string>();
+
+  for (const dep of deposits) {
+    const stance = stanceByVault.get(dep.vaultTermId);
+    if (!stance) continue;
+    if (minBnLb != null && stance.stance.blockNumber > 0 && stance.stance.blockNumber < minBnLb) continue;
+    if (!portalListStanceMatchesListObject(stance.stance.listTermId, listObjectTermId)) continue;
+
+    let recv: string;
+    try {
+      recv = getAddress(dep.receiverId as `0x${string}`);
+    } catch {
+      continue;
+    }
+    const lc = recv.toLowerCase();
+    if (exclude.has(lc) || operators.has(lc)) continue;
+    if (seenRecv.has(lc)) continue;
+    seenRecv.add(lc);
+    out.push(recv);
+    if (out.length >= maxWallets) break;
+  }
+  return out;
 }
 
 /**
@@ -3203,30 +3227,50 @@ export async function fetchPortfolioArenaRankingClaims(wallet: string): Promise<
   return fetchUserArenaRankingClaimsWithAllowlist(wallet, allow);
 }
 
-async function fetchUserArenaRankingClaimsWithAllowlist(
-  wallet: string,
+/**
+ * Build portal ranking claims for many wallets from one deposit + stance scan (Compare batch path).
+ */
+export function buildArenaRankingClaimsForReceivers(
+  wallets: string[],
+  deposits: ArenaProxyDepositRow[],
+  stanceByVault: Map<string, ArenaVaultStance>,
   allow: Set<string>,
-): Promise<UserArenaRankingClaim[]> {
-  const recvVariants = prepareQueryIds(wallet.trim());
-  if (!recvVariants.length) return [];
-  const recvSet = new Set(recvVariants.map(normalize));
+): Map<string, UserArenaRankingClaim[]> {
+  const out = new Map<string, UserArenaRankingClaim[]>();
+  if (allow.size === 0 || wallets.length === 0 || deposits.length === 0 || stanceByVault.size === 0) {
+    return out;
+  }
 
-  try {
-    if (allow.size === 0) return [];
+  const operatorCreators = protocolOperatorCreatorIdsNormalized();
+  const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
 
-    const operatorCreators = protocolOperatorCreatorIdsNormalized();
-    const minBnLb = ARENA_ATTRIBUTION_MIN_BLOCK;
+  const walletVariantSets = new Map<string, Set<string>>();
+  for (const w of wallets) {
+    const variants = prepareQueryIds(w.trim());
+    if (!variants.length) continue;
+    const primary = normalize(variants[0]!);
+    if (walletVariantSets.has(primary)) continue;
+    walletVariantSets.set(primary, new Set(variants.map(normalize)));
+  }
 
-    const depositsAll = await fetchProxyArenaRankDeposits(4200);
-    const userDeps = depositsAll.filter((d) => {
-      const recvLc = normalize(d.receiverId);
-      return recvLc && recvSet.has(recvLc) && !operatorCreators.has(recvLc);
-    });
-    if (userDeps.length === 0) return [];
+  const depsByWallet = new Map<string, ArenaProxyDepositRow[]>();
+  for (const dep of deposits) {
+    const recvLc = normalize(dep.receiverId);
+    if (!recvLc || operatorCreators.has(recvLc)) continue;
+    for (const [walletKey, variantSet] of walletVariantSets) {
+      if (!variantSet.has(recvLc)) continue;
+      const bucket = depsByWallet.get(walletKey);
+      if (bucket) bucket.push(dep);
+      else depsByWallet.set(walletKey, [dep]);
+    }
+  }
 
-    const vaultIds = Array.from(new Set(userDeps.map((d) => d.vaultTermId)));
-    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
-    if (stanceByVault.size === 0) return [];
+  for (const walletKey of walletVariantSets.keys()) {
+    const userDeps = depsByWallet.get(walletKey) ?? [];
+    if (userDeps.length === 0) {
+      out.set(walletKey, []);
+      continue;
+    }
 
     const seenWalletStake = new Set<string>();
     const rawStakes: ArenaGraphTripleStanceRow[] = [];
@@ -3263,7 +3307,27 @@ async function fetchUserArenaRankingClaimsWithAllowlist(
       if (!prev || row.blockNumber >= prev.blockNumber) bySlot.set(slotKey, row);
     }
 
-    return Array.from(bySlot.values()).sort((a, b) => b.blockNumber - a.blockNumber);
+    out.set(walletKey, Array.from(bySlot.values()).sort((a, b) => b.blockNumber - a.blockNumber));
+  }
+
+  return out;
+}
+
+async function fetchUserArenaRankingClaimsWithAllowlist(
+  wallet: string,
+  allow: Set<string>,
+): Promise<UserArenaRankingClaim[]> {
+  const recvVariants = prepareQueryIds(wallet.trim());
+  if (!recvVariants.length) return [];
+
+  try {
+    if (allow.size === 0) return [];
+
+    const depositsAll = await fetchProxyArenaRankDepositsCached(2600);
+    const vaultIds = Array.from(new Set(depositsAll.map((d) => d.vaultTermId)));
+    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+    const primary = normalize(recvVariants[0]!);
+    return buildArenaRankingClaimsForReceivers([wallet], depositsAll, stanceByVault, allow).get(primary) ?? [];
   } catch (e) {
     console.warn('[fetchUserArenaRankingClaimsWithAllowlist]', e);
     return [];
@@ -3443,20 +3507,53 @@ function protocolOperatorCreatorIdsNormalized(): Set<string> {
   return s;
 }
 
-type ArenaProxyDepositRow = {
+export type ArenaProxyDepositRow = {
   vaultTermId: string;
   receiverId: string;
   receiverLabel?: string;
   receiverImage?: string;
   createdAt: number;
   transactionHash?: string;
+  /** TRUST routed through FeeProxy for this deposit (wei). */
+  assetsAfterFeesWei?: bigint;
 };
+
+/** Dedupe heavy deposit scans (Compare was re-fetching 4200 rows per peer wallet). */
+let proxyArenaDepositsCache: {
+  limit: number;
+  fetchedAt: number;
+  promise: Promise<ArenaProxyDepositRow[]>;
+} | null = null;
+const PROXY_ARENA_DEPOSITS_CACHE_MS = 55_000;
+
+export async function fetchProxyArenaRankDepositsCached(limit = 800): Promise<ArenaProxyDepositRow[]> {
+  const now = Date.now();
+  if (
+    proxyArenaDepositsCache &&
+    proxyArenaDepositsCache.limit >= limit &&
+    now - proxyArenaDepositsCache.fetchedAt < PROXY_ARENA_DEPOSITS_CACHE_MS
+  ) {
+    return proxyArenaDepositsCache.promise;
+  }
+  const promise = fetchProxyArenaRankDeposits(limit);
+  proxyArenaDepositsCache = {
+    limit,
+    fetchedAt: now,
+    promise,
+  };
+  return promise;
+}
+
+export function invalidateProxyArenaRankDepositsCache(): void {
+  proxyArenaDepositsCache = null;
+  compareGraphBundleCache = null;
+}
 
 /**
  * Recent deposits routed through IntuRank's FeeProxy/MultiVault — the canonical "ranked through IntuRank" signal.
  * `sender_id` on the deposit row pins us as the originator regardless of when/who first created the triple.
  */
-async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepositRow[]> {
+export async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepositRow[]> {
   const proxyIds = Array.from(
     new Set([FEE_PROXY_ADDRESS, MULTI_VAULT_ADDRESS].flatMap((a) => prepareQueryIds(a))),
   );
@@ -3468,6 +3565,7 @@ async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepos
     ) {
       created_at
       transaction_hash
+      assets_after_fees
       receiver { id label image }
       vault { term_id }
     }
@@ -3485,6 +3583,13 @@ async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepos
         if (typeof v === 'string') return parseInt(v, 10) || 0;
         return 0;
       })();
+      let assetsAfterFeesWei: bigint | undefined;
+      try {
+        const raw = d?.assets_after_fees;
+        if (raw != null && String(raw) !== '') assetsAfterFeesWei = BigInt(String(raw));
+      } catch {
+        /* ignore */
+      }
       out.push({
         vaultTermId: tid,
         receiverId: recv,
@@ -3492,6 +3597,7 @@ async function fetchProxyArenaRankDeposits(limit = 800): Promise<ArenaProxyDepos
         receiverImage: d?.receiver?.image || undefined,
         createdAt,
         transactionHash: d?.transaction_hash || undefined,
+        assetsAfterFeesWei,
       });
     }
     return out;
@@ -3515,7 +3621,7 @@ type ArenaVaultStance = {
  * surface every one regardless of predicate shape. We still surface YES (member) and NO (counter)
  * vault sides distinctly.
  */
-async function fetchArenaVaultStanceMap(
+export async function fetchArenaVaultStanceMap(
   vaultTermIds: string[],
 ): Promise<Map<string, ArenaVaultStance>> {
   const ids = Array.from(new Set(vaultTermIds.flatMap((id) => prepareQueryIds(id).map(normalize)))).slice(0, 480);
@@ -3590,6 +3696,51 @@ async function fetchArenaVaultStanceMap(
     console.warn('[fetchArenaVaultStanceMap]', e);
     return new Map();
   }
+}
+
+/** One deposit + stance + allowlist bundle per Compare visit (not per peer). */
+export type ArenaCompareGraphBundle = {
+  deposits: ArenaProxyDepositRow[];
+  stanceByVault: Map<string, ArenaVaultStance>;
+  allow: Set<string>;
+};
+
+let compareGraphBundleCache: {
+  depositLimit: number;
+  fetchedAt: number;
+  promise: Promise<ArenaCompareGraphBundle>;
+} | null = null;
+
+const ARENA_COMPARE_GRAPH_DEPOSIT_LIMIT = 2600;
+const ARENA_COMPARE_GRAPH_BUNDLE_TTL_MS = 50_000;
+
+/**
+ * Prefetch everything Compare needs in two graph round-trips (deposits + vault triples) plus allowlist.
+ */
+export async function fetchArenaCompareGraphBundle(
+  depositLimit = ARENA_COMPARE_GRAPH_DEPOSIT_LIMIT,
+): Promise<ArenaCompareGraphBundle> {
+  const now = Date.now();
+  if (
+    compareGraphBundleCache &&
+    compareGraphBundleCache.depositLimit >= depositLimit &&
+    now - compareGraphBundleCache.fetchedAt < ARENA_COMPARE_GRAPH_BUNDLE_TTL_MS
+  ) {
+    return compareGraphBundleCache.promise;
+  }
+
+  const promise = (async (): Promise<ArenaCompareGraphBundle> => {
+    const [allow, deposits] = await Promise.all([
+      getArenaPortalRankingAllowlist(),
+      fetchProxyArenaRankDepositsCached(depositLimit),
+    ]);
+    const vaultIds = Array.from(new Set(deposits.map((d) => d.vaultTermId)));
+    const stanceByVault = await fetchArenaVaultStanceMap(vaultIds);
+    return { deposits, stanceByVault, allow };
+  })();
+
+  compareGraphBundleCache = { depositLimit, fetchedAt: now, promise };
+  return promise;
 }
 
 /**
