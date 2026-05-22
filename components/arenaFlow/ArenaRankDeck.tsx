@@ -40,6 +40,8 @@ type Props = {
   reduceMotion?: boolean;
   onReorder: (next: RankItem[]) => void;
   onCompare: () => void;
+  /** Primary sidebar CTA label (e.g. off-chain → Publish and compare). */
+  compareCtaLabel?: string;
   onCreateCard?: () => void;
   onSignSubmit?: () => void;
   signDisabled?: boolean;
@@ -438,6 +440,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
   reduceMotion,
   onReorder,
   onCompare,
+  compareCtaLabel = 'Compare with others',
   onCreateCard,
   onSignSubmit,
   signDisabled,
@@ -752,7 +755,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
               className="group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[11px] font-black uppercase tracking-[0.14em] shadow-[0_12px_28px_rgba(0,0,0,0.45)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
               style={{ background: deck.hex, color: deck.contrastText }}
             >
-              Compare with others
+              {compareCtaLabel}
               <ArrowRight size={14} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </button>
             <p className="mt-1 text-center font-mono text-[9px] uppercase tracking-wider text-slate-600">

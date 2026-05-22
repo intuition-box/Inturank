@@ -131,7 +131,7 @@ const SignalStanceCartModal: React.FC<Props> = ({
                     Conviction cart
                   </h2>
                   <p className="text-[10px] text-slate-500 font-mono mt-1 truncate">
-                    Pulse · <span className="text-intuition-primary/90">{txCount} claim{txCount === 1 ? '' : 's'}</span>
+                    Pulse · <span className="text-intuition-primary/90">{picks.length} claim{picks.length === 1 ? '' : 's'}</span>
                     <span className="text-slate-600"> · </span>
                     <span className="text-amber-200/90 tabular-nums">{trustTotalLabel} TRUST</span>
                   </p>

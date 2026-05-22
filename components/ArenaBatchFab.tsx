@@ -70,7 +70,21 @@ const ArenaBatchFab: React.FC = () => {
     }
   };
 
-  if (!mounted || count < 1) return null;
+  const hideOnArenaCompare = useMemo(() => {
+    if (loc.pathname !== '/climb') return false;
+    try {
+      const lid = new URLSearchParams(loc.search).get('list')?.trim();
+      if (!lid) return false;
+      const raw = sessionStorage.getItem(`inturank-arena-contest-flow-v1:${lid}`);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as { phase?: string };
+      return parsed?.phase === 'compare';
+    } catch {
+      return false;
+    }
+  }, [loc.pathname, loc.search]);
+
+  if (!mounted || count < 1 || hideOnArenaCompare) return null;
 
   return createPortal(
     <button

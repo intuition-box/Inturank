@@ -54,10 +54,32 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
    * reflects the just-completed batch instead of the empty "Be the first ranker" splash.
    */
   const augmentedPlayers = useMemo<ArenaPlayerRow[]>(() => {
+    const sortRanked = (rows: ArenaPlayerRow[]) =>
+      [...rows]
+        .sort((a, b) => inturankLeaderboardTotalXp(b) - inturankLeaderboardTotalXp(a))
+        .map((m, i) => ({ ...m, rank: i + 1 }));
+
+    const bridgeViewer = (rows: ArenaPlayerRow[]) => {
+      if (!myAddrLc) return rows;
+      return rows.map((p) =>
+        p.address === myAddrLc
+          ? {
+              ...p,
+              arenaXp: Math.max(p.arenaXp, myArenaXp),
+              activityXp: Math.max(p.activityXp, myActivityXp),
+            }
+          : p,
+      );
+    };
+
     const myTotal = inturankLeaderboardTotalXp({ arenaXp: myArenaXp, activityXp: myActivityXp });
-    if (!myAddrLc || myTotal <= 0) return players;
+    if (!myAddrLc) return players;
+
     const exists = players.some((p) => p.address === myAddrLc);
-    if (exists) return players;
+    if (exists) return sortRanked(bridgeViewer(players));
+
+    if (myTotal <= 0) return players;
+
     const synthetic: ArenaPlayerRow = {
       rank: 0,
       address: myAddrLc,
@@ -69,22 +91,16 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       listsPlayed: 0,
       updatedAt: 0,
     };
-    const merged = [...players, synthetic].sort(
-      (a, b) => inturankLeaderboardTotalXp(b) - inturankLeaderboardTotalXp(a),
-    );
-    return merged.map((m, i) => ({ ...m, rank: i + 1 }));
+    return sortRanked(bridgeViewer([...players, synthetic]));
   }, [players, myAddrLc, myArenaXp, myActivityXp]);
 
   const myRow = useMemo(
     () => (myAddrLc ? augmentedPlayers.find((p) => p.address === myAddrLc) ?? null : null),
     [augmentedPlayers, myAddrLc],
   );
-  /**
-   * Single source for "You" breakdown: when already on the fetched board, match the row used for the podium
-   * (indexer/mirror + merged activity). Props alone use `max(indexer, pick credit)` for Arena and can differ by a few XP.
-   */
-  const youArenaXp = myRow ? myRow.arenaXp : myArenaXp;
-  const youActivityXp = myRow ? myRow.activityXp : myActivityXp;
+  /** Same totals as Climb uplink badge (`max(indexer, device pick credit)` + activity). */
+  const youArenaXp = myArenaXp;
+  const youActivityXp = myActivityXp;
   const top3 = augmentedPlayers.slice(0, 3);
 
   return (
@@ -312,7 +328,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
               )}
             </div>
             <div className="text-right shrink-0 space-y-1.5 tabular-nums">
-              <div title="Arena XP as counted on this leaderboard (indexer / mirror). Session strip may bridge pick credit until the graph catches up.">
+              <div title="Arena XP — indexer plus device pick credit until the graph catches up (matches Climb uplink).">
                 <p className={`text-[8px] font-mono uppercase tracking-wider font-bold leading-none ${isLight ? 'text-sky-800/90' : 'text-cyan-300/85'}`}>Arena</p>
                 <p
                   className="text-base font-black leading-none mt-0.5"

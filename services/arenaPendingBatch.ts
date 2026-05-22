@@ -124,6 +124,57 @@ export function clearPendingForList(listId: string) {
   writeStore(all);
 }
 
+/** Build vault-deposit rows from the rank deck right after mint (no conviction cart). */
+export function buildArenaRankStakeRows(input: {
+  deck: Array<{
+    id: string;
+    kind: ArenaPendingRow['item']['kind'];
+    label: string;
+    subtitle?: string;
+    image?: string;
+    imageSecondary?: string;
+    versusLeftLabel?: string;
+    versusRightLabel?: string;
+    pairKind: string;
+  }>;
+  rankTrustUnits: Record<string, number>;
+  memberTermIds: Map<string, `0x${string}`>;
+  sourceListId: string;
+}): ArenaPendingRowWithSource[] {
+  return input.deck.map((it, i) => {
+    const onChainId = input.memberTermIds.get(it.id) ?? it.id;
+    return {
+      key: `rank-publish-${onChainId}-${i}`,
+      item: {
+        id: onChainId,
+        kind: it.kind,
+        label: it.label,
+        subtitle: it.subtitle,
+        image: it.image,
+        imageSecondary: it.imageSecondary,
+        versusLeftLabel: it.versusLeftLabel,
+        versusRightLabel: it.versusRightLabel,
+        pairKind: it.pairKind,
+      },
+      support: true,
+      units: Math.max(1, Math.min(12, input.rankTrustUnits[it.id] ?? 1)),
+      sourceListId: input.sourceListId,
+    };
+  });
+}
+
+/** After promote, map local deck ids → on-chain member atom term ids for portal vault deposits. */
+export function remapPendingRowsMemberTermIds(
+  rows: ArenaPendingRow[],
+  memberTermIds: Map<string, `0x${string}`>,
+): ArenaPendingRow[] {
+  return rows.map((row) => {
+    const tid = memberTermIds.get(row.item.id);
+    if (!tid) return row;
+    return { ...row, item: { ...row.item, id: tid } };
+  });
+}
+
 /** Total queued stances across all lists (for global FAB). */
 export function getTotalPendingCount(): number {
   const s = readStore();

@@ -215,60 +215,21 @@ export const getConnectedAccount = async (): Promise<string | null> => {
   } catch { return null; }
 };
 
-function isUserRejectedError(error: unknown, depth = 0): boolean {
+function isUserRejectedError(error: unknown): boolean {
   if (error instanceof UserRejectedRequestError) return true;
-  if (depth > 4) return false;
   if (typeof error === 'object' && error !== null) {
-    const e = error as {
-      code?: number | string;
-      name?: string;
-      message?: string;
-      shortMessage?: string;
-      details?: string;
-      cause?: unknown;
-    };
-    if (e.code === 4001 || e.code === 'ACTION_REJECTED') return true;
+    const e = error as { code?: number; name?: string };
+    if (e.code === 4001) return true;
     if (e.name === 'UserRejectedRequestError') return true;
-    const s =
-      `${e.message ?? ''} ${String(e.shortMessage ?? '')} ${String(e.details ?? '')}`.toLowerCase();
-    if (
-      /user reject|rejected the request|transaction rejected|denied transaction signing|ethers-user-denied|wallet.*reject|user denied|request rejected|action_rejected|\b4001\b|cancelled|\bcancel\b|\bcanceled\b|action canceled/i.test(
-        s
-      )
-    ) {
-      return true;
-    }
-    if (e.cause !== undefined && e.cause !== null) return isUserRejectedError(e.cause, depth + 1);
   }
+  const msg = String((error as { message?: string })?.message ?? error ?? '').toLowerCase();
+  if (msg.includes('user rejected') || msg.includes('user denied')) return true;
   return false;
 }
 
-/** Shared UI helper: distinguish user-dismissed prompts from real faults (switch, approvals, txs). */
+/** Public alias for batch / Arena flows (MetaMask reject, viem UserRejectedRequestError). */
 export function isUserRejectedWalletError(error: unknown): boolean {
   return isUserRejectedError(error);
-}
-
-/** Current wallet chain id from the active EIP‑1193 provider, or null if unavailable. */
-export async function readConnectedWalletChainId(): Promise<number | null> {
-  const p = getProvider();
-  if (!p?.request) return null;
-  try {
-    const hex = (await p.request({ method: 'eth_chainId' })) as string;
-    return typeof hex === 'string' ? parseInt(hex, 16) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Throws if the wallet is not on Intuition RPC `CHAIN_ID` (call after prompting switch). */
-export async function assertWalletOnConfiguredChain(): Promise<void> {
-  const id = await readConnectedWalletChainId();
-  if (id == null) {
-    throw new Error('Wallet not connected. Connect your wallet, then retry.');
-  }
-  if (id !== CHAIN_ID) {
-    throw new Error(`Wrong network (chain ${id}). Switch to ${NETWORK_NAME} (chain ${CHAIN_ID}) and try again.`);
-  }
 }
 
 /** MetaMask validates the RPC when adding a chain; Intuition’s JSON-RPC is on `/http` (bare `/` often fails). */
@@ -307,23 +268,22 @@ async function switchNetworkViaInjectedProvider(provider: NonNullable<ReturnType
     await attemptSwitch();
     return;
   } catch (error: unknown) {
-    if (isUserRejectedError(error)) throw error;
+    if (isUserRejectedError(error)) return;
     try {
       await provider.request({
         method: 'wallet_addEthereumChain',
         params: [addParams],
       });
     } catch (addError: unknown) {
-      if (isUserRejectedError(addError)) throw addError;
+      if (isUserRejectedError(addError)) return;
       // Chain may already be registered; still try switching again.
     }
     try {
       await attemptSwitch();
     } catch (e2: unknown) {
-      if (isUserRejectedError(e2)) throw e2;
+      if (isUserRejectedError(e2)) return;
       console.error('SWITCH_NETWORK_ERROR:', error, e2);
-      toast.error('Could not switch network. Pick Intuition in your wallet manually, then retry.');
-      throw new Error('Could not switch network in your wallet.');
+      toast.error('Could not switch network. Try switching to Intuition in your wallet.');
     }
   }
 }
@@ -337,32 +297,26 @@ export const switchNetwork = async () => {
     blockExplorerUrls: [EXPLORER_URL],
   };
 
-  let usedWagmi = false;
   if (typeof window !== 'undefined') {
     try {
       await wagmiSwitchChain(wagmiConfig, {
         chainId: CHAIN_ID,
         addEthereumChainParameter,
       });
-      usedWagmi = true;
+      return;
     } catch (error: unknown) {
-      if (isUserRejectedError(error)) throw error;
+      if (isUserRejectedError(error)) return;
       console.warn('wagmi switchChain failed, falling back to injected provider:', error);
     }
   }
 
-  if (!usedWagmi) {
-    const provider = getProvider();
-    if (!provider) {
-      const msg = 'Wallet not ready. Open your wallet extension, connect, then try again.';
-      toast.error(msg);
-      throw new Error(msg);
-    }
-
-    await switchNetworkViaInjectedProvider(provider);
+  const provider = getProvider();
+  if (!provider) {
+    toast.error('Wallet not ready. Wait a moment and try again, or switch network in your wallet.');
+    return;
   }
 
-  await assertWalletOnConfiguredChain();
+  await switchNetworkViaInjectedProvider(provider);
 };
 
 export type WalletConnector = 'injected' | 'walletconnect';
@@ -409,8 +363,8 @@ export const connectWallet = async (
       if (typeof window !== 'undefined') localStorage.removeItem(DISCONNECT_FLAG_KEY);
       return address;
     } catch (error: any) {
-      if (error?.code === 4001) toast.info('Wallet connection declined.');
-      else toast.error(error?.message || 'WalletConnect failed');
+      if (error?.code === 4001) toast.error("REJECTED_BY_USER");
+      else toast.error(`WALLETCONNECT_ERROR: ${error?.message || 'Failed to connect'}`);
       return null;
     }
   }
@@ -428,21 +382,14 @@ export const connectWallet = async (
     
     const chainIdHex = await provider.request({ method: 'eth_chainId' });
     if (parseInt(chainIdHex, 16) !== CHAIN_ID) {
-      try {
         await switchNetwork();
-      } catch (e: unknown) {
-        if (!isUserRejectedError(e)) {
-          toast.error(parseProtocolError(e) || (e instanceof Error ? e.message : 'Could not switch network'));
-        }
-        // Still unlock account; Wrong network banner in Layout/Mobile prompts again.
-      }
     }
     activeProvider = provider;
     if (typeof window !== 'undefined') localStorage.removeItem(DISCONNECT_FLAG_KEY);
     return address;
   } catch (error: any) {
-    if (error.code === 4001) toast.info('Connection declined in wallet.');
-    else toast.error(error?.message?.includes('Wallet not ready') ? error.message : `ERROR: ${error.message}`);
+    if (error.code === 4001) toast.error("REJECTED_BY_USER");
+    else toast.error(`ERROR: ${error.message}`);
     return null; 
   }
 };
@@ -978,7 +925,7 @@ export const grantProxyApproval = async (walletAddress: string): Promise<void> =
 
     if (fromRead || fromLogs) {
         setProxyApprovalCache(checksumAccount);
-        toast.success('Fee proxy enabled. You can submit to the chain.');
+        toast.success("HANDSHAKE_COMPLETE: Protocol enabled.");
         return;
     }
 
@@ -989,7 +936,7 @@ export const grantProxyApproval = async (walletAddress: string): Promise<void> =
         { hash }
     );
     setProxyApprovalCache(checksumAccount);
-    toast.success('Fee proxy enabled. You can submit to the chain.');
+    toast.success("HANDSHAKE_COMPLETE: Protocol enabled.");
 };
 
 const LOCAL_TX_KEY = 'inturank_ledger_v3';
@@ -1610,7 +1557,7 @@ export async function isTermCreatedOnChain(termId: string): Promise<boolean> {
 }
 
 /** Poll until `isTermCreated` reflects a tx mined in the same session (avoids MultiVault_AtomExists on duplicate picks). */
-async function waitUntilTermCreatedOnChain(
+export async function waitUntilTermCreatedOnChain(
     termId: string,
     opts?: { maxAttempts?: number; delayMs?: number },
 ): Promise<boolean> {
@@ -1866,6 +1813,45 @@ export async function createTripleFromLabels(
     }
 }
 
+/**
+ * Mint or reuse an identity/list/thing atom. Skips FeeProxy when the term is already registered
+ * (retries, partial promotes, duplicate labels).
+ */
+export async function ensureIdentityAtom(
+    metadata: any,
+    depositAmount: string,
+    receiver: string,
+    onProgress?: (log: string) => void,
+): Promise<{ hash?: `0x${string}`; termId: `0x${string}` }> {
+    const { dataHex } = await getFeeProxyAtomParams(metadata, depositAmount);
+    const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+    if (await isTermCreatedOnChain(candidate)) {
+        onProgress?.('Identity already on-chain — reusing it.');
+        return { termId: candidate };
+    }
+    if (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 10, delayMs: 280 })) {
+        onProgress?.('Identity already on-chain — reusing it.');
+        return { termId: candidate };
+    }
+
+    try {
+        const { hash, termId } = await createIdentityAtom(metadata, depositAmount, receiver, onProgress);
+        const tid = termId ?? (hash ? await getAtomTermIdFromTxHash(hash, dataHex) : undefined) ?? candidate;
+        return { hash, termId: tid };
+    } catch (e) {
+        if (errorLooksLikeAtomAlreadyExists(e)) {
+            const ready =
+                (await isTermCreatedOnChain(candidate)) ||
+                (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 28, delayMs: 320 }));
+            if (ready) {
+                onProgress?.('Identity already on-chain — reusing it.');
+                return { termId: candidate };
+            }
+        }
+        throw e;
+    }
+}
+
 export const createIdentityAtom = async (metadata: any, depositAmount: string, receiver: string, onProgress?: (log: string) => void): Promise<{ hash: `0x${string}`; termId?: `0x${string}` }> => {
     const checksumReceiver = getAddress(receiver);
     const depositParsed = parseEther(depositAmount);
@@ -1879,6 +1865,13 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
     const walletClient = createWalletClient({ chain: intuitionChain, transport: custom(provider), account: checksumReceiver });
 
     try {
+        const { dataHex, depositWei, valueWei: totalCost } = await getFeeProxyAtomParams(metadata, depositAmount);
+        const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+        if (await isTermCreatedOnChain(candidate)) {
+            onProgress?.('Identity already on-chain — reusing it.');
+            return { hash: '0x0000000000000000000000000000000000000000000000000000000000000000', termId: candidate };
+        }
+
         onProgress?.("Verifying Protocol Approval...");
         const approved = await getProxyApprovalStatus(receiver, { readRetries: 2, readDelayMs: 120 });
         if (!approved) {
@@ -1887,7 +1880,6 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
         }
 
         onProgress?.("Simulating atom creation (FeeProxy)...");
-        const { dataHex, depositWei, valueWei: totalCost } = await getFeeProxyAtomParams(metadata, depositAmount);
 
         onProgress?.(`Total send: ${formatEther(totalCost)} ${CURRENCY_SYMBOL}`);
         onProgress?.("Awaiting Identity Signature...");
@@ -1905,6 +1897,15 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
             request = simulation.request;
         } catch (simulationError: any) {
             console.warn("ATOM_SIMULATION_FAILED:", simulationError);
+            if (errorLooksLikeAtomAlreadyExists(simulationError)) {
+                const ready =
+                    (await isTermCreatedOnChain(candidate)) ||
+                    (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 28, delayMs: 320 }));
+                if (ready) {
+                    onProgress?.('Identity already on-chain — reusing it.');
+                    return { hash: '0x0000000000000000000000000000000000000000000000000000000000000000', termId: candidate };
+                }
+            }
             const parsed = parseProtocolError(simulationError);
             // Search for keywords case-insensitively
             const upper = parsed.toUpperCase();
@@ -1929,6 +1930,21 @@ export const createIdentityAtom = async (metadata: any, depositAmount: string, r
         return { hash, termId };
     } catch (error: any) {
         console.error('createIdentityAtom failed:', error?.message || error);
+        try {
+            const { dataHex } = await getFeeProxyAtomParams(metadata, depositAmount);
+            const candidate = await getProtocolAtomIdFromAtomData(dataHex);
+            if (errorLooksLikeAtomAlreadyExists(error)) {
+                const ready =
+                    (await isTermCreatedOnChain(candidate)) ||
+                    (await waitUntilTermCreatedOnChain(candidate, { maxAttempts: 28, delayMs: 320 }));
+                if (ready) {
+                    onProgress?.('Identity already on-chain — reusing it.');
+                    return { hash: '0x0000000000000000000000000000000000000000000000000000000000000000', termId: candidate };
+                }
+            }
+        } catch {
+            /* fall through */
+        }
         const parsed = parseProtocolError(error);
         const upper = parsed.toUpperCase();
         if (upper.includes("REVERTED") || upper.includes("BALANCE") || upper.includes("FEE")) {
@@ -2092,13 +2108,27 @@ export async function batchEnsureAtomTermIds(
             if (!errorLooksLikeAtomAlreadyExists(e)) throw e;
             onProgress?.('Atom batch reported duplicates — confirming anchors on-chain…');
         }
+        const jobByKey = new Map(orderedUnique.map((j) => [atomRefJobKey(j.ref, j.depositTrust), j]));
         for (const b of byDataHex.values()) {
             const tid = await getProtocolAtomIdFromAtomData(b.dataHex);
-            const ok = await waitUntilTermCreatedOnChain(tid, { maxAttempts: 28, delayMs: 320 });
-            if (!ok) {
-                throw new Error(`Atom ${b.dataHex.slice(0, 12)}… did not appear on-chain — wait and retry.`);
+            let ok = await waitUntilTermCreatedOnChain(tid, { maxAttempts: 28, delayMs: 320 });
+            if (ok) {
+                for (const k of b.keys) out.set(k, tid);
+                continue;
             }
-            for (const k of b.keys) out.set(k, tid);
+            onProgress?.('Confirming member atoms one-by-one…');
+            for (const k of b.keys) {
+                if (out.has(k)) continue;
+                const job = jobByKey.get(k);
+                if (!job) continue;
+                const resolved = await resolveAtomReferenceToTermId(
+                    job.ref,
+                    job.depositTrust,
+                    receiver,
+                    onProgress,
+                );
+                out.set(k, resolved.termId);
+            }
         }
     }
 
@@ -2397,6 +2427,8 @@ export type SemanticTripleBatchInput = {
  * Single-transaction claim write batch via FeeProxy.createTriples.
  * All ids must be valid bytes32 term ids (existing atoms/terms).
  */
+const ZERO_TX_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
+
 export const createSemanticTriplesBatch = async (
   triples: SemanticTripleBatchInput[],
   receiver: string,
@@ -2407,12 +2439,38 @@ export const createSemanticTriplesBatch = async (
   const provider = getProvider();
   if (!provider) throw new Error('Wallet not connected');
 
-  const subjectIds = triples.map((t) => padTermId(t.subjectId));
-  const predicateIds = triples.map((t) => padTermId(t.predicateId));
-  const objectIds = triples.map((t) => padTermId(t.objectId));
-  const assets = triples.map((t) => t.assetsWei);
+  const pending: SemanticTripleBatchInput[] = [];
+  for (const t of triples) {
+    const sId = padTermId(t.subjectId);
+    const pId = padTermId(t.predicateId);
+    const oId = padTermId(t.objectId);
+    const tripleId = calculateTripleId(sId, pId, oId);
+    if (await isTermCreatedOnChain(tripleId)) {
+      onProgress?.('Claim already on-chain — reusing existing vault.');
+      continue;
+    }
+    if (await waitUntilTermCreatedOnChain(tripleId, { maxAttempts: 5, delayMs: 240 })) {
+      onProgress?.('Claim registered — reusing existing vault.');
+      continue;
+    }
+    pending.push(t);
+  }
+
+  if (!pending.length) {
+    onProgress?.(
+      triples.length > 1
+        ? `All ${triples.length} claims already on-chain — nothing new to create.`
+        : 'Claim already on-chain — nothing new to create.',
+    );
+    return ZERO_TX_HASH;
+  }
+
+  const subjectIds = pending.map((t) => padTermId(t.subjectId));
+  const predicateIds = pending.map((t) => padTermId(t.predicateId));
+  const objectIds = pending.map((t) => padTermId(t.objectId));
+  const assets = pending.map((t) => t.assetsWei);
   const totalDeposit = assets.reduce((a, b) => a + b, 0n);
-  const tripleCount = BigInt(triples.length);
+  const tripleCount = BigInt(pending.length);
 
   for (const a of assets) {
     if (a < CURVE_OFFSET) {
@@ -2453,15 +2511,15 @@ export const createSemanticTriplesBatch = async (
     totalCost = (multiVaultCost * 115n) / 100n;
   }
 
-  onProgress?.(`Preparing ${triples.length} claim writes…`);
+  onProgress?.(`Preparing ${pending.length} claim write(s)…`);
   onProgress?.(`Total value: ${formatEther(totalCost)} ${CURRENCY_SYMBOL}`);
 
-  for (let i = 0; i < triples.length; i++) {
-    const t = triples[i]!;
+  for (let i = 0; i < pending.length; i++) {
+    const t = pending[i]!;
     const { ok, missing } = await validateTripleAtomsExist(t.subjectId, t.predicateId, t.objectId);
     if (!ok) {
       throw new Error(
-        `Triple row ${i + 1}: atom(s) not on-chain yet (${missing.join(', ')}). Wait for sync or verify IDs.`
+        `Triple row ${i + 1}: atom(s) not on-chain yet — ${missing.join(', ')}. Wait for sync or verify IDs.`
       );
     }
   }
@@ -2484,11 +2542,59 @@ export const createSemanticTriplesBatch = async (
     } as any);
     request = simulation.request;
   } catch (e: any) {
+    if (errorLooksLikeTripleAlreadyExists(e)) {
+      onProgress?.('Claims reported duplicates — confirming on-chain…');
+      for (const t of pending) {
+        const tripleId = calculateTripleId(
+          padTermId(t.subjectId),
+          padTermId(t.predicateId),
+          padTermId(t.objectId),
+        );
+        const ready =
+          (await isTermCreatedOnChain(tripleId)) ||
+          (await waitUntilTermCreatedOnChain(tripleId, { maxAttempts: 28, delayMs: 320 }));
+        if (!ready) {
+          throw new Error(
+            `Claim ${tripleId.slice(0, 12)}… did not appear on-chain after duplicate — wait and retry.`,
+          );
+        }
+      }
+      onProgress?.('Claims already on-chain — reusing existing vaults.');
+      window.dispatchEvent(new Event('local-tx-updated'));
+      return ZERO_TX_HASH;
+    }
     const parsed = parseProtocolError(e);
     throw new Error(parsed || 'Batch simulation failed');
   }
 
-  const hash = await walletClient.writeContract(request);
+  let hash: `0x${string}`;
+  try {
+    hash = await walletClient.writeContract(request);
+  } catch (e: any) {
+    if (errorLooksLikeTripleAlreadyExists(e)) {
+      onProgress?.('Claims reported duplicates — confirming on-chain…');
+      for (const t of pending) {
+        const tripleId = calculateTripleId(
+          padTermId(t.subjectId),
+          padTermId(t.predicateId),
+          padTermId(t.objectId),
+        );
+        const ready =
+          (await isTermCreatedOnChain(tripleId)) ||
+          (await waitUntilTermCreatedOnChain(tripleId, { maxAttempts: 28, delayMs: 320 }));
+        if (!ready) {
+          throw new Error(
+            `Claim ${tripleId.slice(0, 12)}… did not appear on-chain after duplicate — wait and retry.`,
+          );
+        }
+      }
+      onProgress?.('Claims already on-chain — reusing existing vaults.');
+      window.dispatchEvent(new Event('local-tx-updated'));
+      return ZERO_TX_HASH;
+    }
+    const parsed = parseProtocolError(e);
+    throw new Error(parsed || 'Batch submit failed');
+  }
   window.dispatchEvent(new Event('local-tx-updated'));
   return hash;
 };
