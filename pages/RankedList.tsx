@@ -1043,6 +1043,10 @@ const RankedList: React.FC = () => {
   const bumpDeckEngagement = useCallback(() => setDeckEngagementTuneCount((c) => c + 1), []);
   const curateInitForListRef = useRef<string | null>(null);
   const prevListIdForFlowRef = useRef<string | null>(null);
+  /** Bumps on every list switch to ignore in-flight pool fetches from the previous contest. */
+  const poolLoadGenerationRef = useRef(0);
+  /** `pool` rows belong to this contest id only — blocks curate init on stale roster during fetch. */
+  const poolLoadedForListIdRef = useRef<string | null>(null);
   /** After promote, `listId` changes static → portal; skip the curate reset in the listId effect. */
   const portalPromoteLandingRef = useRef<string | null>(null);
   const submitArenaBatchRef = useRef<(() => Promise<void>) | null>(null);
@@ -1845,6 +1849,7 @@ const RankedList: React.FC = () => {
   /** After hard refresh during rank/compare: restore deck once pool loads. */
   useEffect(() => {
     if (!ARENA_CONTEST_FLOW_V2 || !listId || loading || pool.length < 1) return;
+    if (poolLoadedForListIdRef.current !== listId) return;
     if (arenaFlowPhase !== 'rank' && arenaFlowPhase !== 'compare') return;
     if (rankDeckItems.length > 0) return;
 
@@ -1890,6 +1895,7 @@ const RankedList: React.FC = () => {
   useEffect(() => {
     if (!ARENA_CONTEST_FLOW_V2) return;
     if (arenaFlowPhase !== 'curate' || !listId || loading || pool.length < 1) return;
+    if (poolLoadedForListIdRef.current !== listId) return;
     if (curateInitForListRef.current === listId) return;
     curateInitForListRef.current = listId;
     setCurateQueue([...pool]);
@@ -1917,63 +1923,86 @@ const RankedList: React.FC = () => {
     savePendingForList(listId, pendingRows);
   }, [listId, pendingRows]);
 
-  const initScoresForPool = useCallback(
-    (items: RankItem[]) => {
-      if (!listId) return {};
-      const persisted = loadPersistedForList(listId);
-      const next: Record<string, number> = {};
-      for (const it of items) {
-        next[it.id] = persisted?.[it.id] ?? SCORE_START;
-      }
-      return next;
-    },
-    [listId]
-  );
-
-  const refreshPool = useCallback(async () => {
-    if (!listId) return;
-    const entry = getArenaListById(listId);
-    if (!entry) return;
-    setLoading(true);
-    setRound(null);
-    try {
-      const items = await loadArenaListPool(entry);
-      const roundItems = pickYesNoGridItems(items, ARENA_CARDS_PER_ROUND);
-      const nextRound =
-        ARENA_CONTEST_FLOW_V2
-          ? null
-          : roundItems.length > 0
-            ? ({ kind: 'yesno' as const, items: roundItems } satisfies ArenaRound)
-            : null;
-      setPool(items);
-      setScores(initScoresForPool(items));
-      setDuels(0);
-      setStreak(0);
-      setRound(nextRound);
-      if (items.length < 1) {
-        toast.error('Not enough items in this list. Try another list.');
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error('Could not load Arena pool');
-      setPool([]);
-      setRound(null);
-    } finally {
-      setLoading(false);
+  const initScoresForPool = useCallback((items: RankItem[], forListId: string) => {
+    if (!forListId) return {};
+    const persisted = loadPersistedForList(forListId);
+    const next: Record<string, number> = {};
+    for (const it of items) {
+      next[it.id] = persisted?.[it.id] ?? SCORE_START;
     }
-  }, [listId, initScoresForPool]);
+    return next;
+  }, []);
+
+  /** Drop roster + curate queue immediately when switching contests (e.g. Compare → random game). */
+  const beginArenaPoolLoad = useCallback(
+    (targetListId: string) => {
+      const gen = (poolLoadGenerationRef.current += 1);
+      poolLoadedForListIdRef.current = null;
+      setPool([]);
+      setCurateQueue([]);
+      setRound(null);
+      setScores({});
+      setComparePeers([]);
+      setComparePeersLoading(false);
+      setLoading(true);
+
+      void (async () => {
+        const entry = getArenaListById(targetListId);
+        if (!entry) {
+          if (poolLoadGenerationRef.current === gen) setLoading(false);
+          return;
+        }
+        try {
+          const items = await loadArenaListPool(entry);
+          if (poolLoadGenerationRef.current !== gen) return;
+
+          const roundItems = pickYesNoGridItems(items, ARENA_CARDS_PER_ROUND);
+          const nextRound =
+            ARENA_CONTEST_FLOW_V2
+              ? null
+              : roundItems.length > 0
+                ? ({ kind: 'yesno' as const, items: roundItems } satisfies ArenaRound)
+                : null;
+
+          poolLoadedForListIdRef.current = targetListId;
+          setPool(items);
+          setScores(initScoresForPool(items, targetListId));
+          setDuels(0);
+          setStreak(0);
+          setRound(nextRound);
+          if (items.length < 1) {
+            toast.error('Not enough items in this list. Try another list.');
+          }
+        } catch (e) {
+          if (poolLoadGenerationRef.current !== gen) return;
+          console.error(e);
+          toast.error('Could not load Arena pool');
+          poolLoadedForListIdRef.current = null;
+          setPool([]);
+          setRound(null);
+        } finally {
+          if (poolLoadGenerationRef.current === gen) setLoading(false);
+        }
+      })();
+
+      return gen;
+    },
+    [initScoresForPool],
+  );
 
   useEffect(() => {
     if (!listId) {
+      poolLoadGenerationRef.current += 1;
+      poolLoadedForListIdRef.current = null;
       setPool([]);
+      setCurateQueue([]);
       setRound(null);
+      setScores({});
       setLoading(false);
       return;
     }
-    void refreshPool();
-    // refreshPool is listId-scoped via closure; we only re-run when listId changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listId]);
+    beginArenaPoolLoad(listId);
+  }, [listId, beginArenaPoolLoad]);
 
   useEffect(() => {
     if (ARENA_CONTEST_FLOW_V2) return;
@@ -3065,6 +3094,18 @@ const RankedList: React.FC = () => {
       resumeArenaAudio();
       arenaFloorStingerPlayedForListRef.current = id;
       playArenaFloorEnter();
+      if (listId && listId !== id) {
+        clearPersistedContestFlow(listId);
+      }
+      poolLoadGenerationRef.current += 1;
+      poolLoadedForListIdRef.current = null;
+      setPool([]);
+      setCurateQueue([]);
+      setRound(null);
+      setScores({});
+      setComparePeers([]);
+      setComparePeersLoading(false);
+      setLoading(true);
       setListId(id);
       if (ARENA_CONTEST_FLOW_V2) {
         clearPersistedContestFlow(id);
@@ -3087,7 +3128,7 @@ const RankedList: React.FC = () => {
       next.delete('view');
       navigate(`/climb?${next.toString()}`, { replace: hasListInUrl });
     },
-    [navigate, searchParams],
+    [navigate, searchParams, listId],
   );
 
   const exitToArenaBrowse = useCallback(() => {
