@@ -34,10 +34,6 @@ import {
   predicateLooksLikeBattlePredicateLoose,
   resolveMetadata,
   registerArenaPortalListTermsForIndexing,
-  fetchDistinctRankingCreatorsForPortalList,
-  fetchArenaCompareGraphBundle,
-  discoverPortalListRankerReceiversFromDeposits,
-  buildArenaRankingClaimsForReceivers,
   invalidateProxyArenaRankDepositsCache,
   fetchApproxDistinctPortalListRankerCount,
   fetchArenaLiveAtomsFromGraph,
@@ -82,12 +78,19 @@ import {
 } from '../services/arenaPickCredit';
 import { recordArenaCurationPicks } from '../services/arenaCurations';
 import { fetchArenaXpRecordForWallet, postArenaTotalsMirrorOptional } from '../services/arenaXp';
-import { clearProtocolXpLedger, getProtocolXpTotal, notifyProtocolXpEarned, PROTOCOL_XP_UPDATED_EVENT } from '../services/protocolXp';
+import { clearProtocolXpLedger, getProtocolXpTotal, PROTOCOL_XP_UPDATED_EVENT } from '../services/protocolXp';
+import { queueProtocolXpForGiftBox, accrueArenaPendingXp } from '../services/arenaPendingXp';
+import { fetchPortalListCommunityRankings } from '../services/arenaCommunityRankings';
+import {
+  buildAdoptedRankingSession,
+  consumeArenaPendingAdopt,
+  peerDisplayLabel,
+  recordRankingAdoption,
+} from '../services/arenaRankingRemix';
+import type { RankedListSpotlightEntry } from '../services/arenaRankedListsSpotlight';
 import { fetchArenaPlayerLeaderboard, inturankLeaderboardTotalXp, type ArenaPlayerRow } from '../services/arenaLeaderboard';
 import {
   aggregateSimilarity,
-  computeArenaListSimilarity,
-  buildPortalListRankingByAccumulatedTrust,
   type ArenaSimilarityResult,
   type PortalListRankRow,
 } from '../services/arenaSimilarity';
@@ -126,6 +129,7 @@ import {
   getArenaListConstituents,
   getArenaPreviewItems,
   getArenaDataSourceFootprint,
+  getRegisteredPortalListEntries,
   registerPortalListEntries,
   portalListIdFromTermId,
   type ArenaListEntry,
@@ -153,6 +157,10 @@ import { ArenaCreateCardModal, isPendingArenaCardId } from '../components/arenaF
 import { ArenaCurateStack } from '../components/arenaFlow/ArenaCurateStack';
 import { ArenaRankDeck } from '../components/arenaFlow/ArenaRankDeck';
 import { ArenaCompareView } from '../components/arenaFlow/ArenaCompareView';
+import { ArenaCommunityDecks } from '../components/arenaFlow/ArenaCommunityDecks';
+import { ArenaRankedListsSpotlight } from '../components/arenaFlow/ArenaRankedListsSpotlight';
+import { ArenaXpGiftBox } from '../components/arenaFlow/ArenaXpGiftBox';
+import { ArenaAdoptionInbox } from '../components/arenaFlow/ArenaAdoptionInbox';
 import { ArenaPortraitImg } from '../components/arenaFlow/ArenaPortraitImg';
 import { ArenaPromoteBanner } from '../components/arenaFlow/ArenaPromoteBanner';
 import { ArenaPromoteContestModal } from '../components/arenaFlow/ArenaPromoteContestModal';
@@ -1108,8 +1116,10 @@ const RankedList: React.FC = () => {
    * portal lists where we have an on-chain `listObjectTermId` to anchor
    * `UserArenaRankingClaim` rows against.
    */
-  const [comparePeers, setComparePeers] = useState<ArenaComparePeer[]>([]);
-  const [comparePeersLoading, setComparePeersLoading] = useState(false);
+  const [communityRankings, setCommunityRankings] = useState<ArenaComparePeer[]>([]);
+  const [communityRankingsLoading, setCommunityRankingsLoading] = useState(false);
+  const pendingHubAdoptRef = useRef<ArenaComparePeer | null>(null);
+  const pendingAdoptPeerAddressRef = useRef<string | null>(null);
   /** Refetch Compare similarities after batch / pick events (indexer lags). */
   const [comparePeersVersion, setComparePeersVersion] = useState(0);
   /** Bumps portal list ranker-count refetch alongside Compare peers after on-chain submits. */
@@ -1312,6 +1322,19 @@ const RankedList: React.FC = () => {
     }
     return Math.max(players.length, pool.length + 4, 12);
   }, [listId, portalListRankerCount, players.length, pool.length]);
+
+  const activeList = useMemo(() => getArenaListById(listId), [listId]);
+
+  /** Compare step: peers with overlap vs your deck (subset of community rankings). */
+  const comparePeers = useMemo(() => {
+    if (rankDeckItems.length === 0) return [];
+    return communityRankings
+      .filter((p) => p.similarity.sharedCount > 0)
+      .sort((a, b) => b.similarity.similarityPct - a.similarity.similarityPct);
+  }, [communityRankings, rankDeckItems.length]);
+
+  const comparePeersLoading = communityRankingsLoading;
+
   /**
    * Compare numbers from on-chain data when we have it; otherwise `null` so UI stays honest.
    */
@@ -1335,8 +1358,6 @@ const RankedList: React.FC = () => {
     if (myLadderPosition.place <= 10) return 0;
     return myLadderPosition.place - 10;
   }, [myLadderPosition]);
-
-  const activeList = useMemo(() => getArenaListById(listId), [listId]);
 
   useEffect(() => {
     const entry = listId ? getArenaListById(listId) : undefined;
@@ -1373,150 +1394,61 @@ const RankedList: React.FC = () => {
   }, [listId, address, listRankersTick]);
 
   /**
-   * Fetches other rankers’ on-chain claims for this portal
-   * list (global leaderboard plus FeeProxy receivers and triple creators here) and
-   * scores overlap with your deck. Refetch on Compare, deck edits, leaderboard
-   * churn, or `inturank-arena-onchain-updated` (`comparePeersVersion`).
+   * Community rankings for portal lists (browse / adopt / compare). Refetch on curate,
+   * rank, compare, deck edits, leaderboard churn, or on-chain updates.
    */
   useEffect(() => {
-    if (arenaFlowPhase !== 'compare') return;
-    if (!activeList || activeList.source !== 'portal' || !activeList.listObjectTermId) {
-      setComparePeers([]);
-      setComparePeersLoading(false);
+    const inContest =
+      arenaFlowPhase === 'curate' ||
+      arenaFlowPhase === 'rank' ||
+      arenaFlowPhase === 'compare';
+    if (!inContest) {
+      setCommunityRankings([]);
+      setCommunityRankingsLoading(false);
       return;
     }
-    if (rankDeckItems.length === 0) {
-      setComparePeers([]);
-      setComparePeersLoading(false);
+    if (!activeList || activeList.source !== 'portal' || !activeList.listObjectTermId) {
+      setCommunityRankings([]);
+      setCommunityRankingsLoading(false);
       return;
     }
 
     let cancelled = false;
-    const myLower = (address ?? '').toLowerCase();
-    const playerByAddr = new Map<string, ArenaPlayerRow>();
-    for (const p of players) {
-      if (p.address) playerByAddr.set(p.address.toLowerCase(), p);
-    }
-
-    const syntheticRow = (wallet: string): ArenaPlayerRow => {
-      const hit = playerByAddr.get(wallet.toLowerCase());
-      if (hit) return hit;
-      let short = wallet;
+    setCommunityRankingsLoading(true);
+    void (async () => {
       try {
-        const a = getAddress(wallet as `0x${string}`);
-        short = `${a.slice(0, 6)}…${a.slice(-4)}`;
-      } catch {
-        short = wallet.length >= 10 ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : wallet;
-      }
-      return {
-        rank: 0,
-        address: wallet,
-        label: short,
-        arenaXp: 0,
-        activityXp: 0,
-        duels: 0,
-        atomsRanked: 0,
-        listsPlayed: 0,
-        updatedAt: 0,
-      };
-    };
-
-    setComparePeersLoading(true);
-    (async () => {
-      const lb = players
-        .filter((p) => p.address && p.address.toLowerCase() !== myLower)
-        .slice(0, 8)
-        .map((p) => p.address);
-
-      const listTermId = activeList.listObjectTermId!;
-
-      let bundle: Awaited<ReturnType<typeof fetchArenaCompareGraphBundle>> | null = null;
-      let fromList: string[] = [];
-      try {
-        const [graphBundle, listCreators] = await Promise.all([
-          fetchArenaCompareGraphBundle(),
-          fetchDistinctRankingCreatorsForPortalList(listTermId, address, 20),
-        ]);
-        if (cancelled) return;
-        bundle = graphBundle;
-        fromList = listCreators;
-      } catch (e) {
-        console.warn('[comparePeers] graph bundle / list rankers failed', e);
-      }
-
-      let fromDeposits: string[] = [];
-      if (bundle) {
-        try {
-          fromDeposits = discoverPortalListRankerReceiversFromDeposits(
-            listTermId,
-            address,
-            26,
-            bundle.deposits,
-            bundle.stanceByVault,
-          );
-        } catch (e) {
-          console.warn('[comparePeers] deposit list rankers derive failed', e);
-        }
-      }
-
-      const merged: string[] = [];
-      const seen = new Set<string>();
-      for (const w of [...lb, ...fromDeposits, ...fromList]) {
-        const lc = w.toLowerCase();
-        if (!lc || lc === myLower || seen.has(lc)) continue;
-        seen.add(lc);
-        merged.push(w);
-        if (merged.length >= 22) break;
-      }
-
-      if (merged.length === 0 || !bundle) {
+        const rows = await fetchPortalListCommunityRankings({
+          listObjectTermId: activeList.listObjectTermId!,
+          listId: activeList.id,
+          myAddress: address,
+          players,
+          myDeck: rankDeckItems,
+          maxPeers: 48,
+        });
         if (!cancelled) {
-          setComparePeers([]);
-          setComparePeersLoading(false);
+          setCommunityRankings(rows);
+          setCommunityRankingsLoading(false);
         }
-        return;
-      }
-
-      const { deposits: rankDeposits, stanceByVault, allow } = bundle;
-      let claimsByWallet: Map<string, UserArenaRankingClaim[]>;
-      try {
-        claimsByWallet = buildArenaRankingClaimsForReceivers(
-          merged,
-          rankDeposits,
-          stanceByVault,
-          allow,
-        );
       } catch (e) {
-        console.warn('[comparePeers] batch claims build failed', e);
-        claimsByWallet = new Map();
+        console.warn('[communityRankings] fetch failed', e);
+        if (!cancelled) {
+          setCommunityRankings([]);
+          setCommunityRankingsLoading(false);
+        }
       }
-
-      const results = merged.map((wallet) => {
-        const walletKey = wallet.toLowerCase();
-        const claims = claimsByWallet.get(walletKey) ?? [];
-        const sim = computeArenaListSimilarity(rankDeckItems, claims, listTermId);
-        const listRanking = buildPortalListRankingByAccumulatedTrust(
-          wallet,
-          listTermId,
-          claims,
-          rankDeposits,
-          stanceByVault,
-        );
-        return { player: syntheticRow(wallet), claims, similarity: sim, listRanking };
-      });
-
-      if (cancelled) return;
-      const peers: ArenaComparePeer[] = results
-        .filter((r): r is ArenaComparePeer => r.similarity !== null && r.similarity.sharedCount > 0)
-        .sort((a, b) => b.similarity.similarityPct - a.similarity.similarityPct);
-      setComparePeers(peers);
-      setComparePeersLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [arenaFlowPhase, activeList, rankDeckItems, players, address, comparePeersVersion]);
+  }, [
+    arenaFlowPhase,
+    activeList,
+    rankDeckItems,
+    players,
+    address,
+    comparePeersVersion,
+  ]);
 
   const [portalListEntries, setPortalListEntries] = useState<
     Extract<ArenaListEntry, { source: 'portal' }>[]
@@ -1556,7 +1488,7 @@ const RankedList: React.FC = () => {
           };
         });
         registerPortalListEntries(entries);
-        setPortalListEntries(entries);
+        setPortalListEntries((prev) => dedupeArenaEntries([...entries, ...prev, ...getRegisteredPortalListEntries()]));
       } catch {
         if (!cancelled) setPortalListEntries([]);
       }
@@ -1649,9 +1581,61 @@ const RankedList: React.FC = () => {
     });
   }, [address]);
 
-  const allArenaListsFlat = useMemo(() => dedupeArenaEntries([...ARENA_LISTS, ...portalListEntries]), [portalListEntries]);
+  const allArenaListsFlat = useMemo(
+    () => dedupeArenaEntries([...ARENA_LISTS, ...portalListEntries, ...getRegisteredPortalListEntries()]),
+    [portalListEntries],
+  );
 
   const contestHubSections = useMemo(() => buildContestHubSections(allArenaListsFlat), [allArenaListsFlat]);
+
+  const hubPortalLists = useMemo(
+    () =>
+      allArenaListsFlat
+        .filter((l) => l.source === 'portal' && l.listObjectTermId)
+        .map((l) => ({
+          id: l.id,
+          title: l.title,
+          listObjectTermId: l.listObjectTermId!,
+          arenaCategory: l.arenaCategory,
+        })),
+    [allArenaListsFlat],
+  );
+
+  /** Preload member portraits for hub spotlight + contest tiles. */
+  useEffect(() => {
+    if (listId || climbViewMode !== 'arena' || arenaFlowPhase !== 'hub') return;
+
+    let cancelled = false;
+    for (const l of hubPortalLists.slice(0, 12)) {
+      if ((hubPreviewPoolByListId[l.id]?.length ?? 0) > 0) continue;
+      const entry = getArenaListById(l.id);
+      if (!entry?.listObjectTermId) continue;
+
+      void (async () => {
+        try {
+          const rows = await getListMemberSubjectsForObject(entry.listObjectTermId!, 32);
+          if (cancelled || rows.length < 1) return;
+          setHubPreviewPoolByListId((prev) => ({
+            ...prev,
+            [l.id]: rows.map((r) => ({
+              id: r.id,
+              kind: 'atom' as const,
+              label: r.label,
+              subtitle: 'On-chain list',
+              image: r.image,
+              pairKind: 'list-preview',
+            })),
+          }));
+        } catch {
+          /* ignore */
+        }
+      })();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [listId, climbViewMode, arenaFlowPhase, hubPortalLists, hubPreviewPoolByListId]);
 
   const resumeBrowseTitle = useMemo(() => {
     try {
@@ -1942,8 +1926,8 @@ const RankedList: React.FC = () => {
       setCurateQueue([]);
       setRound(null);
       setScores({});
-      setComparePeers([]);
-      setComparePeersLoading(false);
+      setCommunityRankings([]);
+      setCommunityRankingsLoading(false);
       setLoading(true);
 
       void (async () => {
@@ -2106,20 +2090,22 @@ const RankedList: React.FC = () => {
     const txByRowKey = new Map<string, string>();
     /** Per-row activity XP grant for curation modal / ledger (batch tx shares one hash across rows). */
     const xpdnByRowKey = new Map<string, number>();
-    /** Activity XP (XPDN) for this batch from `notifyProtocolXpEarned`. */
+    /** Activity XP (XPDN) for this batch (queued in Arena gift box until claim). */
     let activityXpDelta = 0;
     const xpdnGrantsPerTx: number[] = [];
     try {
       setSubmitProgress('Switching to Intuition if needed…');
       await switchNetwork();
       const awardArenaStakeXp = (txHash: string, depositWei: bigint, rowKey: string) => {
-        const granted = notifyProtocolXpEarned({
+        const granted = queueProtocolXpForGiftBox({
           address: address!,
           reasonKey: 'add_to_list',
           txHash,
           depositTrustWei: depositWei,
           grossMultiplier: PROTOCOL_XP_ARENA_RANK_ADD_TO_LIST_MULT,
           dedupeKey: `arena:${txHash}:${rowKey}`,
+          pendingSource: 'arena_batch',
+          pendingLabel: 'Arena rank stake',
         });
         if (typeof granted === 'number' && granted > 0) {
           activityXpDelta += granted;
@@ -3103,8 +3089,8 @@ const RankedList: React.FC = () => {
       setCurateQueue([]);
       setRound(null);
       setScores({});
-      setComparePeers([]);
-      setComparePeersLoading(false);
+      setCommunityRankings([]);
+      setCommunityRankingsLoading(false);
       setLoading(true);
       setListId(id);
       if (ARENA_CONTEST_FLOW_V2) {
@@ -3163,6 +3149,103 @@ const RankedList: React.FC = () => {
     const pick = others[Math.floor(Math.random() * others.length)]!;
     startListRun(pick.id);
   }, [allArenaListsFlat, listId, startListRun]);
+
+  const onAdoptPeerRanking = useCallback(
+    (peer: ArenaComparePeer) => {
+      if (!listId || !activeList) return;
+      if (pool.length < 1) {
+        toast.error('Wait for the list pool to load.');
+        return;
+      }
+      const built = buildAdoptedRankingSession(pool, peer, stakeTRUST);
+      if (!built) {
+        toast.error('Could not map their ranking onto this list pool.');
+        return;
+      }
+      playArenaUiClick();
+      setRankDeckItems(built.deck);
+      setRankTrustUnits(built.rankTrustUnits);
+      curateInitForListRef.current = listId;
+      const deckIds = new Set(built.deck.map((d) => d.id));
+      setCurateQueue(pool.filter((p) => !deckIds.has(p.id)));
+      setArenaFlowPhase('rank');
+      if (address && peer.player.address) {
+        const me = players.find((p) => p.address === address.toLowerCase());
+        recordRankingAdoption({
+          adopterWallet: address,
+          adopterLabel: me ? peerDisplayLabel(me) : `${address.slice(0, 6)}…${address.slice(-4)}`,
+          authorWallet: peer.player.address,
+          listId,
+          listTitle: activeList.title,
+        });
+      }
+      accrueArenaPendingXp(address, {
+        amount: Math.max(5, ARENA_XP_PER_RANK_PICK),
+        source: 'ranking_adopted_bonus',
+        label: `Remixed ${peerDisplayLabel(peer.player)}'s deck`,
+      });
+      toast.success(
+        `Adopted ${peerDisplayLabel(peer.player)}'s ranking — tweak order and stakes, then compare.`,
+      );
+    },
+    [listId, activeList, pool, stakeTRUST, address, players],
+  );
+
+  const onAdoptFromSpotlight = useCallback(
+    (entry: RankedListSpotlightEntry) => {
+      pendingHubAdoptRef.current = entry.peer;
+      startListRun(entry.listId);
+    },
+    [startListRun],
+  );
+
+  useEffect(() => {
+    const pending = consumeArenaPendingAdopt();
+    if (!pending) return;
+    pendingAdoptPeerAddressRef.current = pending.peerAddress.toLowerCase();
+    if (!listId || pending.listId !== listId) {
+      startListRun(pending.listId);
+    }
+  }, [listId, startListRun]);
+
+  useEffect(() => {
+    const pending = pendingHubAdoptRef.current;
+    if (!pending || !listId || loading || pool.length < 1) return;
+    if (poolLoadedForListIdRef.current !== listId) return;
+    pendingHubAdoptRef.current = null;
+    onAdoptPeerRanking(pending);
+  }, [listId, loading, pool.length, onAdoptPeerRanking]);
+
+  useEffect(() => {
+    const addr = pendingAdoptPeerAddressRef.current;
+    if (!addr || !listId || loading || pool.length < 1) return;
+    if (poolLoadedForListIdRef.current !== listId) return;
+    const entry = activeList;
+    if (!entry?.listObjectTermId) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await fetchPortalListCommunityRankings({
+          listObjectTermId: entry.listObjectTermId!,
+          listId: entry.id,
+          myAddress: address,
+          players,
+          maxPeers: 24,
+        });
+        if (cancelled) return;
+        const peer = rows.find((r) => r.player.address.toLowerCase() === addr);
+        pendingAdoptPeerAddressRef.current = null;
+        if (peer) onAdoptPeerRanking(peer);
+      } catch {
+        pendingAdoptPeerAddressRef.current = null;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [listId, loading, pool.length, activeList, address, players, onAdoptPeerRanking]);
 
   /** Count of locally-created cards (id starts with `pending-card-…`) in the deck. */
   const pendingCardCount = useMemo(
@@ -3247,8 +3330,8 @@ const RankedList: React.FC = () => {
         <div className="h-1.5 w-full" style={{ background: ARENA_THEME.topAccentBar }} />
         <div className="pointer-events-none absolute inset-0 opacity-[0.55]" style={{ background: ARENA_THEME.heroGlow }} />
         <div className="w-full max-w-[min(1720px,calc(100vw-1.5rem))] sm:max-w-[min(1720px,calc(100vw-2rem))] mx-auto px-3 sm:px-6 lg:px-10 xl:px-12 pt-5 pb-4 md:pt-6 md:pb-5 relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 sm:gap-8 lg:gap-10">
-            <div className="relative min-w-0">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-6 xl:gap-8 lg:justify-between">
+            <div className="relative min-w-0 shrink-0 lg:max-w-[min(100%,20rem)] xl:max-w-[22rem]">
               <p
                 className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-[0.4em]"
                 style={{
@@ -3275,6 +3358,20 @@ const RankedList: React.FC = () => {
                 }}
                 aria-hidden
               />
+              {climbViewMode === 'arena' && address ? (
+                <div className="mt-4 w-full max-w-[11.5rem] sm:max-w-[13rem]">
+                  <ArenaXpGiftBox
+                    walletAddress={address}
+                    listCategory={
+                      (listId
+                        ? getArenaListById(listId)
+                        : getArenaListById(FLAGSHIP_ARENA_LIST_ID)
+                      )?.arenaCategory
+                    }
+                    variant="hero"
+                  />
+                </div>
+              ) : null}
               <p className="text-sm text-slate-400 mt-4 max-w-md leading-relaxed font-medium">
                 {climbViewMode === 'explorer' ? (
                   <>
@@ -3322,7 +3419,8 @@ const RankedList: React.FC = () => {
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-col items-stretch w-full sm:w-auto sm:max-w-[min(410px,calc(100vw-2rem))] shrink-0 gap-0">
+
+            <div className="flex w-full shrink-0 flex-col items-stretch gap-0 sm:w-auto sm:max-w-[min(410px,calc(100vw-2rem))] lg:ml-auto">
               <div className="relative overflow-hidden rounded-[1.35rem] border border-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_64px_-24px_rgba(34,211,238,0.45),0_0_1px_rgba(236,72,153,0.28)] backdrop-blur-xl backdrop-saturate-150 pt-px">
                 {/* Panel chrome */}
                 <div
@@ -3429,14 +3527,16 @@ const RankedList: React.FC = () => {
                   </div>
 
                   {address ? (
-                    <IntuRankXpBadge
-                      arenaXp={arenaXpUi}
-                      activityXp={myProtocolXp}
-                      size="md"
-                      presentation="arenaHud"
-                      className="w-full"
-                      loading={!arenaGraphReady}
-                    />
+                    <div className="flex w-full flex-col gap-2.5">
+                      <IntuRankXpBadge
+                        arenaXp={arenaXpUi}
+                        activityXp={myProtocolXp}
+                        size="md"
+                        presentation="arenaHud"
+                        className="w-full"
+                        loading={!arenaGraphReady}
+                      />
+                    </div>
                   ) : (
                     <div
                       className="w-full min-h-[7.5rem] rounded-xl border border-dashed border-white/12 bg-black/30 flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-center"
@@ -3729,7 +3829,17 @@ const RankedList: React.FC = () => {
                 className="col-start-1 row-start-1 z-[1] min-h-0 w-full overflow-y-auto overflow-x-hidden overscroll-auto pr-1 [scrollbar-gutter:stable]"
               >
             {ARENA_CONTEST_FLOW_V2 ? (
-              <div className="p-3 sm:p-4 md:p-5 lg:p-6">
+              <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-5">
+                {!listId && climbViewMode === 'arena' && hubPortalLists.length > 0 ? (
+                  <ArenaRankedListsSpotlight
+                    portalLists={hubPortalLists}
+                    myAddress={address}
+                    refreshVersion={comparePeersVersion + listRankersTick}
+                    variant="arena"
+                    onAdopt={onAdoptFromSpotlight}
+                    onExploreList={startListRun}
+                  />
+                ) : null}
                 <ArenaContestHub
                   sections={contestHubSections}
                   onSelectList={startListRun}
@@ -4169,6 +4279,18 @@ const RankedList: React.FC = () => {
                   />
                 </div>
               ) : null}
+              {activeList?.source === 'portal' ? (
+                <ArenaCommunityDecks
+                  listTitle={activeList.title}
+                  listCategory={activeList.arenaCategory}
+                  peers={communityRankings}
+                  previewPool={pool}
+                  loading={communityRankingsLoading}
+                  myAddress={address}
+                  onAdopt={onAdoptPeerRanking}
+                  variant={arenaFlowPhase === 'curate' ? 'curate' : 'panel'}
+                />
+              ) : null}
               {arenaFlowPhase === 'curate' ? (
                 <ArenaCurateStack
                   listTitle={activeList?.title ?? '…'}
@@ -4242,6 +4364,7 @@ const RankedList: React.FC = () => {
                   onSubmitAndContinue={beginArenaCommit}
                   onRandomGame={onCompareRandomGame}
                   onPickNextGame={exitToArenaBrowse}
+                  onAdoptPeer={onAdoptPeerRanking}
                   gameActionsOnly={ARENA_CONTEST_FLOW_V2}
                   onOpenSignal={() => {
                     playArenaUiClick();
@@ -4885,6 +5008,7 @@ const RankedList: React.FC = () => {
           };
           registerPortalListEntries([portalEntry]);
           registerArenaPortalListTermsForIndexing([result.listTermId]);
+          setPortalListEntries((prev) => dedupeArenaEntries([...prev, portalEntry]));
 
           /**
            * Migrate the queued batch rows from the (old) static list id to the

@@ -1,11 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, Binary, Box, HardDrive, Network } from 'lucide-react';
 import { formatEther } from 'viem';
-import { getNetworkStats } from '../services/graphql';
-import { CURRENCY_SYMBOL } from '../constants';
+import { useAccount } from 'wagmi';
+import { getLists, getNetworkStats } from '../services/graphql';
+import { ARENA_PORTAL_LISTS_FETCH_LIMIT, CURRENCY_SYMBOL } from '../constants';
+import {
+  ARENA_LISTS,
+  getRegisteredPortalListEntries,
+  portalListIdFromTermId,
+  registerPortalListEntries,
+  type ArenaListEntry,
+} from '../services/arenaListsRegistry';
 import { HomeWelcomeStrip } from '../components/HomeWelcomeStrip';
 import { HomeGameBoard } from '../components/HomeGameBoard';
 import { HomeArenaEntryEffects } from '../components/HomeArenaEntryEffects';
+import { ArenaRankedListsSpotlight } from '../components/arenaFlow/ArenaRankedListsSpotlight';
 
 interface InViewOptions extends IntersectionObserverInit {
   once?: boolean;
@@ -140,6 +149,69 @@ const MissionTerminal: React.FC = () => {
 
 const Home: React.FC = () => {
   const [stats, setStats] = useState({ tvl: '0', atoms: 0, signals: 0, positions: 0 });
+  const { address } = useAccount();
+  const [portalListEntries, setPortalListEntries] = useState<
+    Extract<ArenaListEntry, { source: 'portal' }>[]
+  >([]);
+  const [portalRegistryTick, setPortalRegistryTick] = useState(0);
+
+  useEffect(() => {
+    const onChainUpdated = () => setPortalRegistryTick((n) => n + 1);
+    window.addEventListener('inturank-arena-onchain-updated', onChainUpdated);
+    return () => window.removeEventListener('inturank-arena-onchain-updated', onChainUpdated);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { items } = await getLists(ARENA_PORTAL_LISTS_FETCH_LIMIT, 0, [
+          { total_position_count: 'desc' },
+        ]);
+        if (cancelled) return;
+        const entries: Extract<ArenaListEntry, { source: 'portal' }>[] = items.map((row: any) => ({
+          id: portalListIdFromTermId(row.id),
+          source: 'portal' as const,
+          listObjectTermId: row.id,
+          title: row.label || 'Untitled list',
+          description: '',
+          tag: 'Live',
+          arenaCategory: 'network' as const,
+          listGlyph: '◆',
+          totalItems: row.totalItems ?? 0,
+        }));
+        registerPortalListEntries(entries);
+        setPortalListEntries((prev) => {
+          const merged = [...entries, ...prev, ...getRegisteredPortalListEntries()];
+          const m = new Map<string, Extract<ArenaListEntry, { source: 'portal' }>>();
+          for (const e of merged) m.set(e.id, e);
+          return [...m.values()];
+        });
+      } catch {
+        if (!cancelled) setPortalListEntries([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const portalListsForSpotlight = useMemo(() => {
+    const m = new Map<
+      string,
+      { id: string; title: string; listObjectTermId: string; arenaCategory?: string }
+    >();
+    for (const e of [...ARENA_LISTS, ...portalListEntries, ...getRegisteredPortalListEntries()]) {
+      if (e.source !== 'portal' || !e.listObjectTermId) continue;
+      m.set(e.id, {
+        id: e.id,
+        title: e.title,
+        listObjectTermId: e.listObjectTermId,
+        arenaCategory: e.arenaCategory,
+      });
+    }
+    return [...m.values()];
+  }, [portalListEntries, portalRegistryTick]);
 
   useEffect(() => {
     const initData = async () => {
@@ -168,6 +240,18 @@ const Home: React.FC = () => {
     <div className="relative flex min-h-screen w-full min-w-0 max-w-[100vw] flex-col overflow-x-clip bg-intuition-dark selection:bg-intuition-secondary selection:text-white">
       <HomeArenaEntryEffects />
       <HomeWelcomeStrip />
+
+      {portalListsForSpotlight.length > 0 ? (
+        <div className="relative w-full border-t border-white/[0.07] bg-[#030508]">
+          <div className="mx-auto w-full max-w-[min(1720px,calc(100vw-1.5rem))] px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-12">
+            <ArenaRankedListsSpotlight
+              portalLists={portalListsForSpotlight}
+              myAddress={address}
+              variant="home"
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="relative border-t border-white/[0.07] bg-[#030508]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent" />

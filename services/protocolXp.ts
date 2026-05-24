@@ -288,29 +288,23 @@ export function getProtocolXpTotal(address: string | null | undefined): number {
   return ledger[lc]?.total ?? 0;
 }
 
-/**
- * Persist + UX for a qualifying on-chain action.
- * Dedupes by `txHash`. Deposit-sized categories require `depositTrustWei` (spam-safe scaling + daily caps).
- *
- * Back-compat: returns truthy (the awarded amount) when XP was granted, falsy otherwise.
- * Callers that previously checked `if (notifyProtocolXpEarned(...)) ...` keep working.
- */
-export function notifyProtocolXpEarned(opts: {
+export type ProtocolXpAwardOpts = {
   address: string | null | undefined;
   reasonKey: ProtocolXpReasonKey;
   txHash?: string | null;
   depositTrustWei?: bigint | null;
-  /** Only send_trust — pass fixed XP after min-send gate at callsite. */
   sendTrustFixedAmount?: number;
-  /** Dedupe non-tx awards (e.g. Skill assistant message id). */
   dedupeKey?: string | null;
-  /**
-   * Multiply gross (after deposit scaling) before daily cap — e.g. Arena rank uses `add_to_list` on the same tx as pick XP.
-   * Omit or use 1 for full weight; values in (0, 1) floor after multiply.
-   */
   grossMultiplier?: number;
-}): number {
-  const { address, reasonKey, txHash, depositTrustWei, sendTrustFixedAmount, dedupeKey, grossMultiplier } = opts;
+};
+
+/**
+ * Compute XP award, apply dedupe + daily caps, and persist reservation markers.
+ * Does not toast or play sound — used by gift-box queue and direct grant paths.
+ */
+export function tryReserveProtocolXpAward(opts: ProtocolXpAwardOpts): number {
+  const { address, reasonKey, txHash, depositTrustWei, sendTrustFixedAmount, dedupeKey, grossMultiplier } =
+    opts;
   if (!address?.trim()) return 0;
 
   let gross = computeGrossProtocolXp({
@@ -335,7 +329,6 @@ export function notifyProtocolXpEarned(opts: {
     return 0;
   }
 
-  /** Same tx hash may credit multiple logical deposits (FeeProxy depositBatch); require per-row `dedupeKey`. */
   if (h && entry.seenHashes[h] && !dedupe) {
     return 0;
   }
@@ -373,19 +366,49 @@ export function notifyProtocolXpEarned(opts: {
 
   todayBucket[reasonKey] = usedToday + award;
   dailyByReason = { ...dailyByReason, [dayKey]: todayBucket };
-  entry = { ...entry, total: entry.total + award, dailyByReason };
+  entry = { ...entry, dailyByReason };
   ledger[addrLc] = entry;
   saveLedger(ledger);
 
+  return award;
+}
+
+/** Add XP to ledger total (e.g. gift-box claim) without re-running dedupe. */
+export function creditProtocolXpToLedger(addressLc: string, amount: number): void {
+  const award = Math.floor(amount);
+  if (!addressLc?.startsWith('0x') || award <= 0) return;
+  const ledger = loadLedger();
+  const entry = ledger[addressLc] ?? { total: 0, seenHashes: {} };
+  ledger[addressLc] = { ...entry, total: entry.total + award };
+  saveLedger(ledger);
+  emitUpdated(addressLc);
+}
+
+/**
+ * Persist + UX for a qualifying on-chain action.
+ * Dedupes by `txHash`. Deposit-sized categories require `depositTrustWei` (spam-safe scaling + daily caps).
+ *
+ * Back-compat: returns truthy (the awarded amount) when XP was granted, falsy otherwise.
+ * Callers that previously checked `if (notifyProtocolXpEarned(...)) ...` keep working.
+ */
+export function notifyProtocolXpEarned(opts: ProtocolXpAwardOpts): number {
+  const award = tryReserveProtocolXpAward(opts);
+  if (award <= 0) return 0;
+
+  const addrLc = opts.address!.toLowerCase();
+  creditProtocolXpToLedger(addrLc, award);
+  const ledger = loadLedger();
+  const entry = ledger[addrLc] ?? { total: 0, seenHashes: {} };
+
   playXpChime();
-  toast.success(`+${award} XP — ${REASON_LABEL[reasonKey]}`);
+  toast.success(`+${award} XP — ${REASON_LABEL[opts.reasonKey]}`);
   emitUpdated(addrLc);
   postMirrorOptional({
     address: addrLc,
     total: entry.total,
     delta: award,
-    reasonKey,
-    txHash: h ?? undefined,
+    reasonKey: opts.reasonKey,
+    txHash: opts.txHash?.startsWith('0x') ? opts.txHash.toLowerCase() : undefined,
     dedupeKey: opts.dedupeKey?.trim() ? opts.dedupeKey.trim() : undefined,
   });
   return award;

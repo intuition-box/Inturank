@@ -96,7 +96,7 @@ export const ArenaClimbGate: React.FC<Props> = ({ onRandomContest, onResumeLast 
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] py-3 px-4 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-300 transition-colors hover:border-intuition-primary/35 hover:text-white"
         >
           <Plus className="h-4 w-4 shrink-0" strokeWidth={2.3} aria-hidden />
-          Create your game
+          Create list
         </Link>
 
         <Link

@@ -12,6 +12,7 @@ import {
   PenLine,
   Radio,
   ShieldCheck,
+  Copy,
   Shuffle,
   Sparkles,
   Trophy,
@@ -67,6 +68,8 @@ type Props = {
   onSubmitAndContinue: () => void;
   onRandomGame: () => void;
   onPickNextGame: () => void;
+  /** Remix a peer's published ranking into your rank deck. */
+  onAdoptPeer?: (peer: ArenaComparePeer) => void;
   /** Opens batch review so the user can sign queued rows (this list or others). */
   onOpenConvictionCart?: () => void;
   onOpenSignal?: () => void;
@@ -125,6 +128,7 @@ export const ArenaCompareView: React.FC<Props> = ({
   onSubmitAndContinue,
   onRandomGame,
   onPickNextGame,
+  onAdoptPeer,
   onOpenConvictionCart,
   onOpenSignal,
   gameActionsOnly = false,
@@ -313,6 +317,7 @@ export const ArenaCompareView: React.FC<Props> = ({
             pendingStakeCount={pendingStakeCount}
             batchMode={batchMode}
             isWalletConnected={isWalletConnected}
+            onAdoptPeer={onAdoptPeer}
           />
         </section>
 
@@ -818,7 +823,18 @@ const PeerList: React.FC<{
   pendingStakeCount: number;
   batchMode: boolean;
   isWalletConnected: boolean;
-}> = ({ myDeckRows, listIsOnChain, peersLoading, peers, palette, pendingStakeCount, batchMode, isWalletConnected }) => {
+  onAdoptPeer?: (peer: ArenaComparePeer) => void;
+}> = ({
+  myDeckRows,
+  listIsOnChain,
+  peersLoading,
+  peers,
+  palette,
+  pendingStakeCount,
+  batchMode,
+  isWalletConnected,
+  onAdoptPeer,
+}) => {
   if (!listIsOnChain) {
     return (
       <EmptyState
@@ -897,6 +913,7 @@ const PeerList: React.FC<{
           idx={idx}
           palette={palette}
           myDeckRows={myDeckRows}
+          onAdopt={onAdoptPeer ? () => onAdoptPeer(p) : undefined}
         />
       ))}
     </ul>
@@ -908,7 +925,8 @@ const PeerRow: React.FC<{
   idx: number;
   palette: DeckPaletteEntry;
   myDeckRows: MyDeckRow[];
-}> = ({ peer, idx, palette, myDeckRows }) => {
+  onAdopt?: () => void;
+}> = ({ peer, idx, palette, myDeckRows, onAdopt }) => {
   const reduceMotion = useReducedMotion();
   const [expanded, setExpanded] = useState(false);
   const { player, similarity, listRanking } = peer;
@@ -994,33 +1012,54 @@ const PeerRow: React.FC<{
           ) : null}
         </div>
 
-        {canExpand ? (
-          <button
-            type="button"
-            onClick={() => {
-              playArenaUiClick();
-              setExpanded((v) => !v);
-            }}
-            onMouseEnter={() => playArenaUiHover()}
-            aria-expanded={expanded}
-            aria-label={expanded ? 'Hide comparison' : 'Compare your rank to theirs'}
-            className="mt-1 flex h-11 shrink-0 items-center gap-2 rounded-xl border-2 px-3.5 font-mono text-xs font-black uppercase tracking-[0.12em] transition-colors hover:bg-white/[0.06]"
-            style={{
-              borderColor: expanded ? palette.hex : palette.line,
-              color: palette.hex,
-              background: expanded ? `${palette.hex}18` : palette.soft,
-            }}
-          >
-            {expanded ? 'Close' : 'Compare'}
-            <ChevronDown
-              className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out ${
-                expanded ? 'rotate-180' : ''
-              }`}
-              strokeWidth={2.6}
-              aria-hidden
-            />
-          </button>
-        ) : null}
+        <div className="mt-1 flex shrink-0 flex-col gap-2">
+          {onAdopt && peer.listRanking.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                playArenaUiClick();
+                onAdopt();
+              }}
+              onMouseEnter={() => playArenaUiHover()}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl border-2 px-3.5 font-mono text-xs font-black uppercase tracking-[0.12em] transition-colors hover:brightness-110"
+              style={{
+                borderColor: palette.hex,
+                color: '#fff',
+                background: `${palette.hex}33`,
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+              Adopt
+            </button>
+          ) : null}
+          {canExpand ? (
+            <button
+              type="button"
+              onClick={() => {
+                playArenaUiClick();
+                setExpanded((v) => !v);
+              }}
+              onMouseEnter={() => playArenaUiHover()}
+              aria-expanded={expanded}
+              aria-label={expanded ? 'Hide comparison' : 'Compare your rank to theirs'}
+              className="flex h-11 items-center gap-2 rounded-xl border-2 px-3.5 font-mono text-xs font-black uppercase tracking-[0.12em] transition-colors hover:bg-white/[0.06]"
+              style={{
+                borderColor: expanded ? palette.hex : palette.line,
+                color: palette.hex,
+                background: expanded ? `${palette.hex}18` : palette.soft,
+              }}
+            >
+              {expanded ? 'Close' : 'Compare'}
+              <ChevronDown
+                className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out ${
+                  expanded ? 'rotate-180' : ''
+                }`}
+                strokeWidth={2.6}
+                aria-hidden
+              />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/**

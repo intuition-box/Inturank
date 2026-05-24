@@ -298,8 +298,12 @@ export const ARENA_LISTS: ArenaListEntry[] = [
 const runtimePortalLists = new Map<string, Extract<ArenaListEntry, { source: 'portal' }>>();
 
 export function registerPortalListEntries(entries: Extract<ArenaListEntry, { source: 'portal' }>[]) {
-  runtimePortalLists.clear();
   for (const e of entries) runtimePortalLists.set(e.id, e);
+}
+
+/** Session-promoted portal lists (merge with `getLists` for spotlight / hub). */
+export function getRegisteredPortalListEntries(): Extract<ArenaListEntry, { source: 'portal' }>[] {
+  return [...runtimePortalLists.values()];
 }
 
 export function getArenaListById(id: string | null | undefined): ArenaListEntry | undefined {

@@ -2774,7 +2774,10 @@ function arenaRankSlotKey(listTermId: string, subjectId: string): string | null 
 }
 
 /** Vault stance `listTermId` vs portal list object id (handles id padding variants). */
-function portalListStanceMatchesListObject(listTermIdFromStance: string, portalListObjectTermId: string): boolean {
+export function portalListStanceMatchesListObject(
+  listTermIdFromStance: string,
+  portalListObjectTermId: string,
+): boolean {
   const want = new Set(
     prepareQueryIds(String(portalListObjectTermId || ''))
       .map(normalize)

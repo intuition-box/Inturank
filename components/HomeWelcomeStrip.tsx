@@ -220,11 +220,11 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
                 <Plus className="h-7 w-7" strokeWidth={2.5} aria-hidden />
               </span>
               <span className="relative px-2 text-center text-[11px] font-black uppercase tracking-[0.2em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]">
-                Create your game
+                Publish a list
               </span>
             </Link>
             <p className="max-w-[14rem] text-center text-[10px] leading-snug text-slate-500">
-              Contest picker lives below. Use nav for graph create (identities + claims).
+              Play a contest below, then Publish on-chain at Compare to mint a live ranking list.
             </p>
           </div>
         </div>

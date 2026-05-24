@@ -27,6 +27,8 @@ type Props = {
   onResumeLast?: () => void;
   /** When set, shows resume control (last played list title). */
   resumeListTitle?: string | null;
+  /** Gift box + adoption inbox (Arena homepage chrome). */
+  headerExtras?: React.ReactNode;
 };
 
 function firstPreviewImage(previews: RankItem[]): string | undefined {
@@ -381,6 +383,7 @@ export const ArenaContestHub: React.FC<Props> = ({
   onRandomContest,
   onResumeLast,
   resumeListTitle,
+  headerExtras,
 }) => {
   const totalGames = sections.reduce((sum, s) => sum + s.lists.length, 0);
   const rm = !!(reduceMotion ?? false);
@@ -432,7 +435,11 @@ export const ArenaContestHub: React.FC<Props> = ({
           </div>
 
           {/* Action stack */}
-          <div className="flex flex-wrap gap-2 shrink-0">
+          <div className="flex flex-col items-stretch gap-3 shrink-0 sm:items-end">
+            {headerExtras ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">{headerExtras}</div>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
             <Link
               to="/"
               state={{ scrollArenaContests: true, showArenaCreateGameToast: true }}
@@ -447,7 +454,7 @@ export const ArenaContestHub: React.FC<Props> = ({
                 strokeWidth={2.6}
                 aria-hidden
               />
-              Create game
+              Create list
             </Link>
 
             {typeof onRandomContest === 'function' ? (
@@ -507,6 +514,7 @@ export const ArenaContestHub: React.FC<Props> = ({
               />
               Explorer
             </Link>
+            </div>
           </div>
         </div>
       </header>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
@@ -70,6 +70,7 @@ type Props = {
   }) => Promise<ArenaPromoteListResult>;
 };
 
+const SUCCESS_COUNTDOWN_SEC = 10;
 const DEFAULT_DEPOSIT_FALLBACK = formatEther(CURVE_OFFSET);
 
 /**
@@ -96,6 +97,15 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
   const [txError, setTxError] = useState<string | null>(null);
   const [txProgress, setTxProgress] = useState<string>('');
   const [txLastHash, setTxLastHash] = useState<`0x${string}` | null>(null);
+  const [promoteResult, setPromoteResult] = useState<ArenaPromoteListResult | null>(null);
+  const continuedRef = useRef(false);
+
+  const handleContinueAfterSuccess = useCallback(() => {
+    if (continuedRef.current || !promoteResult) return;
+    continuedRef.current = true;
+    playArenaUiClick();
+    onPromoted(promoteResult);
+  }, [onPromoted, promoteResult]);
 
   /** Members the service will actually anchor — capped + filtered. */
   const effectiveItems = useMemo(
@@ -120,6 +130,8 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
     setTxError(null);
     setTxProgress('');
     setTxLastHash(null);
+    setPromoteResult(null);
+    continuedRef.current = false;
   }, [isOpen]);
 
   useEffect(() => {
@@ -139,11 +151,16 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !txInFlight(txStatus)) onClose();
+      if (e.key !== 'Escape' || txInFlight(txStatus)) return;
+      if (txStatus === 'SUCCESS') {
+        handleContinueAfterSuccess();
+      } else {
+        onClose();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose, txStatus]);
+  }, [isOpen, onClose, txStatus, handleContinueAfterSuccess]);
 
   const balanceNum = parseFloat(walletBalance);
   const insufficientFunds = Number.isFinite(balanceNum) && balanceNum < estCost;
@@ -188,9 +205,9 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
           });
       markProxyApproved(walletAddress);
       setTxLastHash(result.triplesTxHash);
+      setPromoteResult(result);
       setTxStatus('SUCCESS');
-      /** Small beat so the user reads the success state before we swap the route. */
-      setTimeout(() => onPromoted(result), 800);
+      setTxProgress('Batch confirmed on-chain.');
     } catch (e: any) {
       console.error('promoteArenaListOnChain failed:', e);
       setTxError(parseProtocolError(e));
@@ -254,7 +271,11 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
                 disabled={inFlight}
                 onClick={() => {
                   playArenaUiClick();
-                  onClose();
+                  if (txStatus === 'SUCCESS') {
+                    handleContinueAfterSuccess();
+                  } else {
+                    onClose();
+                  }
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-[background] disabled:opacity-40"
                 style={{ background: 'rgba(0,0,0,0.18)', color: palette.contrastText }}
@@ -292,8 +313,14 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
                 status={txStatus}
                 progress={txProgress}
                 hash={txLastHash}
+                countdownSeconds={SUCCESS_COUNTDOWN_SEC}
+                onContinue={txStatus === 'SUCCESS' ? handleContinueAfterSuccess : undefined}
                 onClose={() => {
-                  if (!inFlight) onClose();
+                  if (txStatus === 'SUCCESS') {
+                    handleContinueAfterSuccess();
+                  } else if (!inFlight) {
+                    onClose();
+                  }
                 }}
               />
             )}
@@ -475,14 +502,33 @@ const TxView: React.FC<{
   status: TxStatus;
   progress: string;
   hash: `0x${string}` | null;
+  countdownSeconds?: number;
+  onContinue?: () => void;
   onClose: () => void;
-}> = ({ palette, status, progress, hash, onClose }) => {
+}> = ({ palette, status, progress, hash, countdownSeconds = 10, onContinue, onClose }) => {
   const isSuccess = status === 'SUCCESS';
   const isError = status === 'ERROR';
   const Icon = isSuccess ? CheckCircle2 : isError ? AlertCircle : Loader2;
+  const [secondsLeft, setSecondsLeft] = useState(countdownSeconds);
+
+  useEffect(() => {
+    if (!isSuccess || !onContinue) return;
+    setSecondsLeft(countdownSeconds);
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          window.clearInterval(id);
+          onContinue();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isSuccess, onContinue, countdownSeconds]);
 
   return (
-    <div className="px-5 py-7">
+    <motion.div className="px-5 py-7">
       <div className="flex flex-col items-center gap-4 text-center">
         <span
           className="flex h-14 w-14 items-center justify-center rounded-2xl"
@@ -514,17 +560,22 @@ const TxView: React.FC<{
             View tx <ExternalLink className="h-3 w-3" strokeWidth={2.4} />
           </a>
         ) : null}
+        {isSuccess ? (
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
+            Continuing to compare in {secondsLeft}s
+          </p>
+        ) : null}
         {isSuccess || isError ? (
           <button
             type="button"
             onClick={onClose}
             className="mt-2 rounded-xl border border-white/12 bg-black/30 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-white/[0.04] hover:text-white"
           >
-            Close
+            {isSuccess ? 'Continue to compare' : 'Close'}
           </button>
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -584,7 +635,7 @@ function defaultProgress(s: TxStatus): string {
     case 'CONFIRMING':
       return 'Waiting for the indexer to surface the new list…';
     case 'SUCCESS':
-      return 'Switching you to the new on-chain contest.';
+      return 'Batch confirmed on-chain.';
     case 'ERROR':
       return 'See the error and try again.';
     default:
