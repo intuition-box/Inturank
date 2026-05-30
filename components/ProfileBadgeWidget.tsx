@@ -1,5 +1,5 @@
 /**
- * Gamified profile widget for header — avatar, badge, link to full profile
+ * Gamified profile widget for header ,  avatar, badge, link to full profile
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
@@ -53,7 +53,7 @@ const ProfileBadgeWidget: React.FC<ProfileBadgeWidgetProps> = ({
         type="button"
         onClick={onToggleDropdown}
         onMouseEnter={playHover}
-        className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-full border border-intuition-primary/20 bg-black/35 hover:bg-intuition-primary/[0.06] hover:border-intuition-primary/40 hover:shadow-[0_0_18px_rgba(0,243,255,0.12)] transition-all group"
+        className="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-full border border-intuition-primary/20 bg-black/35 hover:bg-intuition-primary/[0.06] hover:border-intuition-primary/40 hover:shadow-[0_0_18px_rgba(255,80,57,0.12)] transition-all group"
       >
         <div className="relative shrink-0">
           <div

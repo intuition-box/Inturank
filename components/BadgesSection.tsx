@@ -1,5 +1,5 @@
 /**
- * Gamified badges section — shows user's leaderboard ranks and badge tier
+ * Gamified badges section ,  shows user's leaderboard ranks and badge tier
  */
 import React from 'react';
 import { Link } from 'react-router-dom';

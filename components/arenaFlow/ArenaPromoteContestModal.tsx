@@ -256,7 +256,7 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
             >
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] opacity-85">
-                  {palette.label} Â· Promote contest
+                  {palette.label} Â/ Promote contest
                 </p>
                 <h2
                   id="arena-promote-title"
@@ -386,7 +386,7 @@ const FormView: React.FC<{
       </div>
 
       {trimmed ? (
-        <p className="mt-3 text-[11px] leading-snug text-amber-300/85">
+        <p className="mt-3 text-[11px] leading-snug text-intuition-warning/85">
           Trimmed to first {effectiveItems.length} of {rawItemCount} rows (per-call cap). Re-promote later to attach the
           remainder to the same list identity.
         </p>
@@ -456,9 +456,9 @@ const FormView: React.FC<{
           className="mt-4 flex items-start gap-2 rounded-lg border px-3 py-2.5"
           style={{ borderColor: 'rgba(255,77,122,0.4)', background: 'rgba(255,77,122,0.06)' }}
         >
-          <AlertCircle className="mt-[1px] h-4 w-4 shrink-0 text-rose-400" strokeWidth={2.4} />
+          <AlertCircle className="mt-[1px] h-4 w-4 shrink-0 text-intuition-secondary" strokeWidth={2.4} />
           <div className="min-w-0">
-            <p className="font-mono text-[10px] font-black uppercase tracking-wider text-rose-300">Tx failed</p>
+            <p className="font-mono text-[10px] font-black uppercase tracking-wider text-intuition-secondary">Tx failed</p>
             <p className="mt-0.5 text-[11px] leading-snug text-slate-300">{txError}</p>
           </div>
         </div>
@@ -489,7 +489,7 @@ const FormView: React.FC<{
       </footer>
 
       <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-wider text-slate-600">
-        Min deposit / leg Â· {minDeposit} {CURRENCY_SYMBOL}
+        Min deposit / leg Â/ {minDeposit} {CURRENCY_SYMBOL}
       </p>
     </div>
   );
@@ -535,7 +535,7 @@ const TxView: React.FC<{
           style={{ background: isError ? 'rgba(255,77,122,0.14)' : palette.soft }}
         >
           <Icon
-            className={`h-7 w-7 ${isError ? 'text-rose-400' : isSuccess ? 'text-emerald-300' : 'animate-spin'}`}
+            className={`h-7 w-7 ${isError ? 'text-intuition-secondary' : isSuccess ? 'text-intuition-success' : 'animate-spin'}`}
             strokeWidth={2.2}
             style={!isError && !isSuccess ? { color: palette.hex } : undefined}
             aria-hidden

@@ -31,9 +31,9 @@ function hintCopy(variant: XpEarnHintVariant): string {
     case 'markets':
       return `Buys: up to +${PROTOCOL_XP_MARKET_ACQUIRE} activity XP. List adds: up to +${PROTOCOL_XP_ADD_TO_LIST}. More TRUST → more XP; small amounts earn less.`;
     case 'market_detail':
-      return `Up to +${PROTOCOL_XP_MARKET_ACQUIRE} activity XP — scales with TRUST on this buy.`;
+      return `Up to +${PROTOCOL_XP_MARKET_ACQUIRE} activity XP ,  scales with TRUST on this buy.`;
     case 'create_hub':
-      return `Atoms to +${PROTOCOL_XP_CREATE_ATOM} XP; claims +${PROTOCOL_XP_CREATE_CLAIM}. Skill Playground: +${PROTOCOL_XP_SKILL_CHAT} per reply (wallet), up to +${PROTOCOL_XP_SKILL_ATOM} atom / +${PROTOCOL_XP_SKILL_TRIPLE} triple when signed — on-chain rows scale with deposit.`;
+      return `Atoms to +${PROTOCOL_XP_CREATE_ATOM} XP; claims +${PROTOCOL_XP_CREATE_CLAIM}. Skill Playground: +${PROTOCOL_XP_SKILL_CHAT} per reply (wallet), up to +${PROTOCOL_XP_SKILL_ATOM} atom / +${PROTOCOL_XP_SKILL_TRIPLE} triple when signed ,  on-chain rows scale with deposit.`;
     case 'skill':
       return `+${PROTOCOL_XP_SKILL_CHAT} activity XP per assistant reply (wallet connected). Signed atom: up to +${PROTOCOL_XP_SKILL_ATOM}; signed triple: up to +${PROTOCOL_XP_SKILL_TRIPLE}. Deposits scale on-chain awards.`;
     case 'send_trust':
@@ -50,7 +50,7 @@ function ArenaXpRewardsDeck({ className }: { className?: string }) {
       className={`relative w-full rounded-2xl border border-slate-800 bg-slate-950/75 backdrop-blur-md overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.55)] ${className ?? ''}`}
     >
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(0,243,255,0.025)_1px,transparent_1px)] bg-[size:18px_18px] opacity-35"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,80,57,0.025)_1px,transparent_1px)] bg-[size:18px_18px] opacity-35"
         aria-hidden
       />
 
@@ -113,7 +113,7 @@ export function XpEarnHint({
             to={DOC_HREF}
             onClick={(e) => e.stopPropagation()}
             className="shrink-0 text-intuition-primary/75 hover:text-intuition-primary underline-offset-2 hover:underline font-medium"
-            title="Activity XP — documentation"
+            title="Activity XP ,  documentation"
           >
             XP rules
           </Link>

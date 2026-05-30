@@ -24,7 +24,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   assetName,
   assetImage,
   side,
-  themeColor = '#00f3ff' // Default to Intuition Primary
+  themeColor = '#ff5039' // Default to IntuRank Cinnabar
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -73,7 +73,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         <div className="w-full max-w-sm mx-auto perspective-1000 group">
           <div 
             ref={cardRef} 
-            className="relative bg-[#020308] border-2 p-8 rounded-[2rem] overflow-hidden transition-all duration-700"
+            className="relative bg-intuition-dark border-2 p-8 rounded-[2rem] overflow-hidden transition-all duration-700"
             style={glowStyle}
           >
             {/* Ultra-high fidelity background layers */}
@@ -139,7 +139,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 <div 
                   className={`inline-flex items-center gap-2 mt-4 px-4 py-2 text-[9px] font-black uppercase tracking-[0.3em] border rounded-full transition-all`}
                   style={{ 
-                    backgroundColor: side === 'TRUST' ? 'rgba(0,255,157,0.1)' : 'rgba(255,30,109,0.1)',
+                    backgroundColor: side === 'TRUST' ? 'rgba(0,255,157,0.1)' : 'rgba(239,68,68,0.1)',
                     borderColor: side === 'TRUST' ? '#00ff9d44' : '#ff1e6d44',
                     color: side === 'TRUST' ? '#00ff9d' : '#ff1e6d'
                   }}

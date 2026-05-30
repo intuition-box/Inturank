@@ -332,8 +332,8 @@ function ArenaPoolSkeleton({ lanes }: { lanes: number }) {
               <div className="h-4 bg-slate-700/50 rounded w-4/5" />
               <div className="h-3 bg-slate-800/60 rounded w-full" />
               <div className="grid grid-cols-2 gap-2 mt-3">
-                <div className="h-10 bg-cyan-950/40 rounded-lg border border-cyan-500/10" />
-                <div className="h-10 bg-fuchsia-950/40 rounded-lg border border-fuchsia-500/10" />
+                <div className="h-10 bg-intuition-primary/40 rounded-lg border border-intuition-primary/10" />
+                <div className="h-10 bg-intuition-primary/40 rounded-lg border border-intuition-primary/10" />
               </div>
             </div>
           </div>
@@ -369,7 +369,7 @@ const ARENA_STAKE_TITLES = ARENA_BATCH_MODE
   ? (['Pulse', 'Surge', 'Blitz', 'Nova', 'Forge', 'Singularity'] as const)
   : (['Spark', 'Pulse', 'Surge', 'Blitz', 'Nova', 'Singularity'] as const);
 
-/** Per-card multiplier in Step 2 Â· Rank (batch deposit = stake preset Ã— units per row). */
+/** Per-card multiplier in Step 2 Â/ Rank (batch deposit = stake preset Ã— units per row). */
 const RANK_TRUST_UNITS_MAX = 12;
 
 const NARRATIVE_PRED = /predict|forecast|will\b|should\b|believe|future|outcome|if\s+.+\s+then/i;
@@ -555,8 +555,8 @@ function FootprintStripe({ entry }: { entry: ArenaListEntry }) {
   const fp = getArenaDataSourceFootprint(entry);
   const shell =
     fp.kind === 'live_indexer' || fp.kind === 'portal_chain'
-      ? 'border-emerald-400/35 bg-emerald-500/[0.12] text-emerald-100/95'
-      : 'border-amber-400/35 bg-amber-500/[0.1] text-amber-100/95';
+      ? 'border-intuition-success/35 bg-intuition-success/[0.12] text-intuition-success/95'
+      : 'border-intuition-warning/35 bg-intuition-warning/[0.1] text-intuition-warning/95';
 
   return (
     <div className="mt-2 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5">
@@ -566,7 +566,7 @@ function FootprintStripe({ entry }: { entry: ArenaListEntry }) {
           title={fp.detailLine}
         >
           {fp.kind === 'live_indexer' || fp.kind === 'portal_chain' ? (
-            <span className="block h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.8)]" aria-hidden />
+            <span className="block h-1.5 w-1.5 rounded-full bg-intuition-success shadow-[0_0_8px_rgba(52,211,153,0.8)]" aria-hidden />
           ) : null}
           {fp.badgeShort}
         </span>
@@ -640,12 +640,12 @@ function getStreakTier(s: number): { label: string; className: string } {
   if (s >= 12)
     return {
       label: 'Unstoppable',
-      className: 'from-intuition-primary/90 to-intuition-secondary/80 shadow-[0_0_20px_rgba(0,243,255,0.35)]',
+      className: 'from-intuition-primary/90 to-intuition-secondary/80 shadow-[0_0_20px_rgba(255,80,57,0.35)]',
     };
   if (s >= 7)
-    return { label: 'Blazing', className: 'from-intuition-primary/85 to-cyan-600/75 shadow-[0_0_16px_rgba(0,243,255,0.28)]' };
-  if (s >= 3) return { label: 'On fire', className: 'from-cyan-400/80 to-intuition-primary/70 shadow-[0_0_14px_rgba(0,243,255,0.22)]' };
-  if (s >= 1) return { label: 'Heating up', className: 'from-slate-600/70 to-intuition-primary/60 shadow-[0_0_12px_rgba(0,243,255,0.15)]' };
+    return { label: 'Blazing', className: 'from-intuition-primary/85 to-intuition-primary/75 shadow-[0_0_16px_rgba(255,80,57,0.28)]' };
+  if (s >= 3) return { label: 'On fire', className: 'from-intuition-primary/80 to-intuition-primary/70 shadow-[0_0_14px_rgba(255,80,57,0.22)]' };
+  if (s >= 1) return { label: 'Heating up', className: 'from-slate-600/70 to-intuition-primary/60 shadow-[0_0_12px_rgba(255,80,57,0.15)]' };
   return { label: '', className: '' };
 }
 
@@ -654,17 +654,17 @@ function arenaCombatTier(xp: number): { label: string; chip: string } {
   if (xp >= 5000)
     return {
       label: 'Mythic',
-      chip: 'bg-gradient-to-r from-intuition-primary/45 to-intuition-secondary/40 text-white border-intuition-primary/55 shadow-[0_0_16px_rgba(0,243,255,0.22)]',
+      chip: 'bg-gradient-to-r from-intuition-primary/45 to-intuition-secondary/40 text-white border-intuition-primary/55 shadow-[0_0_16px_rgba(255,80,57,0.22)]',
     };
   if (xp >= 2500)
     return {
       label: 'Apex',
-      chip: 'bg-gradient-to-r from-intuition-primary/35 to-cyan-700/40 text-cyan-50 border-intuition-primary/45 shadow-[0_0_14px_rgba(0,243,255,0.18)]',
+      chip: 'bg-gradient-to-r from-intuition-primary/35 to-intuition-primary/40 text-intuition-primary border-intuition-primary/45 shadow-[0_0_14px_rgba(255,80,57,0.18)]',
     };
   if (xp >= 1000)
     return {
       label: 'Elite',
-      chip: 'bg-gradient-to-r from-slate-600/55 to-intuition-primary/35 text-slate-50 border-intuition-primary/40 shadow-[0_0_12px_rgba(0,243,255,0.14)]',
+      chip: 'bg-gradient-to-r from-slate-600/55 to-intuition-primary/35 text-slate-50 border-intuition-primary/40 shadow-[0_0_12px_rgba(255,80,57,0.14)]',
     };
   if (xp >= 500)
     return {
@@ -794,7 +794,7 @@ function ArenaLaneCard({
     <article
       title={item.id}
       className={`group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-zinc-950/80 backdrop-blur-xl transition-[box-shadow,border-color] duration-300 hover:border-white/[0.14] ${
-        emphasized ? 'ring-1 ring-violet-400/15' : ''
+        emphasized ? 'ring-1 ring-intuition-primary/15' : ''
       }`}
       style={{
         background: ARENA_THEME.currentRunCard,
@@ -807,7 +807,7 @@ function ArenaLaneCard({
         style={{ background: ARENA_THEME.rimBar }}
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-violet-500/[0.04] opacity-70"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-intuition-primary/[0.04] opacity-70"
         aria-hidden
       />
 
@@ -881,13 +881,13 @@ function ArenaLaneCard({
                 <Zap size={12} className="shrink-0 text-intuition-primary/90" aria-hidden />+{xpRoundTotal} XP
               </span>
               <span className="text-slate-600" aria-hidden>
-                Â·
+                Â/
               </span>
               {item.subtitle ? (
                 <>
                   <span className="truncate text-slate-500">{item.subtitle}</span>
                   <span className="text-slate-600" aria-hidden>
-                    Â·
+                    Â/
                   </span>
                 </>
               ) : null}
@@ -924,10 +924,10 @@ function ArenaLaneCard({
               onClick={() => onYesNo(true)}
               disabled={stakingTx}
               onMouseEnter={playArenaUiHover}
-              className="rounded-xl border border-cyan-400/45 bg-cyan-500/[0.14] py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform duration-150 hover:border-cyan-300/55 hover:bg-cyan-500/[0.2] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
+              className="min-h-[44px] rounded-xl border border-intuition-primary/45 bg-intuition-primary/[0.14] py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform duration-150 hover:border-intuition-primary/55 hover:bg-intuition-primary/[0.2] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 sm:py-2.5"
             >
               <span className="inline-flex items-center justify-center gap-1.5">
-                <Check className="h-[17px] w-[17px] text-cyan-100" strokeWidth={2.4} />
+                <Check className="h-[17px] w-[17px] text-intuition-primary" strokeWidth={2.4} />
                 <span className="text-sm font-semibold text-white">Yes</span>
               </span>
             </button>
@@ -936,7 +936,7 @@ function ArenaLaneCard({
               onClick={() => onYesNo(false)}
               disabled={stakingTx}
               onMouseEnter={playArenaUiHover}
-              className="rounded-xl border border-red-400/45 bg-red-500/[0.12] py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-150 hover:border-red-300/55 hover:bg-red-500/[0.18] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45"
+              className="min-h-[44px] rounded-xl border border-red-400/45 bg-red-500/[0.12] py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-150 hover:border-red-300/55 hover:bg-red-500/[0.18] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 sm:py-2.5"
             >
               <span className="inline-flex items-center justify-center gap-1.5">
                 <X className="h-[17px] w-[17px] text-red-100" strokeWidth={2.4} />
@@ -951,7 +951,7 @@ function ArenaLaneCard({
             <Link
               to={marketHref}
               onClick={() => playArenaUiClick()}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:text-cyan-200"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:text-intuition-primary"
             >
               <ExternalLink size={13} strokeWidth={2.2} />
               Crowd &amp; vault
@@ -1026,6 +1026,16 @@ const RankedList: React.FC = () => {
     if (persisted) return persisted.phase;
     return 'curate';
   });
+  /** When the Arena phase changes (hub â†’ curate â†’ rank â†’ compare), DOM swaps in
+   *  a new flow step. Reset the window scroll so the new step starts at the top
+   *  on mobile â€” otherwise users land mid-page wondering where the new step is. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, [arenaFlowPhase]);
   const [curateQueue, setCurateQueue] = useState<RankItem[]>([]);
   const [rankDeckItems, setRankDeckItems] = useState<RankItem[]>([]);
   /** Inline "create a new card" modal for the Rank step (no nav-away). */
@@ -1471,7 +1481,7 @@ const RankedList: React.FC = () => {
             source: 'portal' as const,
             listObjectTermId: row.id,
             title: row.label || 'Untitled list',
-            description: `Intuition list Â· ${
+            description: `Intuition list Â/ ${
               typeof row.totalItems === 'number' ? `${row.totalItems} members indexed` : 'live on the graph'
             }`,
             tag: 'Live',
@@ -2402,8 +2412,8 @@ const RankedList: React.FC = () => {
       if (tripleCreateInputs.length > 0) {
         setSubmitProgress(
           tripleCreateInputs.length > 1
-            ? `Confirm in wallet Â· create ${tripleCreateInputs.length} claims (one transaction)`
-            : 'Confirm in wallet Â· create claim',
+            ? `Confirm in wallet Â/ create ${tripleCreateInputs.length} claims (one transaction)`
+            : 'Confirm in wallet Â/ create claim',
         );
         const createHash = await createSemanticTriplesBatch(tripleCreateInputs, address, progressCb);
         for (const x of tripleCreateLegacyRows) {
@@ -2421,8 +2431,8 @@ const RankedList: React.FC = () => {
       if (mergedDepositLegs.length > 0) {
         setSubmitProgress(
           mergedDepositLegs.length > 1
-            ? `Confirm in wallet Â· ${mergedDepositLegs.length} vault deposits (one transaction)`
-            : 'Confirm in wallet Â· vault deposit',
+            ? `Confirm in wallet Â/ ${mergedDepositLegs.length} vault deposits (one transaction)`
+            : 'Confirm in wallet Â/ vault deposit',
         );
         const { hash: depHash } = await depositBatchToVaults(mergedDepositLegs, address, progressCb);
         for (const x of depositXpRows) {
@@ -2499,7 +2509,7 @@ const RankedList: React.FC = () => {
           const side = r.support ? 'YES' : 'NO';
           return `${side} for â€œ${r.item.label}â€ in â€œ${lt}â€`;
         });
-        humanLine = `${who}: ${rowSummaries.join(' Â· ')}`;
+        humanLine = `${who}: ${rowSummaries.join(' Â/ ')}`;
       } catch {
         /* ignore */
       }
@@ -3342,10 +3352,10 @@ const RankedList: React.FC = () => {
                 }}
               >
                 <span aria-hidden className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: ARENA_THEME.cyan }} />
-                IntuRank Â· Climb
+                IntuRank Â/ Climb
               </p>
               <h1
-                className="mt-3 text-3xl sm:text-4xl md:text-5xl font-black font-display tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_42px_rgba(0,243,255,0.12)] leading-[1.05]"
+                className="mt-3 text-3xl sm:text-4xl md:text-5xl font-black font-display tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_42px_rgba(255,80,57,0.12)] leading-[1.05]"
                 style={{ backgroundImage: ARENA_THEME.heroTitle }}
               >
                 THE ARENA
@@ -3377,13 +3387,13 @@ const RankedList: React.FC = () => {
                   <>
                     Recent ranks through IntuRank. Switch to{' '}
                     <span className="text-slate-400 font-semibold">Arena</span> to vote or{' '}
-                    <span className="text-cyan-300 font-semibold">Signal</span> to stance.
+                    <span className="text-intuition-primary font-semibold">Signal</span> to stance.
                   </>
                 ) : climbViewMode === 'signal' ? (
                   <>
                     Stake your conviction on triples surfacing across Intuition.{' '}
-                    <span className="text-cyan-300 font-semibold">STAND</span> Â· or Â·{' '}
-                    <span className="text-rose-300 font-semibold">OPPOSE</span>.
+                    <span className="text-intuition-primary font-semibold">STAND</span> Â/ or Â/{' '}
+                    <span className="text-intuition-secondary font-semibold">OPPOSE</span>.
                   </>
                 ) : listId ? (
                   address ? (
@@ -3391,7 +3401,7 @@ const RankedList: React.FC = () => {
                       <span style={{ color: ARENA_THEME.cyanMuted }} className="font-semibold">Yes</span>
                       {' / '}
                       <span style={{ color: ARENA_THEME.roseNo }} className="font-semibold">No</span>
-                      {' Â· batch when ready.'}
+                      {' Â/ batch when ready.'}
                     </>
                   ) : (
                     'Pick now. Wallet only when you stake.'
@@ -3402,7 +3412,7 @@ const RankedList: React.FC = () => {
               </p>
               {showOnboardTip ? (
                 <div className="mt-3 max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 flex items-center gap-3">
-                  <Sparkles size={14} className="text-cyan-300 shrink-0" aria-hidden />
+                  <Sparkles size={14} className="text-intuition-primary shrink-0" aria-hidden />
                   <p className="text-[11px] text-slate-300 leading-snug flex-1">
                     Tap <strong className="text-white">Quick start</strong>. Toggle <strong className="text-white">Explorer</strong> for stars, leaderboard & feed.
                   </p>
@@ -3412,7 +3422,7 @@ const RankedList: React.FC = () => {
                       playArenaUiClick();
                       dismissOnboardTip();
                     }}
-                    className="shrink-0 rounded-md bg-cyan-500/15 border border-cyan-400/30 px-2 py-1 text-[10px] font-bold text-cyan-200 hover:bg-cyan-500/25"
+                    className="shrink-0 rounded-md bg-intuition-primary/15 border border-intuition-primary/30 px-2 py-1 text-[10px] font-bold text-intuition-primary hover:bg-intuition-primary/25"
                   >
                     OK
                   </button>
@@ -3437,10 +3447,10 @@ const RankedList: React.FC = () => {
                     backgroundImage: `linear-gradient(${ARENA_THEME.cyan}06 1px, transparent 1px)`, backgroundSize: '100% 3px'
                   }}
                 />
-                <div aria-hidden className="pointer-events-none absolute top-2 left-2 h-6 w-6 border-l-2 border-t-2 border-cyan-400/45 rounded-tl-md" />
-                <div aria-hidden className="pointer-events-none absolute top-2 right-2 h-6 w-6 border-r-2 border-t-2 border-fuchsia-500/35 rounded-tr-md" />
-                <div aria-hidden className="pointer-events-none absolute bottom-2 left-2 h-6 w-6 border-l-2 border-b-2 border-fuchsia-500/30 rounded-bl-md" />
-                <div aria-hidden className="pointer-events-none absolute bottom-2 right-2 h-6 w-6 border-r-2 border-b-2 border-cyan-400/35 rounded-br-md" />
+                <div aria-hidden className="pointer-events-none absolute top-2 left-2 h-6 w-6 border-l-2 border-t-2 border-intuition-primary/45 rounded-tl-md" />
+                <div aria-hidden className="pointer-events-none absolute top-2 right-2 h-6 w-6 border-r-2 border-t-2 border-intuition-primary/35 rounded-tr-md" />
+                <div aria-hidden className="pointer-events-none absolute bottom-2 left-2 h-6 w-6 border-l-2 border-b-2 border-intuition-primary/30 rounded-bl-md" />
+                <div aria-hidden className="pointer-events-none absolute bottom-2 right-2 h-6 w-6 border-r-2 border-b-2 border-intuition-primary/35 rounded-br-md" />
                 <div
                   aria-hidden
                   className="pointer-events-none absolute -right-24 -top-28 h-56 w-56 rounded-full opacity-25 blur-3xl"
@@ -3454,7 +3464,7 @@ const RankedList: React.FC = () => {
                   }}
                 >
                   <div className="flex flex-col gap-1">
-                    <p className="text-[9px] font-mono font-black uppercase tracking-[0.42em] text-cyan-500/85 pl-0.5">
+                    <p className="text-[9px] font-mono font-black uppercase tracking-[0.42em] text-intuition-primary/85 pl-0.5">
                       Climb uplink
                     </p>
                     <div
@@ -3470,14 +3480,14 @@ const RankedList: React.FC = () => {
                         transition={{ type: 'spring', stiffness: 520, damping: 32 }}
                         className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
                           climbViewMode === 'arena'
-                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
+                            ? 'bg-gradient-to-b from-intuition-primary/35 to-intuition-primary/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-intuition-primary/60'
                             : 'text-slate-500 hover:text-white hover:bg-white/[0.06]'
                         }`}
                       >
-                        <Trophy size={14} strokeWidth={2.4} className={climbViewMode === 'arena' ? 'text-cyan-100' : 'text-slate-600'} />
+                        <Trophy size={14} strokeWidth={2.4} className={climbViewMode === 'arena' ? 'text-intuition-primary' : 'text-slate-600'} />
                         Arena
                         {climbViewMode !== 'arena' ? (
-                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(239,68,68,0.5)] ring-1 ring-white/25">
                             NEW
                           </span>
                         ) : null}
@@ -3486,19 +3496,19 @@ const RankedList: React.FC = () => {
                         type="button"
                         onClick={() => setClimbViewMode('signal')}
                         aria-pressed={climbViewMode === 'signal'}
-                        title="Stance feed Â· stake your conviction on circulating triples"
+                        title="Stance feed Â/ stake your conviction on circulating triples"
                         whileTap={reduceMotion ? undefined : { scale: 0.96 }}
                         transition={{ type: 'spring', stiffness: 520, damping: 32 }}
                         className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
                           climbViewMode === 'signal'
-                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
-                            : 'text-slate-500 hover:text-cyan-200 hover:bg-white/[0.06]'
+                            ? 'bg-gradient-to-b from-intuition-primary/35 to-intuition-primary/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-intuition-primary/60'
+                            : 'text-slate-500 hover:text-intuition-primary hover:bg-white/[0.06]'
                         }`}
                       >
-                        <Zap size={14} strokeWidth={2.5} className={climbViewMode === 'signal' ? 'text-cyan-100' : 'text-slate-600'} />
+                        <Zap size={14} strokeWidth={2.5} className={climbViewMode === 'signal' ? 'text-intuition-primary' : 'text-slate-600'} />
                         Signal
                         {climbViewMode !== 'signal' ? (
-                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(239,68,68,0.5)] ring-1 ring-white/25">
                             NEW
                           </span>
                         ) : null}
@@ -3511,14 +3521,14 @@ const RankedList: React.FC = () => {
                         transition={{ type: 'spring', stiffness: 520, damping: 32 }}
                         className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
                           climbViewMode === 'explorer'
-                            ? 'bg-gradient-to-b from-cyan-400/35 to-cyan-600/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/60'
+                            ? 'bg-gradient-to-b from-intuition-primary/35 to-intuition-primary/12 text-white shadow-[0_0_28px_rgba(34,211,238,0.4),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-intuition-primary/60'
                             : 'text-slate-500 hover:text-white hover:bg-white/[0.06]'
                         }`}
                       >
-                        <Sparkles size={14} strokeWidth={2.4} className={climbViewMode === 'explorer' ? 'text-cyan-100' : 'text-slate-600'} />
+                        <Sparkles size={14} strokeWidth={2.4} className={climbViewMode === 'explorer' ? 'text-intuition-primary' : 'text-slate-600'} />
                         Explorer
                         {climbViewMode !== 'explorer' ? (
-                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(255,30,109,0.5)] ring-1 ring-white/25">
+                          <span className="absolute -top-1 -right-1 inline-block px-1 py-px rounded-md bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_12px_rgba(239,68,68,0.5)] ring-1 ring-white/25">
                             NEW
                           </span>
                         ) : null}
@@ -3555,7 +3565,7 @@ const RankedList: React.FC = () => {
                     className="rounded-xl border border-white/[0.09] px-3 py-2.5 backdrop-blur-sm min-h-[3.75rem] flex flex-col justify-center"
                     style={{
                       background:
-                        'linear-gradient(90deg, rgba(8,8,12,0.88) 0%, rgba(0,243,255,0.07) 100%)',
+                        'linear-gradient(90deg, rgba(8,8,12,0.88) 0%, rgba(255,80,57,0.07) 100%)',
                       boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 0 20px ${ARENA_THEME.goldDim}`,
                     }}
                   >
@@ -3582,7 +3592,7 @@ const RankedList: React.FC = () => {
                                 <span className="text-slate-600 font-mono uppercase tracking-wider text-[9px] shrink-0">XP</span>
                                 <span
                                   className="text-slate-500 min-w-0 truncate"
-                                  title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} Â· this device picks ${arenaPickXp.toLocaleString()}) Â· Activity ${myProtocolXp.toLocaleString()} Â· Total`}
+                                  title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} Â/ this device picks ${arenaPickXp.toLocaleString()}) Â/ Activity ${myProtocolXp.toLocaleString()} Â/ Total`}
                                 >
                                   <AnimatedXpFigure
                                     ready={arenaGraphReady}
@@ -3626,10 +3636,10 @@ const RankedList: React.FC = () => {
                                     playArenaUiClick();
                                     setStakePresetIdx(idx);
                                   }}
-                                  title={`${amt} TRUST per unit Â· cart line deposit = preset Ã— weight`}
+                                  title={`${amt} TRUST per unit Â/ cart line deposit = preset Ã— weight`}
                                   className={`rounded-md px-2 py-0.5 text-[9px] font-bold tabular-nums transition-colors ${
                                     on
-                                      ? 'bg-cyan-500/25 text-cyan-100 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45)]'
+                                      ? 'bg-intuition-primary/25 text-intuition-primary shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45)]'
                                       : 'bg-white/[0.04] text-slate-500 hover:text-slate-200 hover:bg-white/[0.07]'
                                   }`}
                                 >
@@ -3639,7 +3649,7 @@ const RankedList: React.FC = () => {
                             })}
                           </div>
                           <span className="text-[9px] text-slate-600 font-mono">
-                            TRUST/unit Â· batch: preset Ã— weight
+                            TRUST/unit Â/ batch: preset Ã— weight
                           </span>
                         </div>
                       </>
@@ -3780,20 +3790,20 @@ const RankedList: React.FC = () => {
               style={{
                 background: ARENA_THEME.signalIntroStrip,
                 boxShadow:
-                  'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(0,243,255,0.08), 0 0 28px rgba(255,30,109,0.04)',
+                  'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(255,80,57,0.08), 0 0 28px rgba(239,68,68,0.04)',
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="min-w-0 flex items-center gap-3">
                   <div
-                    className="shrink-0 w-10 h-10 rounded-xl border border-intuition-primary/35 bg-intuition-primary/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.12)]"
+                    className="shrink-0 w-10 h-10 rounded-xl border border-intuition-primary/35 bg-intuition-primary/10 flex items-center justify-center shadow-[0_0_20px_rgba(255,80,57,0.12)]"
                     aria-hidden
                   >
                     <Trophy size={18} className="text-intuition-primary" strokeWidth={2.35} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">
-                      IntuRank Â· Arena
+                      IntuRank Â/ Arena
                     </p>
                     <p className="text-[13px] text-slate-200 leading-snug mt-0.5">
                       Same dark glass and cyan numbers as your IntuRank profile.
@@ -3857,7 +3867,7 @@ const RankedList: React.FC = () => {
               style={{
                 background: ARENA_THEME.signalIntroStrip,
                 boxShadow:
-                  'inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 56px rgba(0,0,0,0.45), 0 0 36px rgba(0,243,255,0.08), 0 0 28px rgba(255,30,109,0.05)',
+                  'inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 56px rgba(0,0,0,0.45), 0 0 36px rgba(255,80,57,0.08), 0 0 28px rgba(239,68,68,0.05)',
               }}
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] opacity-90" style={{ background: ARENA_THEME.rimBar }} aria-hidden />
@@ -3865,13 +3875,13 @@ const RankedList: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div className="flex items-start gap-3 min-w-0">
                   <div
-                    className="shrink-0 w-10 h-10 rounded-xl border border-intuition-primary/35 bg-intuition-primary/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.12)]"
+                    className="shrink-0 w-10 h-10 rounded-xl border border-intuition-primary/35 bg-intuition-primary/10 flex items-center justify-center shadow-[0_0_20px_rgba(255,80,57,0.12)]"
                     aria-hidden
                   >
                     <Scale size={18} className="text-intuition-primary" strokeWidth={2.35} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">Arena Â· Climb</p>
+                    <p className="text-[10px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">Arena Â/ Climb</p>
                     <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">Pick a list</h2>
                     <p className="text-[11px] text-slate-400 mt-0.5">Tap a list card below to start.</p>
                   </div>
@@ -3899,7 +3909,7 @@ const RankedList: React.FC = () => {
               <div
                 className="mb-4 rounded-xl border border-intuition-primary/25 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden bg-[#05070c]/80"
                 style={{
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 0 28px rgba(0,243,255,0.08)`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 0 28px rgba(255,80,57,0.08)`,
                 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -3918,7 +3928,7 @@ const RankedList: React.FC = () => {
                 <button
                   type="button"
                   onClick={onQuickStart}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_28px_rgba(0,243,255,0.25)] hover:brightness-110 transition-[filter]"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_28px_rgba(255,80,57,0.25)] hover:brightness-110 transition-[filter]"
                   style={{
                     background: `linear-gradient(90deg, ${ARENA_THEME.cyan}, ${ARENA_THEME.accentPink})`,
                   }}
@@ -3939,7 +3949,7 @@ const RankedList: React.FC = () => {
                     onMouseEnter={playArenaUiHover}
                     className={`shrink-0 rounded-lg px-3.5 py-1.5 text-[11px] font-bold transition-all duration-200 ${
                       arenaCategoryId === c.id
-                        ? 'text-cyan-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_18px_rgba(56,232,255,0.12)] ring-1 ring-cyan-400/55'
+                        ? 'text-intuition-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_18px_rgba(56,232,255,0.12)] ring-1 ring-intuition-primary/55'
                         : 'text-slate-200 border border-transparent hover:text-white hover:bg-white/[0.05]'
                     }`}
                     style={
@@ -3963,7 +3973,7 @@ const RankedList: React.FC = () => {
                   return (
                     <div key={group.id}>
                       <div className="flex items-center justify-between mb-2.5 gap-3">
-                        <p className="text-[10px] font-mono font-black uppercase tracking-[0.22em] text-cyan-200/90">
+                        <p className="text-[10px] font-mono font-black uppercase tracking-[0.22em] text-intuition-primary/90">
                           {group.label}
                         </p>
                         <span className="text-[10px] text-slate-500 tabular-nums">{group.lists.length}</span>
@@ -4003,7 +4013,7 @@ const RankedList: React.FC = () => {
                       playArenaUiClick();
                       setShowAllLists((v) => !v);
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/80 bg-slate-900/60 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:border-cyan-500/35 hover:text-cyan-100 transition-colors"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-700/80 bg-slate-900/60 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:border-intuition-primary/35 hover:text-intuition-primary transition-colors"
                   >
                     {showAllLists ? 'Show fewer lists' : 'Show more lists'}
                     <ChevronRight size={13} className={showAllLists ? 'rotate-90' : ''} />
@@ -4036,7 +4046,7 @@ const RankedList: React.FC = () => {
                 <div
                   className={`rounded-xl border px-3 py-2 mb-4 text-[11px] ${
                     false
-                      ? 'border-sky-200 bg-sky-50 text-slate-600'
+                      ? 'border-intuition-primary bg-intuition-primary text-slate-600'
                       : 'text-slate-300'
                   }`}
                   style={
@@ -4062,7 +4072,7 @@ const RankedList: React.FC = () => {
                   title="Back"
                   className={
                     false
-                      ? 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-sky-300 hover:text-slate-900'
+                      ? 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-intuition-primary hover:text-slate-900'
                       : 'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.14] bg-black/45 text-slate-200 transition-all hover:border-intuition-primary/45 hover:text-white hover:bg-black/55'
                   }
                   style={false ? undefined : { boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06)` }}
@@ -4130,7 +4140,7 @@ const RankedList: React.FC = () => {
                         if (pendingArenaClear === 'cart') clearAllArenaBatch();
                         else clearContestPicksForCurrentList();
                       }}
-                      className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-rose-600/90 text-white border border-rose-400/45 hover:bg-rose-600"
+                      className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-intuition-secondary/90 text-white border border-intuition-secondary/45 hover:bg-intuition-secondary"
                     >
                       Clear all
                     </button>
@@ -4201,11 +4211,11 @@ const RankedList: React.FC = () => {
                   </h2>
                   {stanceSummary.total > 0 ? (
                     <p className="text-[11px] text-slate-500 shrink-0 tabular-nums sm:text-right">
-                      {stanceSummary.total} indexed Â·{' '}
+                      {stanceSummary.total} indexed Â/{' '}
                       <span className="font-semibold" style={{ color: ARENA_THEME.cyan }}>
                         yes {stanceSummary.yes}
                       </span>
-                      {' Â· '}
+                      {' Â/ '}
                       <span className="font-semibold" style={{ color: ARENA_THEME.red }}>
                         no {stanceSummary.no}
                       </span>
@@ -4375,7 +4385,7 @@ const RankedList: React.FC = () => {
             </div>
           ) : !round ? (
             <div className="rounded-xl border border-slate-700/60 py-16 text-center bg-slate-900/15">
-              <Loader2 className="w-9 h-9 text-cyan-400 animate-spin mx-auto mb-2" />
+              <Loader2 className="w-9 h-9 text-intuition-primary animate-spin mx-auto mb-2" />
               <p className="text-slate-500 text-sm">Next itemâ€¦</p>
             </div>
           ) : (
@@ -4396,7 +4406,7 @@ const RankedList: React.FC = () => {
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-[11px] font-semibold text-slate-500 md:mb-5">
                     <span className="inline-flex items-center gap-2">
                       <span
-                        className="h-2 w-2 rounded-full shadow-[0_0_12px_rgba(0,243,255,0.9)]"
+                        className="h-2 w-2 rounded-full shadow-[0_0_12px_rgba(255,80,57,0.9)]"
                         style={{ background: ARENA_THEME.cyan, boxShadow: `0 0 14px ${ARENA_THEME.cyan}66` }}
                       />
                       <span className="text-slate-300 tabular-nums">Round {duels + 1}</span>
@@ -4443,7 +4453,7 @@ const RankedList: React.FC = () => {
                       type="button"
                       onClick={onSkip}
                       disabled={stakingTx}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:border-cyan-400/35 hover:shadow-[0_0_18px_rgba(248,113,113,0.12)] transition-colors active:scale-[0.98] disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:border-intuition-primary/35 hover:shadow-[0_0_18px_rgba(248,113,113,0.12)] transition-colors active:scale-[0.98] disabled:opacity-50"
                     >
                       <SkipForward size={14} />
                       Skip
@@ -4477,41 +4487,41 @@ const RankedList: React.FC = () => {
         {/* Legacy bottom leaderboard (disabled); use ArenaRankerLeaderboard instead. */}
         {false && (
         <motion.section
-          className="relative mt-8 md:mt-10 w-full min-w-0 overflow-hidden rounded-3xl border-2 border-fuchsia-500/30 bg-[#020814] shadow-[0_0_100px_rgba(168,85,247,0.14),0_0_1px_rgba(34,211,238,0.35),inset_0_1px_0_rgba(255,255,255,0.07)] transition-[box-shadow] duration-500 hover:shadow-[0_0_120px_rgba(168,85,247,0.2),0_0_1px_rgba(34,211,238,0.45),inset_0_1px_0_rgba(255,255,255,0.09)]"
+          className="relative mt-8 md:mt-10 w-full min-w-0 overflow-hidden rounded-3xl border-2 border-intuition-primary/30 bg-[#020814] shadow-[0_0_100px_rgba(168,85,247,0.14),0_0_1px_rgba(34,211,238,0.35),inset_0_1px_0_rgba(255,255,255,0.07)] transition-[box-shadow] duration-500 hover:shadow-[0_0_120px_rgba(168,85,247,0.2),0_0_1px_rgba(34,211,238,0.45),inset_0_1px_0_rgba(255,255,255,0.09)]"
           initial={reduceMotion ? false : { opacity: 0, y: 28 }}
           whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] opacity-[0.06]" />
-          <div className="pointer-events-none absolute -left-32 top-0 h-72 w-72 rounded-full bg-amber-400/12 blur-[110px]" />
-          <div className="pointer-events-none absolute right-0 bottom-0 h-56 w-56 rounded-full bg-cyan-400/12 blur-[100px]" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-400/40 to-transparent" />
+          <div className="pointer-events-none absolute -left-32 top-0 h-72 w-72 rounded-full bg-intuition-warning/12 blur-[110px]" />
+          <div className="pointer-events-none absolute right-0 bottom-0 h-56 w-56 rounded-full bg-intuition-primary/12 blur-[100px]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-intuition-primary/40 to-transparent" />
           <div className="relative z-10 p-5 sm:p-7 md:p-10">
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-6 md:mb-8 pb-6 md:pb-8 border-b border-slate-700/80">
               <div className="flex items-start gap-4 min-w-0">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-400/35 to-fuchsia-700/25 border border-amber-300/50 shadow-[0_0_32px_rgba(251,191,36,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] shrink-0">
-                  <Medal size={26} className="text-amber-100 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-intuition-warning/35 to-intuition-primary/25 border border-intuition-warning/50 shadow-[0_0_32px_rgba(251,191,36,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] shrink-0">
+                  <Medal size={26} className="text-intuition-warning drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
                 </div>
                 <div className="min-w-0 text-center lg:text-left mx-auto lg:mx-0 max-w-xl lg:max-w-none">
-                  <p className="text-[11px] sm:text-xs font-black uppercase tracking-[0.45em] text-fuchsia-300 mb-2.5 drop-shadow-[0_0_16px_rgba(217,70,239,0.5)]">
+                  <p className="text-[11px] sm:text-xs font-black uppercase tracking-[0.45em] text-intuition-primary mb-2.5 drop-shadow-[0_0_16px_rgba(217,70,239,0.5)]">
                     Worldwide ladder
                   </p>
-                  <h2 className="text-[1.65rem] sm:text-3xl md:text-[2.65rem] font-black font-display uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-white to-cyan-200 leading-[1.05] drop-shadow-[0_2px_28px_rgba(255,255,255,0.14)]">
+                  <h2 className="text-[1.65rem] sm:text-3xl md:text-[2.65rem] font-black font-display uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-intuition-warning via-white to-intuition-primary leading-[1.05] drop-shadow-[0_2px_28px_rgba(255,255,255,0.14)]">
                     Arena champions
                   </h2>
-                  <div className="h-[3px] w-24 mx-auto lg:mx-0 mt-3 rounded-full bg-gradient-to-r from-amber-400 via-fuchsia-500 to-cyan-400 opacity-95 shadow-[0_0_16px_rgba(217,70,239,0.35)]" />
+                  <div className="h-[3px] w-24 mx-auto lg:mx-0 mt-3 rounded-full bg-gradient-to-r from-intuition-warning via-intuition-primary to-intuition-primary opacity-95 shadow-[0_0_16px_rgba(217,70,239,0.35)]" />
                   <p className="text-sm md:text-[15px] text-slate-400 mt-4 leading-relaxed max-w-xl lg:max-w-2xl">
                     Arena points (play + optional TRUST per pick). Not a truth score.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3.5 rounded-2xl border border-amber-400/35 bg-gradient-to-br from-slate-950/95 via-[#0a101c]/95 to-slate-950/95 px-5 py-3.5 shrink-0 backdrop-blur-sm shadow-[0_0_28px_rgba(245,158,11,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] mx-auto lg:mx-0">
-                <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-400/30">
-                  <Trophy size={22} className="text-amber-300 shrink-0 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]" />
+              <div className="flex items-center gap-3.5 rounded-2xl border border-intuition-warning/35 bg-gradient-to-br from-slate-950/95 via-[#0a101c]/95 to-slate-950/95 px-5 py-3.5 shrink-0 backdrop-blur-sm shadow-[0_0_28px_rgba(245,158,11,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] mx-auto lg:mx-0">
+                <div className="p-2 rounded-xl bg-intuition-warning/15 border border-intuition-warning/30">
+                  <Trophy size={22} className="text-intuition-warning shrink-0 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]" />
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-amber-200/90 font-black">On the board</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-intuition-warning/90 font-black">On the board</div>
                   <div className="text-2xl font-black text-white tabular-nums leading-none mt-1 drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                     {playersLoading ? 'â€¦' : players.length}
                   </div>
@@ -4522,13 +4532,13 @@ const RankedList: React.FC = () => {
             {!playersLoading && players.length > 0 && myLadderPosition && (
               <motion.div
                 key={address ?? 'anon'}
-                className="mb-6 rounded-3xl border border-cyan-500/35 bg-gradient-to-r from-cyan-500/[0.08] via-slate-900/80 to-fuchsia-600/[0.06] px-4 py-3.5 text-center sm:text-left shadow-[0_0_28px_rgba(34,211,238,0.1)] transition-shadow duration-300 hover:shadow-[0_0_36px_rgba(34,211,238,0.16)]"
+                className="mb-6 rounded-3xl border border-intuition-primary/35 bg-gradient-to-r from-intuition-primary/[0.08] via-slate-900/80 to-intuition-primary/[0.06] px-4 py-3.5 text-center sm:text-left shadow-[0_0_28px_rgba(34,211,238,0.1)] transition-shadow duration-300 hover:shadow-[0_0_36px_rgba(34,211,238,0.16)]"
                 initial={false}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               >
                 <p className="text-sm text-slate-200 font-semibold">
-                  <span className="text-cyan-300 font-black tabular-nums">#{myLadderPosition.place}</span>
+                  <span className="text-intuition-primary font-black tabular-nums">#{myLadderPosition.place}</span>
                   <span className="text-slate-500 font-normal mx-1">of</span>
                   <span className="text-white font-black tabular-nums">{myLadderPosition.total}</span>
                   <span className="text-slate-400 font-normal ml-2">Keep ranking to move up.</span>
@@ -4538,7 +4548,7 @@ const RankedList: React.FC = () => {
 
             {playersLoading ? (
               <div className="flex flex-col items-center justify-center py-20 md:py-28 gap-3">
-                <Loader2 className="w-12 h-12 text-fuchsia-400 animate-spin" />
+                <Loader2 className="w-12 h-12 text-intuition-primary animate-spin" />
                 <span className="text-xs text-slate-500">Loadingâ€¦</span>
               </div>
             ) : players.length === 0 ? (
@@ -4554,8 +4564,8 @@ const RankedList: React.FC = () => {
                   <div className="flex justify-center items-end gap-4 sm:gap-8 mb-10 max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-2">
                     {[
                       { idx: 1, h: 'h-16', ring: 'from-slate-200/55 to-slate-500/45', label: '2nd' },
-                      { idx: 0, h: 'h-28', ring: 'from-amber-200/70 to-amber-600/50', label: '1st', showCrown: true },
-                      { idx: 2, h: 'h-12', ring: 'from-amber-600/50 to-orange-900/50', label: '3rd' },
+                      { idx: 0, h: 'h-28', ring: 'from-intuition-warning/70 to-intuition-warning/50', label: '1st', showCrown: true },
+                      { idx: 2, h: 'h-12', ring: 'from-intuition-warning/50 to-intuition-primary/50', label: '3rd' },
                     ].map((slot) => {
                       const { idx, h, ring, label, showCrown } = slot;
                       const p = players[idx]!;
@@ -4568,10 +4578,10 @@ const RankedList: React.FC = () => {
                           whileHover={reduceMotion ? undefined : { y: -6, transition: { type: 'spring', stiffness: 380, damping: 22 } }}
                         >
                           <div
-                            className={`flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${idx === 0 ? 'text-amber-200' : 'text-slate-400'}`}
+                            className={`flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] mb-2 ${idx === 0 ? 'text-intuition-warning' : 'text-slate-400'}`}
                           >
                             {showCrown ? (
-                              <Crown size={15} className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                              <Crown size={15} className="text-intuition-warning drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
                             ) : null}
                             {label}
                           </div>
@@ -4581,21 +4591,21 @@ const RankedList: React.FC = () => {
                             <div
                               className={`rounded-t-[1.15rem] bg-gradient-to-b from-[#0c1520] to-[#060a10] ${h} flex flex-col items-center justify-end pb-2.5 px-2 border-b border-white/10`}
                             >
-                              <span className="text-sm font-mono text-amber-100 tabular-nums font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]">
+                              <span className="text-sm font-mono text-intuition-warning tabular-nums font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]">
                                 {inturankLeaderboardTotalXp(p)}
                               </span>
-                              <span className="text-[9px] text-amber-400/90 uppercase tracking-widest font-bold font-mono">Total XP</span>
+                              <span className="text-[9px] text-intuition-warning/90 uppercase tracking-widest font-bold font-mono">Total XP</span>
                               <span className="text-[9px] text-slate-400 font-mono font-semibold mt-1">{p.duels} picks</span>
                             </div>
                           </div>
                           <div className="mt-3 text-center w-full min-w-0 px-1">
                             <div className="text-[12px] font-bold text-slate-100 truncate drop-shadow-sm">
-                              {isYou ? <span className="text-cyan-300">You Â· </span> : null}
+                              {isYou ? <span className="text-intuition-primary">You Â/ </span> : null}
                               {p.label}
                             </div>
                             <div className="mt-2 h-1.5 rounded-full bg-slate-800/90 overflow-hidden ring-1 ring-white/5">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-fuchsia-500 to-cyan-400 shadow-[0_0_10px_rgba(251,191,36,0.35)]"
+                                className="h-full rounded-full bg-gradient-to-r from-intuition-warning via-intuition-primary to-intuition-primary shadow-[0_0_10px_rgba(251,191,36,0.35)]"
                                 style={{ width: `${xpPct}%` }}
                               />
                             </div>
@@ -4621,11 +4631,11 @@ const RankedList: React.FC = () => {
                       const shortAddr = `${p.address.slice(0, 6)}â€¦${p.address.slice(-4)}`;
                       const rankColor =
                         p.rank === 1
-                          ? 'text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.35)]'
+                          ? 'text-intuition-warning drop-shadow-[0_0_14px_rgba(251,191,36,0.35)]'
                           : p.rank === 2
                             ? 'text-slate-200'
                             : p.rank === 3
-                              ? 'text-orange-300/95'
+                              ? 'text-intuition-primary/95'
                               : 'text-slate-500';
                       return (
                         <motion.li
@@ -4651,16 +4661,16 @@ const RankedList: React.FC = () => {
                           <div
                             className={`group relative flex min-w-0 flex-1 flex-col rounded-2xl sm:rounded-3xl px-3 py-2.5 sm:px-3.5 sm:py-3 text-[13px] transition-all duration-300 ease-out hover:-translate-y-0.5 ${
                               isYou
-                                ? 'bg-gradient-to-br from-cyan-500/[0.12] via-slate-950/95 to-slate-950 border border-cyan-400/50 shadow-[0_0_28px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_0_40px_rgba(34,211,238,0.22)]'
+                                ? 'bg-gradient-to-br from-intuition-primary/[0.12] via-slate-950/95 to-slate-950 border border-intuition-primary/50 shadow-[0_0_28px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] hover:shadow-[0_0_40px_rgba(34,211,238,0.22)]'
                                 : top
-                                  ? 'bg-gradient-to-br from-amber-500/[0.08] via-[#0b1018]/98 to-slate-950/98 border border-amber-400/35 hover:border-amber-300/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:shadow-[0_12px_36px_rgba(245,158,11,0.08)]'
+                                  ? 'bg-gradient-to-br from-intuition-warning/[0.08] via-[#0b1018]/98 to-slate-950/98 border border-intuition-warning/35 hover:border-intuition-warning/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] hover:shadow-[0_12px_36px_rgba(245,158,11,0.08)]'
                                   : 'border border-slate-700/65 bg-slate-950/95 hover:border-slate-500/55 hover:bg-slate-900/95 hover:shadow-[0_10px_32px_rgba(0,0,0,0.45)]'
                             }`}
                           >
                             <div className="flex items-start gap-2.5">
                               <div className="relative h-10 w-10 shrink-0 rounded-2xl overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-slate-800 to-slate-950 shadow-inner">
                                 <ArenaPortraitImg src={p.image} className="h-full w-full object-cover">
-                                  <div className="h-full w-full flex items-center justify-center text-sm font-black text-cyan-200/90">
+                                  <div className="h-full w-full flex items-center justify-center text-sm font-black text-intuition-primary/90">
                                     {leaderboardAvatarGlyph(p.label)}
                                   </div>
                                 </ArenaPortraitImg>
@@ -4668,7 +4678,7 @@ const RankedList: React.FC = () => {
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5 gap-y-1">
                                   {isYou && (
-                                    <span className="text-[8px] font-black uppercase tracking-wider text-cyan-950 shrink-0 px-1.5 py-0.5 rounded bg-cyan-400/90 border border-cyan-200/50">
+                                    <span className="text-[8px] font-black uppercase tracking-wider text-intuition-primary shrink-0 px-1.5 py-0.5 rounded bg-intuition-primary/90 border border-intuition-primary/50">
                                       You
                                     </span>
                                   )}
@@ -4683,28 +4693,28 @@ const RankedList: React.FC = () => {
                                 </div>
                                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] sm:text-[11px]">
                                   <span className="inline-flex items-center gap-1 text-slate-300">
-                                    <Activity size={12} className="text-cyan-400 shrink-0" />
+                                    <Activity size={12} className="text-intuition-primary shrink-0" />
                                     <span className="font-mono tabular-nums font-bold text-white">{p.duels}</span>
                                     <span className="text-slate-400 font-medium">duels</span>
                                   </span>
-                                  <span className="text-slate-600">Â·</span>
+                                  <span className="text-slate-600">Â/</span>
                                   <span className="text-slate-300">
-                                    <span className="text-amber-300 font-mono tabular-nums font-bold">{avgPick}</span>{' '}
+                                    <span className="text-intuition-warning font-mono tabular-nums font-bold">{avgPick}</span>{' '}
                                     <span className="text-slate-500 font-medium">XP/pick</span>
                                   </span>
-                                  <span className="text-slate-600">Â·</span>
+                                  <span className="text-slate-600">Â/</span>
                                   <span className="inline-flex items-center gap-1 text-slate-300">
-                                    <Clock size={11} className="text-fuchsia-400/80 shrink-0" />
+                                    <Clock size={11} className="text-intuition-primary/80 shrink-0" />
                                     <span className="font-medium text-slate-200">{formatRelativeArenaActive(p.updatedAt)}</span>
                                   </span>
                                 </div>
                                 <p className="text-[9px] text-slate-500 font-mono mt-1.5 truncate tracking-wide">{shortAddr}</p>
                               </div>
                               <div className="shrink-0 text-right pl-1">
-                                <span className="font-mono text-lg sm:text-xl tabular-nums font-black leading-none text-transparent bg-clip-text bg-gradient-to-b from-amber-200 to-amber-500">
+                                <span className="font-mono text-lg sm:text-xl tabular-nums font-black leading-none text-transparent bg-clip-text bg-gradient-to-b from-intuition-warning to-intuition-warning">
                                   {inturankLeaderboardTotalXp(p)}
                                 </span>
-                                <div className="text-[8px] text-amber-400/90 uppercase tracking-[0.15em] font-bold mt-0.5">
+                                <div className="text-[8px] text-intuition-warning/90 uppercase tracking-[0.15em] font-bold mt-0.5">
                                   Total XP
                                 </div>
                               </div>
@@ -4713,8 +4723,8 @@ const RankedList: React.FC = () => {
                               <motion.div
                                 className={`h-full rounded-full ${
                                   isYou
-                                    ? 'bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-fuchsia-600'
-                                    : 'bg-gradient-to-r from-amber-400 via-fuchsia-500 to-cyan-400'
+                                    ? 'bg-gradient-to-r from-intuition-primary via-intuition-primary to-intuition-primary'
+                                    : 'bg-gradient-to-r from-intuition-warning via-intuition-primary to-intuition-primary'
                                 }`}
                                 initial={false}
                                 animate={{ width: `${xpPct}%` }}
@@ -4844,11 +4854,9 @@ const RankedList: React.FC = () => {
         }
         @keyframes arena-stake-fill-glow {
           0%, 100% {
-            filter: brightness(1);
             box-shadow: 0 0 18px rgba(34,211,238,0.4), inset 0 1px 0 rgba(255,255,255,0.22);
           }
           50% {
-            filter: brightness(1.12);
             box-shadow: 0 0 32px rgba(34,211,238,0.55), 0 0 24px rgba(168,85,247,0.25), inset 0 1px 0 rgba(255,255,255,0.28);
           }
         }
@@ -4992,7 +5000,7 @@ const RankedList: React.FC = () => {
             description:
               activeList && 'description' in activeList && activeList.description
                 ? activeList.description
-                : 'Promoted on-chain Â· live on the graph',
+                : 'Promoted on-chain Â/ live on the graph',
             tag: 'Live',
             arenaCategory,
             listGlyph: activeList?.listGlyph ?? 'â—†',

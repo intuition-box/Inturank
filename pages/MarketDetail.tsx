@@ -52,7 +52,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return (
-      <div className="bg-black/95 border-2 border-intuition-primary p-4 rounded-3xl shadow-[0_0_40px_rgba(0,243,255,0.7)] backdrop-blur-xl z-50">
+      <div className="bg-black/95 border-2 border-intuition-primary p-4 rounded-3xl shadow-[0_0_18px_rgba(255,80,57,0.45)] z-50">
         <div className="flex items-center justify-between gap-8 mb-3 border-b border-white/10 pb-2">
             <p className="text-[8px] font-black font-mono text-intuition-primary uppercase tracking-[0.3em] text-glow-blue">TELEMETRY_SCAN</p>
             <p className="text-[7px] font-mono text-slate-500 uppercase tracking-widest">{formattedDate} // {formattedTime}</p>
@@ -109,8 +109,8 @@ const generateAnchoredHistory = (assetsWei: string, sharesWei: string, currentSh
 };
 
 const getTierTheme = (strength: number) => {
-    if (strength >= 90) return { label: 'Sovereign', color: '#facc15', glow: 'rgba(250, 204, 21, 0.6)', bgGlow: 'rgba(250, 204, 21, 0.15)' };
-    if (strength >= 75) return { label: 'Authentic', color: '#00f3ff', glow: 'rgba(0, 243, 255, 0.6)', bgGlow: 'rgba(0, 243, 255, 0.15)' };
+    if (strength >= 90) return { label: 'Sovereign', color: '#facc15', glow: 'rgba(250,204,21, 0.6)', bgGlow: 'rgba(250,204,21, 0.15)' };
+    if (strength >= 75) return { label: 'Authentic', color: '#ff5039', glow: 'rgba(255,80,57, 0.6)', bgGlow: 'rgba(255,80,57, 0.15)' };
     if (strength >= 60) return { label: 'Reliable', color: '#a855f7', glow: 'rgba(168, 85, 247, 0.6)', bgGlow: 'rgba(168, 85, 247, 0.15)' };
     if (strength >= 45) return { label: 'Credible', color: '#00ff9d', glow: 'rgba(0, 255, 157, 0.6)', bgGlow: 'rgba(0, 255, 157, 0.15)' };
     return { label: 'Emerging', color: '#94a3b8', glow: 'rgba(148, 163, 184, 0.4)', bgGlow: 'rgba(148, 163, 184, 0.08)' };
@@ -176,7 +176,7 @@ const AgentShareModal: React.FC<{
             <div className="w-full max-w-xl sm:max-w-2xl translate-y-0" onClick={e => e.stopPropagation()}>
                 <div 
                     ref={cardRef} 
-                    className="relative bg-[#020308] border-2 py-6 px-5 sm:px-8 rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_0_150px_rgba(0,0,0,1)] overflow-hidden group/modal transition-all duration-1000"
+                    className="relative bg-intuition-dark border-2 py-6 px-5 sm:px-8 rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_0_150px_rgba(0,0,0,1)] overflow-hidden group/modal transition-all duration-1000"
                     style={{ 
                         borderColor: `${theme.color}aa`,
                         boxShadow: `0 0 100px ${theme.bgGlow}`
@@ -269,7 +269,7 @@ const AgentShareModal: React.FC<{
                     </div>
 
                     <div className="flex items-center justify-between pt-5 border-t border-white/10 opacity-80 relative z-10 font-mono">
-                        <div className="text-[9px] font-medium font-sans text-slate-400 tracking-wide">IntuRank · {APP_VERSION_DISPLAY}</div>
+                        <div className="text-[9px] font-medium font-sans text-slate-400 tracking-wide">IntuRank �/ {APP_VERSION_DISPLAY}</div>
                         <div className="text-[9px] font-semibold text-slate-400 tracking-wide">{new Date().toLocaleDateString()}</div>
                     </div>
                 </div>
@@ -997,7 +997,7 @@ const MarketDetail: React.FC = () => {
         : 'Could not load this market. Check your connection or try again.';
     return (
       <>
-        <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-6 bg-[#020308] text-center">
+        <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-6 bg-intuition-dark text-center">
           <p className="text-intuition-primary font-mono text-xs sm:text-sm uppercase tracking-[0.35em] max-w-md">{errMsg}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -1340,7 +1340,7 @@ const MarketDetail: React.FC = () => {
         </div>
 
         {agent.type === 'LIST' && (
-          <div className="mb-8 rounded-2xl border border-intuition-primary/30 bg-gradient-to-r from-[#00f3ff]/10 via-black/60 to-[#ff1e6d]/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_40px_rgba(0,243,255,0.08)]">
+          <div className="mb-8 rounded-2xl border border-intuition-primary/30 bg-gradient-to-r from-intuition-primary/10 via-black/60 to-intuition-danger/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_40px_rgba(255,80,57,0.08)]">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.35em] text-intuition-primary mb-1.5">
                 <Swords size={14} className="shrink-0" />
@@ -1354,7 +1354,7 @@ const MarketDetail: React.FC = () => {
               to={`/climb?list=${encodeURIComponent(portalListIdFromTermId(agent.id))}`}
               onClick={playClick}
               onMouseEnter={playHover}
-              className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest text-black bg-gradient-to-r from-intuition-primary to-cyan-300 hover:brightness-110 border border-intuition-primary/50 shadow-[0_0_24px_rgba(0,243,255,0.35)] transition-all"
+              className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest text-black bg-gradient-to-r from-intuition-primary to-cyan-300 hover:brightness-110 border border-intuition-primary/50 shadow-[0_0_24px_rgba(255,80,57,0.35)] transition-all"
             >
               Rank items in this list
               <ChevronRight size={16} className="opacity-90" />
@@ -2019,7 +2019,7 @@ const MarketDetail: React.FC = () => {
                                               <span className="hidden sm:inline">Support</span>
                                             </div>
                                             <span className="text-[11px] font-semibold text-sky-300 tabular-nums leading-tight">
-                                              {formatLargeNumber(c.supportPositionCount)} · {formatMarketValue(supportVal)}
+                                              {formatLargeNumber(c.supportPositionCount)} �/ {formatMarketValue(supportVal)}
                                             </span>
                                         </div>
                                         <div className="flex flex-col gap-0.5 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-2.5 py-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:flex-row sm:items-center sm:gap-1.5">
@@ -2028,7 +2028,7 @@ const MarketDetail: React.FC = () => {
                                               <span className="hidden sm:inline">Oppose</span>
                                             </div>
                                             <span className="text-[11px] font-semibold text-amber-300 tabular-nums leading-tight">
-                                              {formatLargeNumber(c.opposePositionCount)} · {formatMarketValue(opposeVal)}
+                                              {formatLargeNumber(c.opposePositionCount)} �/ {formatMarketValue(opposeVal)}
                                             </span>
                                         </div>
                                         </div>

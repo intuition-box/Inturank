@@ -1,5 +1,5 @@
 /**
- * Signal — Pulse (stance queue + markets) · Vouch (on-chain name claims).
+ * Signal — Pulse (stance queue + markets) �/ Vouch (on-chain name claims).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -537,7 +537,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
         unitsTrust: DEFAULT_STAKE_UNITS,
       });
       if (!result.applied) return;
-      if (result.reason === 'added') toast.success(`Queued · ${stance === 'stand' ? 'Support' : 'Oppose'}`);
+      if (result.reason === 'added') toast.success(`Queued �/ ${stance === 'stand' ? 'Support' : 'Oppose'}`);
       else if (result.reason === 'flipped')
         toast.info(
           `${stance === 'stand' ? 'Support' : 'Oppose'} queued — submit from the conviction cart (new deposit, not an instant flip).`,
@@ -566,8 +566,8 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
         if (result.reason === 'self') toast.info("Can't vouch for your own wallet.");
         return;
       }
-      if (result.reason === 'added') toast.success(`Queued vouch · ${row.label}`);
-      else if (result.reason === 'removed') toast.info(`Removed · ${row.label}`);
+      if (result.reason === 'added') toast.success(`Queued vouch �/ ${row.label}`);
+      else if (result.reason === 'removed') toast.info(`Removed �/ ${row.label}`);
     },
     [viewerAddress],
   );
@@ -599,7 +599,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       } catch {
         /* parseEther / award edge cases — tx still succeeded */
       }
-      toast.success(`Submitted · ${hash.slice(0, 12)}…`);
+      toast.success(`Submitted �/ ${hash.slice(0, 12)}…`);
       clearSignalVouches(viewerAddress);
       setVouchTick((n) => n + 1);
       void loadNamedBundle();
@@ -643,9 +643,9 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
           const side = p.stance === 'stand' ? 'Support' : 'Oppose';
           const lab = p.objectLabel.trim();
           const short = lab.length > 36 ? `${lab.slice(0, 34)}…` : lab;
-          return `${side} · “${short}”`;
+          return `${side} �/ “${short}”`;
         })
-        .join(' · ');
+        .join(' �/ ');
       try {
         playSuccess();
       } catch {
@@ -654,7 +654,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
       setSignalBatchSuccess({
         itemCount: picks.length,
         trustLabel: formatEther(totalWei),
-        themeShort: 'Signal · Pulse',
+        themeShort: 'Signal �/ Pulse',
         contextSuffix: `${picks.length === 1 ? 'vault stake' : `${picks.length} vault stakes`}`,
         humanLine,
         ...(activityXpDelta > 0 ? { activityXpEarned: activityXpDelta } : {}),
@@ -732,7 +732,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-mono font-black uppercase tracking-[0.28em] text-cyan-200">
-              IntuRank · Signal
+              IntuRank �/ Signal
             </p>
             <p className="text-[13px] text-slate-200 leading-snug mt-0.5">
               Queue Pulse stances, then open <strong className="text-cyan-300/95">Review cart</strong> below — same flow as the Arena conviction cart.
@@ -887,7 +887,7 @@ const SignalFeed: React.FC<Props> = ({ className, viewerAddress }) => {
                     <p className="text-[12px] font-semibold text-slate-100 tabular-nums truncate">
                       <span className="text-cyan-200 font-bold">{totalQueuedTrustUnits.toFixed(2)}</span>
                       <span className="text-slate-500 font-normal"> TRUST</span>
-                      <span className="text-slate-600 mx-1">·</span>
+                      <span className="text-slate-600 mx-1">�/</span>
                       <span className="text-slate-400 font-normal">
                         {stanceQueue.length} claim{stanceQueue.length === 1 ? '' : 's'}
                       </span>
@@ -1391,7 +1391,7 @@ const PulseLane: React.FC<{
         {heroAndPills}
         <div className="flex items-center justify-between gap-2 px-1">
           <p className="text-[12px] text-slate-300">
-            <strong className="text-white tabular-nums">{meStances.length}</strong> stake{meStances.length === 1 ? '' : 's'} ·
+            <strong className="text-white tabular-nums">{meStances.length}</strong> stake{meStances.length === 1 ? '' : 's'} �/
             <span className="text-slate-400"> showing {start + 1}–{start + pageRows.length}</span>
           </p>
           <Link
@@ -1436,7 +1436,7 @@ const PulseLane: React.FC<{
                   </div>
                   <p className="text-[12px] text-slate-200 mt-1 font-mono">
                     <span className="tabular-nums text-white">{fmtTrust(it.trustAmount)}T</span>
-                    <span className="text-slate-500 mx-1.5">·</span>
+                    <span className="text-slate-500 mx-1.5">�/</span>
                     <span
                       className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border ${
                         it.support
@@ -1684,7 +1684,7 @@ const PulseLane: React.FC<{
 };
 
 /* -------------------------------------------------------------------------- */
-/* Pulse · Identity atom cards — portal-style rail (teal tags + stake + gold thumbs)            */
+/* Pulse �/ Identity atom cards — portal-style rail (teal tags + stake + gold thumbs)            */
 /* -------------------------------------------------------------------------- */
 
 /** Hide redundant “has tag” line; show predicate when it adds meaning (graph-driven). */
@@ -1752,8 +1752,8 @@ const PulseAtomTagSection: React.FC<{
     rail === 'yours'
       ? 'Your atoms'
       : atomTone === 'crowd'
-        ? 'Atoms · live order'
-        : 'Atoms · curated heat';
+        ? 'Atoms �/ live order'
+        : 'Atoms �/ curated heat';
 
   const gridClass = 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start';
 
@@ -1868,11 +1868,11 @@ const PulseAtomTagSection: React.FC<{
           {atomsHeading}
           {atomTone === 'crowd' ? (
             <span className="block text-[10px] font-semibold normal-case tracking-normal text-amber-200/85 mt-0.5">
-              Crowd-weighted · same heat rail as Hot (amber → violet → red)
+              Crowd-weighted �/ same heat rail as Hot (amber → violet → red)
             </span>
           ) : atomTone === 'hot' ? (
             <span className="block text-[10px] font-semibold normal-case tracking-normal text-amber-200/85 mt-0.5">
-              Curated spotlight · gold rail
+              Curated spotlight �/ gold rail
             </span>
           ) : null}
         </h3>
@@ -2318,7 +2318,7 @@ const VouchLane: React.FC<{
               Queue trust for the handles below — submit the whole batch from the bar when you&rsquo;re ready.
             </p>
             <p className="text-[12px] font-mono uppercase tracking-[0.16em] text-slate-300 mt-2">
-              {sorted.length} names · heavier vaults first
+              {sorted.length} names �/ heavier vaults first
             </p>
           </div>
         </div>
@@ -2341,7 +2341,7 @@ const VouchLane: React.FC<{
           const metaLine = i.walletId
             ? shortAddress(i.walletId)
             : i.termId
-              ? `${shortAddress(i.termId)} · vault`
+              ? `${shortAddress(i.termId)} �/ vault`
               : shortAddress(i.rowKey);
           return (
             <li

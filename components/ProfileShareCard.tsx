@@ -129,7 +129,7 @@ export default function ProfileShareCard({
       <div className="w-full perspective-1000">
         <div
           ref={cardRef}
-          className="relative bg-[#020308] border-2 p-6 sm:p-9 rounded-[2rem] overflow-hidden"
+          className="relative bg-intuition-dark border-2 p-6 sm:p-9 rounded-[2rem] overflow-hidden"
           style={glowStyle}
         >
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-20 pointer-events-none" />
@@ -158,7 +158,7 @@ export default function ProfileShareCard({
                   Trader profile
                 </p>
                 <p className="mt-2">
-                  <span className="inline-flex items-center rounded-full border border-intuition-primary/45 bg-intuition-primary/10 px-3 py-1 font-sans text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-intuition-primary shadow-[0_0_16px_rgba(0,243,255,0.12)] antialiased [text-rendering:geometricPrecision]">
+                  <span className="inline-flex items-center rounded-full border border-intuition-primary/45 bg-intuition-primary/10 px-3 py-1 font-sans text-[10px] sm:text-[11px] font-bold uppercase tracking-wide text-intuition-primary shadow-[0_0_16px_rgba(255,80,57,0.12)] antialiased [text-rendering:geometricPrecision]">
                     {traderStatusLabel}
                   </span>
                 </p>
@@ -214,7 +214,7 @@ export default function ProfileShareCard({
 
           <div
             className="relative z-10 mb-5 flex items-center gap-4 rounded-2xl border px-4 py-4 sm:px-5 sm:py-4"
-            style={{ borderColor: `${THEME}33`, background: 'rgba(0,243,255,0.04)' }}
+            style={{ borderColor: `${THEME}33`, background: 'rgba(255,80,57,0.04)' }}
           >
             <ArenaXpToken size={48} className="shrink-0" />
             <div className="min-w-0 flex-1">
@@ -227,7 +227,7 @@ export default function ProfileShareCard({
               {arenaXpTotal > 0 || protocolXpTotal > 0 ? (
                 <p className="mt-1 font-mono text-[10px] sm:text-[11px] font-semibold text-slate-400 antialiased [text-rendering:geometricPrecision]">
                   <span className="text-intuition-primary/85">Arena {arenaXpTotal.toLocaleString()}</span>
-                  <span className="text-slate-600 mx-1.5">Â·</span>
+                  <span className="text-slate-600 mx-1.5">Â/</span>
                   <span className="text-amber-300/85">Activity {protocolXpTotal.toLocaleString()}</span>
                 </p>
               ) : null}

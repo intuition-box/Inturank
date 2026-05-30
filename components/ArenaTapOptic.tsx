@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ARENA_TAP_OPTIC_EVENT } from '../services/arenaTapOptic';
 
 /**
- * Full-viewport subtle cyan/magenta pulse on Arena UI taps — pairs with `playArenaUiClick`.
+ * Full-viewport subtle cyan/magenta pulse on Arena UI taps ,  pairs with `playArenaUiClick`.
  */
 const ArenaTapOptic: React.FC = () => {
   const reduceMotion = useReducedMotion();
@@ -31,7 +31,7 @@ const ArenaTapOptic: React.FC = () => {
           aria-hidden
           style={{
             background:
-              'radial-gradient(ellipse 85% 55% at 50% 42%, rgba(0,243,255,0.16) 0%, rgba(255,30,109,0.07) 40%, transparent 72%)',
+              'radial-gradient(ellipse 85% 55% at 50% 42%, rgba(255,80,57,0.16) 0%, rgba(239,68,68,0.07) 40%, transparent 72%)',
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 0] }}

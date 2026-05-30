@@ -105,7 +105,7 @@ const SignalStanceCartModal: React.FC<Props> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(0,243,255,0.03)_1px,transparent_1px)] bg-[size:18px_18px] opacity-40 rounded-3xl"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,80,57,0.03)_1px,transparent_1px)] bg-[size:18px_18px] opacity-40 rounded-3xl"
               aria-hidden
             />
             <div
@@ -131,8 +131,8 @@ const SignalStanceCartModal: React.FC<Props> = ({
                     Conviction cart
                   </h2>
                   <p className="text-[10px] text-slate-500 font-mono mt-1 truncate">
-                    Pulse Â· <span className="text-intuition-primary/90">{picks.length} claim{picks.length === 1 ? '' : 's'}</span>
-                    <span className="text-slate-600"> Â· </span>
+                    Pulse Â/ <span className="text-intuition-primary/90">{picks.length} claim{picks.length === 1 ? '' : 's'}</span>
+                    <span className="text-slate-600"> Â/ </span>
                     <span className="text-amber-200/90 tabular-nums">{trustTotalLabel} TRUST</span>
                   </p>
                 </div>
@@ -261,7 +261,7 @@ const SignalStanceCartModal: React.FC<Props> = ({
             </div>
 
             <p className="px-4 pb-2 text-[10px] text-slate-500 leading-snug shrink-0 z-10">
-              One wallet signature sends the whole cart in a single batch deposit Â· counts are{' '}
+              One wallet signature sends the whole cart in a single batch deposit Â/ counts are{' '}
               <span className="text-slate-400">triples</span>, not atoms.
             </p>
 
@@ -289,8 +289,8 @@ const SignalStanceCartModal: React.FC<Props> = ({
                 ) : (
                   <>
                     <Shield size={18} strokeWidth={2.2} className="shrink-0 opacity-90" />
-                    Confirm Â· {trustTotalLabel} TRUST
-                    {picks.length > 1 ? ` Â· ${picks.length} stakes` : ''} Â· {batchTxCount}&nbsp;tx
+                    Confirm Â/ {trustTotalLabel} TRUST
+                    {picks.length > 1 ? ` Â/ ${picks.length} stakes` : ''} Â/ {batchTxCount}&nbsp;tx
                   </>
                 )}
               </motion.button>

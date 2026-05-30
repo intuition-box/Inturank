@@ -103,7 +103,7 @@ const EmailNotifyModal: React.FC = () => {
       if (!subscribedOk) {
         const welcomeOk = await sendWelcomeEmail(trimmedEmail, nickname.trim() || undefined);
         if (!welcomeOk) {
-          toast.error('Saved locally, but email API is unreachable — check npm run email-server or VITE_EMAIL_API_URL.');
+          toast.error('Saved locally, but email API is unreachable ,  check npm run email-server or VITE_EMAIL_API_URL.');
         }
       }
       setShowSuccess(true);
@@ -278,7 +278,7 @@ const EmailNotifyModal: React.FC = () => {
                   type="submit"
                   disabled={loading}
                   onMouseEnter={playHover}
-                  className="w-full py-3 px-4 bg-amber-400 hover:bg-amber-300 text-black font-black text-[10px] uppercase tracking-[0.2em] clip-path-slant border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] hover:shadow-[0_0_28px_rgba(251,191,36,0.5),0_0_0_1px_rgba(255,30,109,0.2)] disabled:opacity-60 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  className="w-full py-3 px-4 bg-amber-400 hover:bg-amber-300 text-black font-black text-[10px] uppercase tracking-[0.2em] clip-path-slant border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] hover:shadow-[0_0_28px_rgba(251,191,36,0.5),0_0_0_1px_rgba(239,68,68,0.2)] disabled:opacity-60 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
                   {loading ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Subscribe to email alerts'}
                 </button>

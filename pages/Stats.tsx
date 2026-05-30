@@ -1,5 +1,5 @@
 /**
- * Leaderboard — Arena-only. Network-wide staking / PnL / entropy boards were removed per product scope.
+ * Leaderboard ,  Arena-only. Network-wide staking / PnL / entropy boards were removed per product scope.
  */
 import React from 'react';
 import { Crown } from 'lucide-react';
@@ -7,7 +7,7 @@ import IntuRankRankersLeaderboard from '../components/IntuRankRankersLeaderboard
 
 const Stats: React.FC = () => {
   return (
-    <div className="min-h-screen pt-16 md:pt-20 pb-32 md:pb-40 relative overflow-x-hidden min-w-0 w-full bg-[#020308] font-mono selection:bg-intuition-primary selection:text-black">
+    <div className="min-h-screen pt-16 md:pt-20 pb-32 md:pb-40 relative overflow-x-hidden min-w-0 w-full bg-intuition-dark font-mono selection:bg-intuition-primary selection:text-black">
       <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-intuition-primary/5 rounded-full blur-[150px] animate-pulse pointer-events-none" />
 
@@ -21,7 +21,7 @@ const Stats: React.FC = () => {
                 Arena leaderboard
               </h1>
               <p className="max-w-2xl text-[13px] leading-relaxed text-slate-400 font-sans font-medium normal-case tracking-normal">
-                Live rankers, Arena XP, and list coverage from the Arena flow — not a general Intuition network leaderboard.
+                Live rankers, Arena XP, and list coverage from the Arena flow ,  not a general Intuition network leaderboard.
               </p>
             </div>
           </div>

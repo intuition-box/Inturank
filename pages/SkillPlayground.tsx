@@ -79,7 +79,7 @@ const TIP_CARD =
 /** Fixed-height shell: inner message list scrolls; outer height does not grow with message count. */
 const CHAT_SHELL =
     'flex flex-col min-h-0 rounded-3xl sm:rounded-[1.75rem] ' +
-    'border-2 border-intuition-primary/30 bg-[#05070d]/[0.97] backdrop-blur-xl backdrop-saturate-150 p-1.5 sm:p-2 shadow-[0_0_72px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-black/30 ' +
+    'border-2 border-intuition-primary/30 bg-[#05070d]/[0.97] backdrop-blur-xl backdrop-saturate-150 p-1.5 sm:p-2 shadow-[0_0_72px_rgba(255,80,57,0.12),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-black/30 ' +
     'overflow-hidden ' +
     'max-md:h-[min(70dvh,calc(100dvh-12rem))] max-md:max-h-[min(70dvh,calc(100dvh-12rem))] ' +
     'h-[min(88dvh,calc(100dvh-7.5rem))] max-h-[min(88dvh,calc(100dvh-7.5rem))] ' +
@@ -90,16 +90,16 @@ const SkillPlayground: React.FC = () => {
     const [skillChatKey, setSkillChatKey] = useState(0);
 
     return (
-        <div className="min-h-[calc(100dvh-4rem)] flex flex-col bg-[#020308] pt-5 pb-28 sm:pt-8 sm:pb-12 px-3 sm:px-5 lg:px-8 xl:px-10 2xl:px-14 relative overflow-x-hidden">
+        <div className="min-h-[calc(100dvh-4rem)] flex flex-col bg-intuition-dark pt-5 pb-28 sm:pt-8 sm:pb-12 px-3 sm:px-5 lg:px-8 xl:px-10 2xl:px-14 relative overflow-x-hidden">
             <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
             <div className="absolute inset-0 pointer-events-none opacity-[0.05] retro-grid" aria-hidden />
             <div className="absolute top-0 right-0 w-[min(80vw,720px)] h-[min(80vw,720px)] bg-intuition-primary/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[min(60vw,520px)] h-[min(60vw,520px)] bg-[#ff1e6d]/5 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[min(60vw,520px)] h-[min(60vw,520px)] bg-intuition-danger/5 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="w-full max-w-[min(1800px,100%)] mx-auto relative z-10 flex flex-col flex-1 min-h-0">
                 <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between shrink-0 mb-4 sm:mb-6 sm:gap-4 lg:mb-7">
                     <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-black border-2 border-intuition-primary/80 flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-[0_0_32px_rgba(0,243,255,0.25),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-black border-2 border-intuition-primary/80 flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-[0_0_32px_rgba(255,80,57,0.25),inset_0_1px_0_rgba(255,255,255,0.08)]">
                             <Cpu size={26} className="text-intuition-primary" />
                         </div>
                         <div className="min-w-0">
@@ -133,7 +133,7 @@ const SkillPlayground: React.FC = () => {
                             rel="noopener noreferrer"
                             onClick={playClick}
                             onMouseEnter={playHover}
-                            className="px-4 sm:px-5 py-2.5 bg-white/5 border-2 border-intuition-primary/40 hover:border-intuition-primary hover:bg-intuition-primary/10 text-intuition-primary hover:text-white text-sm font-medium transition-all rounded-2xl inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,243,255,0.12)]"
+                            className="px-4 sm:px-5 py-2.5 bg-white/5 border-2 border-intuition-primary/40 hover:border-intuition-primary hover:bg-intuition-primary/10 text-intuition-primary hover:text-white text-sm font-medium transition-all rounded-2xl inline-flex items-center gap-2 shadow-[0_0_20px_rgba(255,80,57,0.12)]"
                         >
                             <History size={14} /> Explorer
                         </a>
@@ -141,7 +141,7 @@ const SkillPlayground: React.FC = () => {
                             href="https://docs.intuition.systems"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-4 sm:px-5 py-2.5 bg-intuition-primary text-black text-sm font-semibold rounded-2xl shadow-[0_0_28px_rgba(0,243,255,0.35)] inline-flex items-center gap-2"
+                            className="px-4 sm:px-5 py-2.5 bg-intuition-primary text-black text-sm font-semibold rounded-2xl shadow-[0_0_28px_rgba(255,80,57,0.35)] inline-flex items-center gap-2"
                         >
                             <BookOpen size={14} /> Intuition Docs <ExternalLink size={10} />
                         </a>
@@ -162,13 +162,13 @@ const SkillPlayground: React.FC = () => {
                     <aside className="w-full xl:w-[min(100%,300px)] 2xl:w-[320px] shrink-0 xl:sticky xl:top-20 xl:self-start xl:max-h-[min(calc(100dvh-6rem),920px)] overflow-y-auto custom-scrollbar space-y-4">
                         <Reveal delay={0}>
                             <div
-                                className={`${REF_CARD} p-5 sm:p-6 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+                                className={`${REF_CARD} p-5 sm:p-6 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/30 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(255,80,57,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
                             >
                                 <div
                                     className="pointer-events-none absolute inset-0 opacity-[0.5]"
                                     style={{
                                         background:
-                                            'radial-gradient(ellipse 90% 70% at 100% 0%, rgba(0,243,255,0.12), transparent 55%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(255,30,109,0.08), transparent 50%)',
+                                            'radial-gradient(ellipse 90% 70% at 100% 0%, rgba(255,80,57,0.12), transparent 55%), radial-gradient(ellipse 70% 50% at 0% 100%, rgba(239,68,68,0.08), transparent 50%)',
                                     }}
                                 />
                                 <div className="relative">
@@ -177,7 +177,7 @@ const SkillPlayground: React.FC = () => {
                                     </p>
                                     <div className="mb-3 flex items-center justify-between gap-2 min-w-0">
                                         <h2 className="flex min-w-0 flex-1 items-center gap-2 font-sans text-sm font-semibold text-white">
-                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/30 bg-intuition-primary/10 shadow-[0_0_20px_rgba(0,243,255,0.15)]">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/30 bg-intuition-primary/10 shadow-[0_0_20px_rgba(255,80,57,0.15)]">
                                                 <Info size={15} className="text-intuition-primary" />
                                             </span>
                                             <span className="truncate">Quick reference</span>
@@ -248,19 +248,19 @@ const SkillPlayground: React.FC = () => {
                         <div className="grid grid-cols-2 gap-3 min-w-0 xl:grid-cols-1 xl:gap-4">
                             <Reveal delay={90}>
                                 <div
-                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/40 hover:shadow-[0_0_32px_rgba(0,243,255,0.1),inset_0_1px_0_rgba(255,255,255,0.07)]`}
+                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-intuition-primary/40 hover:shadow-[0_0_32px_rgba(255,80,57,0.1),inset_0_1px_0_rgba(255,255,255,0.07)]`}
                                 >
                                     <div
                                         className="pointer-events-none absolute inset-0 opacity-40"
                                         style={{
                                             background:
-                                                'radial-gradient(ellipse 80% 60% at 0% 0%, rgba(0,243,255,0.15), transparent 50%)',
+                                                'radial-gradient(ellipse 80% 60% at 0% 0%, rgba(255,80,57,0.15), transparent 50%)',
                                         }}
                                     />
                                     <div className="relative min-w-0">
                                         <div className="mb-2.5 flex items-start gap-2">
                                             <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/20 to-intuition-primary/5 shadow-[0_0_24px_rgba(0,243,255,0.2)]">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/20 to-intuition-primary/5 shadow-[0_0_24px_rgba(255,80,57,0.2)]">
                                                     <Zap size={18} className="text-intuition-primary" />
                                                 </div>
                                                 <h3 className="min-w-0 font-sans text-xs font-semibold leading-snug text-white sm:text-sm">
@@ -277,19 +277,19 @@ const SkillPlayground: React.FC = () => {
 
                             <Reveal delay={180}>
                                 <div
-                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-[#ff3d7a]/40 hover:shadow-[0_0_32px_rgba(255,30,109,0.12),inset_0_1px_0_rgba(255,255,255,0.07)]`}
+                                    className={`${TIP_CARD} h-full p-3 sm:p-4 lg:p-5 transition-[border-color,box-shadow] duration-300 hover:border-[#ff3d7a]/40 hover:shadow-[0_0_32px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.07)]`}
                                 >
                                     <div
                                         className="pointer-events-none absolute inset-0 opacity-50"
                                         style={{
                                             background:
-                                                'radial-gradient(ellipse 90% 70% at 100% 100%, rgba(255,30,109,0.12), transparent 55%)',
+                                                'radial-gradient(ellipse 90% 70% at 100% 100%, rgba(239,68,68,0.12), transparent 55%)',
                                         }}
                                     />
                                     <div className="relative min-w-0">
                                         <div className="mb-2.5 flex items-start gap-2">
                                             <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#ff1e6d]/30 bg-gradient-to-br from-[#ff1e6d]/20 to-[#3d0a18]/40 shadow-[0_0_20px_rgba(255,30,109,0.15)]">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-intuition-danger/30 bg-gradient-to-br from-intuition-danger/20 to-[#3d0a18]/40 shadow-[0_0_20px_rgba(239,68,68,0.15)]">
                                                     <ShieldCheck size={18} className="text-[#ff6b9d]" />
                                                 </div>
                                                 <h3 className="min-w-0 font-sans text-xs font-semibold leading-snug text-white sm:text-sm">

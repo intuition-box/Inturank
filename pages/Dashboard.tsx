@@ -201,7 +201,7 @@ const Dashboard: React.FC = () => {
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <div className="w-24 h-24 bg-intuition-dark border-2 border-intuition-primary flex items-center justify-center shadow-[0_0_20px_rgba(0,243,255,0.3)] transition-shadow">
+          <div className="w-24 h-24 bg-intuition-dark border-2 border-intuition-primary flex items-center justify-center shadow-[0_0_20px_rgba(255,80,57,0.3)] transition-shadow">
             <User size={48} className="text-intuition-primary" />
           </div>
 
@@ -269,7 +269,7 @@ const Dashboard: React.FC = () => {
                 <tr 
                   key={pos.id} 
                   onMouseEnter={playHover}
-                  className="hover:bg-intuition-primary/10 transition-colors group hover:shadow-[inset_0_0_10px_rgba(0,243,255,0.1)]"
+                  className="hover:bg-intuition-primary/10 transition-colors group hover:shadow-[inset_0_0_10px_rgba(255,80,57,0.1)]"
                 >
                   <td className="px-6 py-4">
                     <Link to={`/markets/${pos.id}`} className="flex items-center gap-3">
@@ -325,7 +325,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="border border-intuition-border bg-black p-6 min-h-[300px] flex flex-col clip-path-slant hover:shadow-[0_0_20px_rgba(0,243,255,0.1)] transition-shadow">
+        <div className="border border-intuition-border bg-black p-6 min-h-[300px] flex flex-col clip-path-slant hover:shadow-[0_0_20px_rgba(255,80,57,0.1)] transition-shadow">
           <h3 className="font-bold text-white font-display mb-4 flex items-center gap-2"><Activity size={18} className="text-intuition-primary animate-pulse" /> CAPITAL_DEPLOYMENT</h3>
           <div className="flex-1 w-full h-full min-h-[200px] flex items-center justify-center text-slate-600 font-mono text-xs">
             {chartData.length > 1 ? (
@@ -333,15 +333,15 @@ const Dashboard: React.FC = () => {
                     <AreaChart data={chartData}>
                       <defs>
                           <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="#ff5039" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#ff5039" stopOpacity={0}/>
                           </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
                       <XAxis dataKey="name" hide />
                       <YAxis hide />
                       <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                      <Area type="stepAfter" dataKey="val" stroke="#00f3ff" fillOpacity={1} fill="url(#colorVal)" />
+                      <Area type="stepAfter" dataKey="val" stroke="#ff5039" fillOpacity={1} fill="url(#colorVal)" />
                     </AreaChart>
                 </ResponsiveContainer>
             ) : (

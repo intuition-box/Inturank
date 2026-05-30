@@ -53,7 +53,7 @@ const FLY_X = 520;
 const RANK_READY_MIN = 3;
 
 /**
- * Step 1 · Curate — focused swipe lane: headline + stacked card + deck rail.
+ * Step 1 �/ Curate — focused swipe lane: headline + stacked card + deck rail.
  *
  * Architecture notes:
  *  - Each visible card is rendered by `<SwipeCard>` which owns its OWN motion
@@ -119,25 +119,25 @@ export const ArenaCurateStack: React.FC<Props> = ({
     <header className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
       <div className="min-w-0">
         <p className="font-mono text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: deck.hex }}>
-          Curate · {deck.label}
+          Curate �/ {deck.label}
         </p>
         <h1 className="mt-2 font-display text-[1.6rem] font-black leading-[1.1] tracking-tight text-white sm:text-[clamp(1.5rem,4vw,2rem)]">
           {listTitle}
         </h1>
         <p className="mt-2 max-w-xl font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
-          Pass ← swipe / tap · agree → swipe / tap
+          Pass ← swipe / tap �/ agree → swipe / tap
         </p>
       </div>
       <p className="shrink-0 text-right font-mono text-[11px] leading-relaxed text-slate-500 sm:max-w-[200px] sm:leading-snug">
         <span className="tabular-nums text-slate-300">
           {seenCount + 1}/{pool.length}
         </span>
-        <span className="mx-2 text-slate-700">·</span>
+        <span className="mx-2 text-slate-700">�/</span>
         {playerCountLoading ? '…' : playerCount} playing
         <br className="hidden sm:inline" />
         <span className="sm:ml-0">
-          <span className="mx-2 hidden text-slate-700 sm:inline">·</span>
-          <span className="text-emerald-400/85">{agreedYesCount}</span> in deck
+          <span className="mx-2 hidden text-slate-700 sm:inline">�/</span>
+          <span className="text-intuition-success/85">{agreedYesCount}</span> in deck
         </span>
       </p>
     </header>
@@ -147,7 +147,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
   if (!top) {
     return (
       <ArenaContestStepShell
-        chromeTitle={`Curate · ${deck.label}`}
+        chromeTitle={`Curate �/ ${deck.label}`}
         maxWidthClass="max-w-none"
         innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
       >
@@ -184,7 +184,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
             deck={deck}
             className="mt-8 w-full"
           >
-            Next · rank your deck
+            Next �/ rank your deck
             <ArrowRight size={16} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
           </SolidButton>
         </div>
@@ -194,7 +194,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Curate · ${deck.label}`}
+      chromeTitle={`Curate �/ ${deck.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -203,12 +203,16 @@ export const ArenaCurateStack: React.FC<Props> = ({
       <div className="mt-8 flex w-full flex-col items-stretch gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12 xl:gap-16">
         {/* Card + actions — grows with viewport */}
         <div className="flex min-w-0 flex-1 flex-col items-center">
-          <div className="relative w-full max-w-[min(520px,94vw)] sm:max-w-[540px] pb-8">
+          <div className="relative w-full max-w-[min(500px,94vw)] sm:max-w-[520px] pb-8">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-cyan-400/[0.07] via-slate-950/40 to-fuchsia-500/[0.06] shadow-[inset_0_0_120px_rgba(0,0,0,0.55)] sm:rounded-[2.1rem]"
+              className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem] border border-white/[0.07] bg-gradient-to-b from-intuition-primary/[0.07] via-slate-950/40 to-intuition-primary/[0.06] shadow-[inset_0_0_120px_rgba(0,0,0,0.55)] sm:rounded-[2.1rem]"
             />
-            <div className="relative h-[540px] w-full sm:h-[560px]">
+            {/* touch-action: pan-y lets the page scroll vertically even when a
+                finger starts inside the swipe surface. dragDirectionLock on the
+                <motion.article> below ensures horizontal intent is required
+                before the X-drag captures the gesture. */}
+            <div className="relative h-[540px] w-full sm:h-[560px]" style={{ touchAction: 'pan-y' }}>
             {/* Back-deck cards */}
             {peek.slice(0, 3).map((p, i) => {
               const drift = (i + 1) * 1.05 * (i % 2 === 0 ? -1 : 1);
@@ -244,10 +248,10 @@ export const ArenaCurateStack: React.FC<Props> = ({
               />
             </AnimatePresence>
             <div className="pointer-events-none absolute inset-x-1 bottom-0 z-[4] flex justify-between px-2 pb-0.5 sm:inset-x-2">
-              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-rose-400/80 drop-shadow-[0_0_12px_rgba(251,113,133,0.35)]">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-intuition-secondary/80 drop-shadow-[0_0_12px_rgba(251,113,133,0.35)]">
                 ← Pass
               </span>
-              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-400/80 drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-intuition-success/80 drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">
                 Agree →
               </span>
             </div>
@@ -293,7 +297,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
               </CircleAction>
             </div>
             <p className="text-center font-mono text-[9px] uppercase tracking-[0.14em] text-slate-700">
-              Drag card · ← pass · agree →
+              Drag card �/ ← pass �/ agree →
             </p>
           </div>
         </div>
@@ -355,7 +359,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
               deck={deck}
               className="mt-8 w-full"
             >
-              Next · rank deck
+              Next �/ rank deck
               <ArrowRight size={15} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </SolidButton>
           </div>
@@ -443,6 +447,7 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.34}
       dragMomentum={false}
+      dragDirectionLock
       dragTransition={{ bounceStiffness: 280, bounceDamping: 26 }}
       onDragEnd={endSwipe}
       initial={reduceMotion ? false : { scale: 0.96, y: 8, opacity: 0 }}
@@ -471,8 +476,8 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
         border: `1px solid ${deck.line}`,
         boxShadow: ARENA_SHADOWS.cardLifted,
       }}
-      className={`absolute inset-x-0 top-0 mx-auto w-full max-w-[min(500px,93vw)] cursor-grab select-none overflow-hidden rounded-[1.35rem] ring-1 ring-white/[0.04] transition-shadow duration-150 active:cursor-grabbing sm:max-w-[520px] ${
-        reduceMotion ? 'touch-manipulation' : 'touch-none'
+      className={`absolute inset-x-0 top-0 mx-auto w-full max-w-[min(480px,92vw)] cursor-grab select-none overflow-hidden rounded-[1.35rem] ring-1 ring-white/[0.04] transition-shadow duration-150 active:cursor-grabbing sm:max-w-[500px] ${
+        reduceMotion ? 'touch-manipulation' : 'touch-pan-y'
       }`}
     >
       {!reduceMotion ? (
@@ -503,7 +508,7 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
         className="pointer-events-none absolute left-5 top-[18%] z-[3] -rotate-[11deg] sm:left-6 sm:top-[20%]"
         style={{ opacity: yesStampOpacity, scale: yesStampScale }}
       >
-        <span className="inline-block rounded-md border-2 border-emerald-400/85 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black uppercase tracking-[0.2em] text-emerald-50 shadow-sm ring-1 ring-emerald-500/25 sm:text-xs sm:px-3 sm:py-1.5">
+        <span className="inline-block rounded-md border-2 border-intuition-success/85 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black uppercase tracking-[0.2em] text-intuition-success shadow-sm ring-1 ring-intuition-success/25 sm:text-xs sm:px-3 sm:py-1.5">
           Agree
         </span>
       </motion.div>
@@ -512,7 +517,7 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
         className="pointer-events-none absolute right-5 top-[18%] z-[3] rotate-[11deg] sm:right-6 sm:top-[20%]"
         style={{ opacity: noStampOpacity, scale: noStampScale }}
       >
-        <span className="inline-block rounded-md border-2 border-rose-400/85 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black uppercase tracking-[0.2em] text-rose-50 shadow-sm ring-1 ring-rose-500/25 sm:text-xs sm:px-3 sm:py-1.5">
+        <span className="inline-block rounded-md border-2 border-intuition-secondary/85 bg-black/40 px-2.5 py-1 font-display text-[11px] font-black uppercase tracking-[0.2em] text-intuition-secondary shadow-sm ring-1 ring-intuition-secondary/25 sm:text-xs sm:px-3 sm:py-1.5">
           Pass
         </span>
       </motion.div>

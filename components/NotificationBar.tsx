@@ -239,27 +239,27 @@ const NotificationBar: React.FC<NotificationBarProps> = ({ walletAddress }) => {
         onMouseEnter={playHover}
         className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all ${
           open
-            ? 'border-intuition-primary/60 bg-intuition-primary/15 text-intuition-primary shadow-[0_0_18px_rgba(0,243,255,0.25)]'
-            : 'border-intuition-primary/25 bg-black/35 text-slate-300 hover:border-intuition-primary/45 hover:text-white hover:bg-intuition-primary/5 hover:shadow-[0_0_16px_rgba(0,243,255,0.12)]'
+            ? 'border-intuition-primary/60 bg-intuition-primary/15 text-intuition-primary shadow-[0_0_18px_rgba(255,80,57,0.25)]'
+            : 'border-intuition-primary/25 bg-black/35 text-slate-300 hover:border-intuition-primary/45 hover:text-white hover:bg-intuition-primary/5 hover:shadow-[0_0_16px_rgba(255,80,57,0.12)]'
         }`}
         aria-label="Activity on your holdings and people you follow"
       >
         <Bell size={16} strokeWidth={2} />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 flex items-center justify-center text-[9px] font-bold font-sans leading-none bg-intuition-secondary text-white rounded-full ring-2 ring-[#020308] shadow-[0_0_10px_rgba(255,30,109,0.5)]">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 flex items-center justify-center text-[9px] font-bold font-sans leading-none bg-intuition-secondary text-white rounded-full ring-2 ring-[#020308] shadow-[0_0_10px_rgba(239,68,68,0.5)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-2 w-[400px] max-w-[calc(100vw-2rem)] max-h-[75vh] overflow-hidden bg-[#020308] border-2 border-intuition-primary/30 shadow-[0_0_50px_rgba(0,0,0,1),0_0_30px_rgba(0,243,255,0.08)] z-[110] rounded-2xl animate-notification-panel-in flex flex-col">
+        <div className="absolute top-full right-0 mt-2 w-[400px] max-w-[calc(100vw-2rem)] max-h-[75vh] overflow-hidden bg-intuition-dark border-2 border-intuition-primary/30 shadow-[0_0_50px_rgba(0,0,0,1),0_0_30px_rgba(255,80,57,0.08)] z-[110] rounded-2xl animate-notification-panel-in flex flex-col">
           <div className="p-3 border-b border-white/10 bg-[#050a12] shrink-0">
             <h3 className="text-[12px] font-black font-mono text-white uppercase tracking-widest">
               Activity
             </h3>
             <p className="text-[10px] font-bold font-mono text-slate-300 mt-1">
-              Activity feed (loads on page load). Not real-time push — enable email alerts for notifications when you&apos;re away.
+              Activity feed (loads on page load). Not real-time push ,  enable email alerts for notifications when you&apos;re away.
             </p>
             {items.length > 0 && (
               <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
@@ -272,7 +272,7 @@ const NotificationBar: React.FC<NotificationBarProps> = ({ walletAddress }) => {
                     onMouseEnter={playHover}
                     className={`min-h-[40px] px-4 py-2.5 text-[9px] font-black font-mono uppercase tracking-widest rounded-xl border-2 transition-all duration-300 ${
                       filter === f
-                        ? 'border-intuition-primary bg-intuition-primary/25 text-white shadow-[0_0_15px_rgba(0,243,255,0.2)]'
+                        ? 'border-intuition-primary bg-intuition-primary/25 text-white shadow-[0_0_15px_rgba(255,80,57,0.2)]'
                         : 'border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -291,7 +291,7 @@ const NotificationBar: React.FC<NotificationBarProps> = ({ walletAddress }) => {
               </div>
             )}
           </div>
-          <div className="overflow-y-auto flex-1 min-h-0 p-1 scroll-smooth bg-[#020308]" style={{ scrollBehavior: 'smooth' }}>
+          <div data-lenis-prevent className="overflow-y-auto flex-1 min-h-0 p-1 scroll-smooth bg-intuition-dark" style={{ scrollBehavior: 'smooth' }}>
             {loading && items.length === 0 ? (
               <div className="flex items-center justify-center py-12 text-slate-400">
                 <Loader2 size={24} className="animate-spin" />
@@ -313,7 +313,7 @@ const NotificationBar: React.FC<NotificationBarProps> = ({ walletAddress }) => {
                     if (!list.length) return null;
                     return (
                       <li key={groupKey}>
-                        <div className="text-[9px] font-black font-mono text-slate-400 uppercase tracking-widest px-3 py-2 sticky top-0 bg-[#020308] z-10 border-b border-white/5 rounded-t-xl">
+                        <div className="text-[9px] font-black font-mono text-slate-400 uppercase tracking-widest px-3 py-2 sticky top-0 bg-intuition-dark z-10 border-b border-white/5 rounded-t-xl">
                           {TIME_GROUP_LABELS[groupKey]}
                         </div>
                         <ul className="space-y-0.5 mt-0.5">

@@ -64,52 +64,52 @@ const SECTION_META: Record<
     title: 'Daily & tools',
     subtitle:
       'Workflow staples, vibes, evergreen daily lists — builders and normal tools people actually rely on.',
-    accent: '#fb7185',
+    accent: '#ff5039',                       // cinnabar
   },
   graphs: {
     lane: 'On-graph',
     title: 'Claims · heat · narratives',
     subtitle: 'Indexer-native lists — what’s debated, trending, or narratively loaded on Intuition.',
-    accent: '#e879f9',
+    accent: '#3b5afe',                       // cobalt
   },
   web3: {
     lane: 'Web3',
     title: 'Web3 & ecosystems',
     subtitle:
       'Protocols, portals, infra, and staking-shaped lists — on-chain primitives without crowding indexer-native rows.',
-    accent: '#00f3ff',
+    accent: '#ff8775',                       // cinnabar light
   },
   gaming: {
     lane: 'Games',
     title: 'Games & worlds',
     subtitle: 'Studios, engines, IPs, creators, and play-shaped lists pulled from portal metadata.',
-    accent: '#fb923c',
+    accent: '#fbbf24',                       // marigold
   },
   ai: {
     lane: 'AI',
     title: 'AI & tooling',
     subtitle: 'Agents, models, builders, productivity — and tooling lists from the graph.',
-    accent: '#a78bfa',
+    accent: '#2a44d8',                       // cobalt deep
   },
   people: {
     lane: 'Culture',
     title: 'People & narratives',
     subtitle:
       'Leaders, founders, creators, DAOs — and community-facing lists surfaced from portal data.',
-    accent: '#c084fc',
+    accent: '#dc2626',                       // crimson
   },
   markets: {
     lane: 'Markets',
     title: 'Macro & themes',
     subtitle: 'Markets language, regimes, narratives — treasury, liquidity, cycles.',
-    accent: '#38bdf8',
+    accent: '#3b5afe',                       // cobalt
   },
   topics: {
     lane: 'Topics',
     title: 'More to explore',
     subtitle:
       'Smaller or mixed lanes grouped here — every list is still one tap. Big lanes stay broken out above.',
-    accent: '#94a3b8',
+    accent: '#94a3b8',                       // neutral slate
   },
 };
 

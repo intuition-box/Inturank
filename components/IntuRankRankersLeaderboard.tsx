@@ -164,8 +164,8 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
           }}
         >
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#00f3ff]/50 to-[#ff1e6d]/40 blur-xl opacity-60 animate-pulse" />
-            <Loader2 size={36} className="relative animate-spin text-white drop-shadow-[0_0_12px_rgba(0,243,255,0.8)]" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-intuition-primary/50 to-intuition-danger/40 blur-xl opacity-60 animate-pulse" />
+            <Loader2 size={36} className="relative animate-spin text-white drop-shadow-[0_0_12px_rgba(255,80,57,0.8)]" />
           </div>
           <p className="text-sm font-medium text-slate-500">Loading…</p>
         </div>
@@ -176,17 +176,17 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
             style={{
               background:
                 'linear-gradient(155deg, rgba(12,18,38,0.34) 0%, rgba(5,8,18,0.4) 45%, rgba(22,10,26,0.32) 100%)',
-              boxShadow: 'inset 0 0 80px rgba(0,243,255,0.06)',
+              boxShadow: 'inset 0 0 80px rgba(255,80,57,0.06)',
             }}
           >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-20%,rgba(0,243,255,0.16),transparent_55%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_100%_100%,rgba(255,30,109,0.1),transparent_45%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-20%,rgba(255,80,57,0.16),transparent_55%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_100%_100%,rgba(239,68,68,0.1),transparent_45%)]" />
 
             {/* Header */}
             <div className="relative z-10 p-5 sm:p-6 lg:p-7 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 xl:gap-8 border-b border-white/[0.08]">
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 <div
-                  className="shrink-0 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border border-[#00f3ff]/40 shadow-[0_0_28px_rgba(0,243,255,0.25)]"
+                  className="shrink-0 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border border-intuition-primary/40 shadow-[0_0_28px_rgba(255,80,57,0.25)]"
                   style={{
                     background: `linear-gradient(135deg, ${CY}25 0%, ${MG}15 55%, rgba(8,12,28,0.9) 100%)`,
                   }}
@@ -215,12 +215,12 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
               <div className="flex flex-wrap items-center gap-3 xl:justify-end shrink-0">
                 {address ? (
                   <div
-                    className="rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 backdrop-blur-md border border-[#00f3ff]/25 font-sans min-w-[min(100%,22rem)]"
+                    className="rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 backdrop-blur-md border border-intuition-primary/25 font-sans min-w-[min(100%,22rem)]"
                     style={{
                       background:
-                        'linear-gradient(135deg, rgba(0,243,255,0.1), rgba(8,14,26,0.82), rgba(255,30,109,0.05))',
+                        'linear-gradient(135deg, rgba(255,80,57,0.1), rgba(8,14,26,0.82), rgba(239,68,68,0.05))',
                       boxShadow:
-                        '0 0 28px rgba(0,243,255,0.1), inset 0 1px 0 rgba(255,255,255,0.07)',
+                        '0 0 28px rgba(255,80,57,0.1), inset 0 1px 0 rgba(255,255,255,0.07)',
                     }}
                   >
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 sm:gap-x-10 gap-y-3 text-left items-end">
@@ -228,7 +228,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                         <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 block mb-0.5">
                           Your rank
                         </span>
-                        <span className="text-lg sm:text-xl font-black tabular-nums text-white drop-shadow-[0_0_12px_rgba(0,243,255,0.3)]">
+                        <span className="text-lg sm:text-xl font-black tabular-nums text-white drop-shadow-[0_0_12px_rgba(255,80,57,0.3)]">
                           {myRow ? `${String(myRow.rank).padStart(2, '0')}` : '—'}
                         </span>
                       </div>
@@ -249,7 +249,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-end gap-2 col-span-2 lg:col-span-1 justify-start lg:justify-end" title={HINT_XP}>
-                        <div title={`Arena (indexer): ${myXpRec.xp.toLocaleString()} · Activity (this browser): ${activityXp.toLocaleString()}`}>
+                        <div title={`Arena (indexer): ${myXpRec.xp.toLocaleString()} �/ Activity (this browser): ${activityXp.toLocaleString()}`}>
                           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400/90 block mb-0.5">
                             Your XP
                           </span>
@@ -283,7 +283,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                     }}
                     disabled={refreshing}
                     onMouseEnter={playHover}
-                    className="rounded-full p-2.5 text-[#00f3ff]/90 hover:bg-white/10 hover:shadow-[0_0_20px_rgba(0,243,255,0.25)] transition-all disabled:opacity-45 border border-transparent hover:border-[#00f3ff]/30"
+                    className="rounded-full p-2.5 text-intuition-primary/90 hover:bg-white/10 hover:shadow-[0_0_20px_rgba(255,80,57,0.25)] transition-all disabled:opacity-45 border border-transparent hover:border-intuition-primary/30"
                   >
                     <RefreshCw size={17} className={refreshing ? 'animate-spin' : ''} />
                   </button>
@@ -308,7 +308,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                   to="/climb"
                   onClick={playClick}
                   onMouseEnter={playHover}
-                  className="inline-flex min-h-[48px] items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-black bg-gradient-to-r from-[#00f3ff] via-cyan-300 to-[#ff1e6d] shadow-[0_8px_32px_rgba(0,243,255,0.35)] hover:brightness-110 hover:scale-[1.02] transition-transform"
+                  className="inline-flex min-h-[48px] items-center gap-2 rounded-full px-8 py-3 text-sm font-bold text-black bg-gradient-to-r from-intuition-primary via-cyan-300 to-intuition-danger shadow-[0_8px_32px_rgba(255,80,57,0.35)] hover:brightness-110 hover:scale-[1.02] transition-transform"
                 >
                   <Zap size={17} strokeWidth={2.2} />
                   Open Arena
@@ -349,14 +349,14 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                             <div
                               className={`relative grid ${LB_GRID} gap-x-3 sm:gap-x-5 gap-y-2 items-center rounded-[1.35rem] border backdrop-blur-md px-3 py-3 sm:px-4 sm:py-3 transition-all duration-200 hover:border-white/[0.22] hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)] w-full max-w-none ${
                                 isYou
-                                  ? 'border-[#00f3ff]/50 bg-gradient-to-br from-[#00f3ff]/[0.14] via-white/[0.05] to-[#ff1e6d]/[0.07] shadow-[0_0_40px_rgba(0,243,255,0.12)]'
+                                  ? 'border-intuition-primary/50 bg-gradient-to-br from-intuition-primary/[0.14] via-white/[0.05] to-intuition-danger/[0.07] shadow-[0_0_40px_rgba(255,80,57,0.12)]'
                                   : 'border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.07]'
                               }`}
                               style={
                                 isYou
                                   ? {
                                       boxShadow:
-                                        'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 32px rgba(0,243,255,0.15)',
+                                        'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 32px rgba(255,80,57,0.15)',
                                     }
                                   : {
                                       borderLeft: `4px solid ${accent}`,
@@ -380,7 +380,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                                 <div
                                   className="relative shrink-0 h-11 w-11 sm:h-[50px] sm:w-[50px] rounded-2xl overflow-hidden ring-2 ring-white/15 shadow-lg"
                                   style={{
-                                    boxShadow: isYou ? `0 0 18px rgba(0,243,255,0.25)` : '0 4px 16px rgba(0,0,0,0.4)',
+                                    boxShadow: isYou ? `0 0 18px rgba(255,80,57,0.25)` : '0 4px 16px rgba(0,0,0,0.4)',
                                   }}
                                 >
                                   {p.image ? (
@@ -390,7 +390,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                                       className="flex h-full w-full items-center justify-center text-[15px] font-black text-white"
                                       style={{
                                         background:
-                                          'linear-gradient(145deg, rgba(0,243,255,0.38), rgba(255,30,109,0.28))',
+                                          'linear-gradient(145deg, rgba(255,80,57,0.38), rgba(239,68,68,0.28))',
                                       }}
                                     >
                                       {avatarGlyph(displayLabel)}
@@ -400,7 +400,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                                 <div className="min-w-0 flex-1">
                                   <p className="font-semibold text-white text-[13px] sm:text-[15px] truncate tracking-tight leading-tight">
                                     {isYou ? (
-                                      <span className="inline rounded-lg bg-[#00f3ff]/20 px-2 py-0.5 text-[11px] font-black text-[#00f3ff] mr-1.5 align-middle">
+                                      <span className="inline rounded-lg bg-intuition-primary/20 px-2 py-0.5 text-[11px] font-black text-intuition-primary mr-1.5 align-middle">
                                         YOU
                                       </span>
                                     ) : null}
@@ -427,7 +427,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                               <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 min-w-0 tabular-nums">
                                 <span
                                   className="text-lg sm:text-[1.35rem] font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-br from-amber-200 via-amber-300 to-orange-400 leading-none"
-                                  title={`Arena ${p.arenaXp.toLocaleString()} · Activity ${p.activityXp.toLocaleString()}`}
+                                  title={`Arena ${p.arenaXp.toLocaleString()} �/ Activity ${p.activityXp.toLocaleString()}`}
                                 >
                                   {inturankLeaderboardTotalXp(p).toLocaleString()}
                                 </span>

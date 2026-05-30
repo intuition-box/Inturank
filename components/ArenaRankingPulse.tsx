@@ -230,20 +230,20 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
       <div className="flex items-start justify-between gap-2 px-3.5 sm:px-5 pt-3 sm:pt-4 pb-2 border-b border-white/[0.06]">
         <div className="min-w-0 flex items-start gap-2 sm:gap-3">
           <div
-            className={`shrink-0 rounded-lg border border-emerald-500/35 bg-emerald-950/40 flex items-center justify-center ${
+            className={`shrink-0 rounded-lg border border-intuition-success/35 bg-intuition-success/40 flex items-center justify-center ${
               variant === 'explorer' ? 'w-10 h-10 sm:w-11 sm:h-11' : 'w-8 h-8'
             }`}
           >
             <Radio
-              className={`text-emerald-400/95 stroke-[2.2] ${variant === 'explorer' ? 'w-5 h-5' : 'w-4 h-4'}`}
+              className={`text-intuition-success/95 stroke-[2.2] ${variant === 'explorer' ? 'w-5 h-5' : 'w-4 h-4'}`}
               aria-hidden
             />
           </div>
           <div className="min-w-0">
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.22em] text-emerald-400/90 inline-flex items-center gap-1.5">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.22em] text-intuition-success/90 inline-flex items-center gap-1.5">
               {variant === 'explorer' ? 'Arena explorer' : 'Arena pulse'}
               {syncingRecent ? (
-                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-emerald-200 normal-case">
+                <span className="inline-flex items-center gap-1 rounded-md border border-intuition-success/30 bg-intuition-success/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-intuition-success normal-case">
                   <Loader2 className="w-2.5 h-2.5 animate-spin" aria-hidden />
                   Syncing your latest rank…
                 </span>
@@ -264,8 +264,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
               title={showAllRankers ? 'Show only your wallet' : 'Show all wallets on these lists'}
               className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] transition-colors ${
                 showAllRankers
-                  ? 'border-emerald-500/40 bg-emerald-500/12 text-emerald-200'
-                  : 'border-slate-700/90 bg-black/50 text-slate-400 hover:text-emerald-200 hover:border-emerald-500/35'
+                  ? 'border-intuition-success/40 bg-intuition-success/12 text-intuition-success'
+                  : 'border-slate-700/90 bg-black/50 text-slate-400 hover:text-intuition-success hover:border-intuition-success/35'
               }`}
             >
               <Users className="w-3.5 h-3.5 opacity-90" aria-hidden />
@@ -278,7 +278,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
               onClick={() => playArenaUiClick()}
               onMouseEnter={playArenaUiHover}
               title="Signed rankings grouped by list"
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-700/90 bg-black/50 px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400 hover:text-emerald-200 hover:border-emerald-500/35 transition-colors"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-700/90 bg-black/50 px-2 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400 hover:text-intuition-success hover:border-intuition-success/35 transition-colors"
             >
               <Layers className="w-3.5 h-3.5 opacity-90" aria-hidden />
               My lists
@@ -291,7 +291,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
               playArenaUiClick();
               void load();
             }}
-            className="shrink-0 p-1.5 rounded-lg border border-slate-700/90 bg-black/50 text-slate-500 hover:text-emerald-300 hover:border-emerald-500/35 disabled:opacity-40 transition-colors"
+            className="shrink-0 p-1.5 rounded-lg border border-slate-700/90 bg-black/50 text-slate-500 hover:text-intuition-success hover:border-intuition-success/35 disabled:opacity-40 transition-colors"
             aria-label="Refresh Arena pulse"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -306,11 +306,11 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
       >
         {loading && items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-slate-500">
-            <Loader2 className="w-7 h-7 text-emerald-400/80 animate-spin" />
+            <Loader2 className="w-7 h-7 text-intuition-success/80 animate-spin" />
             <span className="text-[10px] font-semibold uppercase tracking-widest">Pulling rankings…</span>
           </div>
         ) : error ? (
-          <p className="text-[11px] text-rose-300/95 px-1 py-4 text-center">{error}</p>
+          <p className="text-[11px] text-intuition-secondary/95 px-1 py-4 text-center">{error}</p>
         ) : variant === 'explorer' && !viewerAddress?.trim() && !showAllRankers ? (
           <p className="text-[11px] text-slate-500 px-1 py-6 text-center leading-relaxed">
             Connect your wallet to see your Arena rankings here — or switch to <strong className="text-slate-400">All rankers</strong> to browse chain-wide activity on IntuRank&apos;s portal lists.
@@ -344,10 +344,10 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
               return (
                 <li
                   key={`${row.claimTermId}-${row.blockNumber}-${row.transactionHash ?? 'x'}`}
-                  className={`rounded-xl border bg-slate-950/55 px-3 py-2.5 hover:border-emerald-500/25 transition-colors ${
+                  className={`rounded-xl border bg-slate-950/55 px-3 py-2.5 hover:border-intuition-success/25 transition-colors ${
                     variant === 'explorer'
                       ? 'border-white/[0.1]'
-                      : 'border-white/[0.06] hover:border-emerald-500/20'
+                      : 'border-white/[0.06] hover:border-intuition-success/20'
                   }`}
                 >
                   <p className="text-[11px] leading-snug text-slate-100">
@@ -356,12 +356,12 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                         to={`/profile/${encodeURIComponent(row.creatorId)}`}
                         onClick={playArenaUiClick}
                         onMouseEnter={playArenaUiHover}
-                        className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300 hover:from-white hover:to-emerald-200 underline-offset-2 hover:underline"
+                        className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-intuition-success to-intuition-primary hover:from-white hover:to-intuition-success underline-offset-2 hover:underline"
                       >
                         {row.creatorLabel}
                       </Link>
                     ) : (
-                      <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300">
+                      <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-intuition-success to-intuition-primary">
                         {row.creatorLabel}
                       </span>
                     )}{' '}
@@ -377,8 +377,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                     <span
                       className={`font-black uppercase text-[10px] px-1.5 py-0.5 rounded-md ${
                         row.support
-                          ? 'bg-emerald-500/20 text-emerald-300'
-                          : 'bg-rose-500/18 text-rose-300'
+                          ? 'bg-intuition-success/20 text-intuition-success'
+                          : 'bg-intuition-secondary/18 text-intuition-secondary'
                       }`}
                     >
                       {row.support ? 'for' : 'against'}
@@ -389,7 +389,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                         variant === 'explorer' ? 'text-slate-400 font-medium' : 'text-slate-500 font-medium'
                       }
                     >
-                      ·
+                      �/
                     </span>{' '}
                     <Link
                       to={climbHrefForListTerm(row.listTermId)}
@@ -414,11 +414,11 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                       {variant === 'explorer' && isViewerRow ? (
                         rowXp ? (
                           <>
-                            <span className="inline-flex items-center rounded-md border border-cyan-400/45 bg-cyan-950/45 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-cyan-100 shadow-sm shadow-cyan-950/40">
+                            <span className="inline-flex items-center rounded-md border border-intuition-primary/45 bg-intuition-primary/45 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-intuition-primary shadow-sm shadow-intuition-primary/40">
                               +{rowXp.arenaXp} Arena
                             </span>
                             {rowXp.xpdn != null ? (
-                              <span className="inline-flex items-center rounded-md border border-violet-400/40 bg-violet-950/45 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-violet-100 shadow-sm shadow-violet-950/40">
+                              <span className="inline-flex items-center rounded-md border border-intuition-primary/40 bg-intuition-primary/45 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-intuition-primary shadow-sm shadow-intuition-primary/40">
                                 +{rowXp.xpdn} XPDN
                               </span>
                             ) : null}
@@ -428,7 +428,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                             className="inline-flex items-center rounded-md border border-slate-500/40 bg-slate-900/90 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-200 text-right max-w-[13rem] sm:max-w-none leading-tight"
                             title="Arena pick credit applies once the indexer attributes the rank. Submit ranks from this browser to store XPDN per tx locally."
                           >
-                            +{ARENA_XP_PER_RANK_PICK} Arena · XPDN
+                            +{ARENA_XP_PER_RANK_PICK} Arena �/ XPDN
                           </span>
                         )
                       ) : null}
@@ -443,8 +443,8 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                         onClick={playArenaUiClick}
                         className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide transition-colors shrink-0 ${
                           variant === 'explorer'
-                            ? 'text-cyan-400 hover:text-cyan-200'
-                            : 'text-slate-400 hover:text-cyan-300'
+                            ? 'text-intuition-primary hover:text-intuition-primary'
+                            : 'text-slate-400 hover:text-intuition-primary'
                         }`}
                       >
                         Explorer

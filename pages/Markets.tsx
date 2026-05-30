@@ -463,7 +463,7 @@ const Markets: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-6 md:mb-12 gap-4 md:gap-8 border-b border-white/10 pb-6 md:pb-10 relative z-10 max-md:pb-5">
         <div className="relative z-10 min-w-0 max-w-2xl shrink-0 space-y-2 md:space-y-3">
           <p className="text-xs md:text-sm text-slate-500 font-sans">
-            Reputation Â· {APP_VERSION_DISPLAY}
+            Reputation Â/ {APP_VERSION_DISPLAY}
           </p>
           <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Markets</h1>
           <p className="text-sm md:text-[15px] text-slate-400 leading-relaxed font-sans max-md:line-clamp-3">
@@ -503,7 +503,7 @@ const Markets: React.FC = () => {
                 onMouseEnter={playHover}
                 className={`flex-1 min-w-0 px-2 py-2 md:px-6 md:py-3 flex items-center justify-center gap-1 sm:gap-2 rounded-lg md:rounded-xl text-[11px] sm:text-sm font-medium font-sans transition-colors border border-transparent ${
                   isActive
-                    ? 'max-md:border-intuition-primary/40 max-md:bg-intuition-primary/14 max-md:text-intuition-primary max-md:font-semibold md:bg-intuition-primary md:text-black md:shadow-[0_0_0_1px_rgba(0,243,255,0.35)]'
+                    ? 'max-md:border-intuition-primary/40 max-md:bg-intuition-primary/14 max-md:text-intuition-primary max-md:font-semibold md:bg-intuition-primary md:text-black md:shadow-[0_0_0_1px_rgba(255,80,57,0.35)]'
                     : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.04] max-md:hover:border-white/[0.08]'
                 }`}
               >
@@ -523,13 +523,13 @@ const Markets: React.FC = () => {
                         <>
                             <button 
                                 onClick={() => { playClick(); setListViewMode('GRID'); }}
-                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'GRID' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(0,243,255,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'GRID' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(255,80,57,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
                             >
                                 <LayoutGrid size={14} /> Grid
                             </button>
                             <button 
                                 onClick={() => { playClick(); setListViewMode('LIST'); }}
-                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'LIST' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(0,243,255,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
+                                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[10px] font-semibold md:font-black font-sans md:font-mono transition-all duration-300 max-md:border max-md:border-transparent ${listViewMode === 'LIST' ? 'md:bg-intuition-primary md:text-black md:shadow-[0_0_20px_rgba(255,80,57,0.4)] max-md:border-intuition-primary/35 max-md:bg-intuition-primary/10 max-md:text-intuition-primary max-md:shadow-none' : 'text-slate-500 hover:text-white hover:bg-white/5 max-md:hover:border-white/10'}`}
                             >
                                 <List size={14} /> List
                             </button>
@@ -754,11 +754,11 @@ const Markets: React.FC = () => {
                   <Link 
                     key={list.id} 
                     to={`/markets/${list.id}`} 
-                    className="group relative flex flex-col p-3 max-md:min-h-[200px] md:p-6 bg-slate-950/80 backdrop-blur-xl border-2 border-slate-800 hover:border-intuition-primary/60 transition-all duration-500 rounded-xl md:rounded-2xl overflow-hidden min-h-[280px] md:min-h-[320px] min-w-0 shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_40px_rgba(0,243,255,0.15),0_0_0_1px_rgba(0,243,255,0.3)]"
+                    className="group relative flex flex-col p-3 max-md:min-h-[200px] md:p-6 bg-slate-950/80 backdrop-blur-xl border-2 border-slate-800 hover:border-intuition-primary/60 transition-all duration-500 rounded-xl md:rounded-2xl overflow-hidden min-h-[280px] md:min-h-[320px] min-w-0 shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_40px_rgba(255,80,57,0.15),0_0_0_1px_rgba(255,80,57,0.3)]"
                     onClick={playClick}
                     onMouseEnter={playHover}
                   >
-                      <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(0,243,255,0.04)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20 pointer-events-none" />
+                      <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,80,57,0.04)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20 pointer-events-none" />
                       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-intuition-primary/40 to-transparent rounded-full" />
                       <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-intuition-primary/40 to-transparent rounded-full" />
 
@@ -769,7 +769,7 @@ const Markets: React.FC = () => {
                       <div className="flex flex-col items-center justify-center flex-1 relative z-10 mb-2 mt-1 md:mb-5 md:mt-2">
                           <div className="relative mb-2 md:mb-5 group-hover:scale-105 transition-transform duration-500">
                               <div className="absolute inset-0 bg-intuition-primary blur-[20px] opacity-20 group-hover:opacity-35 transition-all duration-500 rounded-full scale-110" />
-                              <div className="relative w-12 h-12 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-black/80 border-2 border-slate-700 group-hover:border-intuition-primary/60 flex items-center justify-center text-slate-500 group-hover:text-intuition-primary transition-all duration-500 overflow-hidden shadow-[0_0_25px_rgba(0,243,255,0.4)]">
+                              <div className="relative w-12 h-12 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-black/80 border-2 border-slate-700 group-hover:border-intuition-primary/60 flex items-center justify-center text-slate-500 group-hover:text-intuition-primary transition-all duration-500 overflow-hidden shadow-[0_0_25px_rgba(255,80,57,0.4)]">
                                   {list.image ? (
                                       <img src={list.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-500" alt="" />
                                   ) : (
@@ -811,7 +811,7 @@ const Markets: React.FC = () => {
                       </div>
 
                       <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-300">
-                          <ArrowRight size={18} className="max-md:w-3.5 max-md:h-3.5 text-intuition-primary drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]" />
+                          <ArrowRight size={18} className="max-md:w-3.5 max-md:h-3.5 text-intuition-primary drop-shadow-[0_0_8px_rgba(255,80,57,0.5)]" />
                       </div>
                   </Link>
               ))}
@@ -852,7 +852,7 @@ const Markets: React.FC = () => {
                 const obj = claim.object?.label || 'â€”';
                 const predRaw = String(claim.predicate || 'link').replace(/_/g, ' ');
                 const pred = predRaw.charAt(0).toUpperCase() + predRaw.slice(1).toLowerCase();
-                const titleHint = `${subj} Â· ${pred} Â· ${obj}`;
+                const titleHint = `${subj} Â/ ${pred} Â/ ${obj}`;
                 return (
                   <div
                     key={claim.id}
@@ -888,7 +888,7 @@ const Markets: React.FC = () => {
                               <Users size={12} /> Support
                             </div>
                             <p className="text-xs font-bold text-[#3498DB] tabular-nums">
-                              {formatLargeNumber(claim.holders)} Â· {formatMarketValue(claim.value)}
+                              {formatLargeNumber(claim.holders)} Â/ {formatMarketValue(claim.value)}
                             </p>
                           </div>
                           <div className="rounded-xl bg-[#F39C12]/10 border border-[#F39C12]/25 px-3 py-2">
@@ -896,7 +896,7 @@ const Markets: React.FC = () => {
                               <Users size={12} /> Oppose
                             </div>
                             <p className="text-xs font-bold text-[#F39C12] tabular-nums">
-                              {formatLargeNumber(claim.opposeHolders || 0)} Â· {formatMarketValue(claim.opposeValue || 0)}
+                              {formatLargeNumber(claim.opposeHolders || 0)} Â/ {formatMarketValue(claim.opposeValue || 0)}
                             </p>
                           </div>
                         </div>
@@ -1043,7 +1043,7 @@ const Markets: React.FC = () => {
 
              if (dynamicLetter === 'S') tierStyle = { ...tierStyle, color: 'text-intuition-warning', border: 'border-intuition-warning/40', glow: 'from-intuition-warning/20 via-black to-black', bar: 'bg-intuition-warning' };
              else if (dynamicLetter === 'A') tierStyle = { ...tierStyle, color: 'text-intuition-primary', border: 'border-intuition-primary/40', glow: 'from-intuition-primary/20 via-black to-black', bar: 'bg-intuition-primary' };
-             else if (dynamicLetter === 'B') tierStyle = { ...tierStyle, color: 'text-[#a855f7]', border: 'border-[#a855f7]/40', glow: 'from-[#a855f7]/10 via-black to-black', bar: 'bg-[#a855f7]' };
+             else if (dynamicLetter === 'B') tierStyle = { ...tierStyle, color: 'text-intuition-purple', border: 'border-intuition-purple/40', glow: 'from-intuition-purple/10 via-black to-black', bar: 'bg-intuition-purple' };
              else if (dynamicLetter === 'C') tierStyle = { ...tierStyle, color: 'text-intuition-success', border: 'border-intuition-success/40', glow: 'from-intuition-success/10 via-black to-black', bar: 'bg-intuition-success' };
              else if (dynamicLetter === 'D') tierStyle = { ...tierStyle, color: 'text-slate-500', border: 'border-slate-800/40', glow: 'from-slate-800/10 via-black to-black', bar: 'bg-slate-800' };
 

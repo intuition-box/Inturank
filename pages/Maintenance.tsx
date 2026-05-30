@@ -4,13 +4,13 @@ import { Wrench, RefreshCw } from 'lucide-react';
 const Maintenance: React.FC = () => {
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center bg-[#020308] text-white px-6"
+      className="min-h-screen w-full flex flex-col items-center justify-center bg-intuition-dark text-white px-6"
       style={{ fontFamily: '"Fira Code", "JetBrains Mono", monospace' }}
     >
       <div className="max-w-lg w-full text-center space-y-8">
         <div className="flex justify-center">
-          <div className="p-4 rounded-2xl bg-[#080a12] border border-[#1a2a4a]">
-            <Wrench className="w-16 h-16 text-[#00f3ff]" strokeWidth={1.5} />
+          <div className="p-4 rounded-2xl bg-intuition-card border border-intuition-border">
+            <Wrench className="w-16 h-16 text-intuition-primary" strokeWidth={1.5} />
           </div>
         </div>
 
@@ -29,7 +29,7 @@ const Maintenance: React.FC = () => {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-[#00f3ff] text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
+            className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-intuition-primary text-black font-bold rounded-lg hover:opacity-90 transition-opacity"
           >
             <RefreshCw className="w-4 h-4" />
             Check again

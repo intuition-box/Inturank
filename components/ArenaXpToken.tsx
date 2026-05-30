@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Arena XP mark — restrained cyan (+slate) bezel, glazed core.
+ * Arena XP mark ,  restrained cyan (+slate) bezel, glazed core.
  * Keeps IntuRank read without rainbow segments.
  */
 export function ArenaXpToken({
@@ -40,7 +40,7 @@ export function ArenaXpToken({
 
       <circle cx="20" cy="20" r="12.95" fill={`url(#${uid}-glass)`} stroke="rgba(148,163,184,0.18)" strokeWidth="1" />
 
-      {/* Subtle tiers — monochrome cyan */}
+      {/* Subtle tiers ,  monochrome cyan */}
       <g opacity={0.55}>
         <rect x="13.85" y="14.2" width="3.1" height="4.6" rx={0.4} fill="#22d3ee" />
         <rect x={18.45} y={15.35} width="3.1" height="3.45" rx={0.4} fill="#22d3ee" />

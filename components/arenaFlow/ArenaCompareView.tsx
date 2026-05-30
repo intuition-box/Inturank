@@ -96,7 +96,7 @@ function peerDisplayName(label: string, address: string): string {
 }
 
 /**
- * Step 3 Â· Similarity. Two-column composition (deck preview | similarity rail)
+ * Step 3 Â/ Similarity. Two-column composition (deck preview | similarity rail)
  * with an honest peer list below. All numbers come from on-chain claims; if
  * the contest is off-chain or no overlap exists, the section is hidden or
  * clearly labelled when missing so nothing is fabricated.
@@ -172,7 +172,7 @@ export const ArenaCompareView: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Compare Â· ${palette.label}`}
+      chromeTitle={`Compare Â/ ${palette.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -188,7 +188,7 @@ export const ArenaCompareView: React.FC<Props> = ({
           className="font-mono text-[10px] font-black uppercase tracking-[0.32em]"
           style={{ color: palette.hex }}
         >
-          Step 3 Â· Compare Â· {palette.label}
+          Step 3 Â/ Compare Â/ {palette.label}
         </p>
         <h1 className="mt-2 font-display text-2xl font-black leading-[1.05] tracking-tight text-white sm:text-3xl">
           Your deck vs the board
@@ -878,16 +878,16 @@ const PeerList: React.FC<{
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px]">
           <Link
             to="/climb?view=explorer"
-            className="font-semibold text-cyan-300/90 underline decoration-cyan-400/40 underline-offset-2 hover:text-cyan-200"
+            className="font-semibold text-intuition-primary/90 underline decoration-intuition-primary/40 underline-offset-2 hover:text-intuition-primary"
           >
             Arena Explorer
           </Link>
           <span className="text-slate-600" aria-hidden>
-            Â·
+            Â/
           </span>
           <Link
             to="/portfolio#arena-rankings"
-            className="font-semibold text-cyan-300/90 underline decoration-cyan-400/40 underline-offset-2 hover:text-cyan-200"
+            className="font-semibold text-intuition-primary/90 underline decoration-intuition-primary/40 underline-offset-2 hover:text-intuition-primary"
           >
             My ranked lists
           </Link>
@@ -979,11 +979,11 @@ const PeerRow: React.FC<{
             </span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs font-black uppercase tracking-wide text-slate-100 sm:text-sm">
-            <span className="inline-flex items-center gap-1.5 text-emerald-300">
+            <span className="inline-flex items-center gap-1.5 text-intuition-success">
               <CheckCircle2 className="h-4 w-4" strokeWidth={2.8} aria-hidden />
               <span className="tabular-nums text-white">{similarity.agreeCount}</span> agree
             </span>
-            <span className="inline-flex items-center gap-1.5 text-rose-300">
+            <span className="inline-flex items-center gap-1.5 text-intuition-secondary">
               <XCircle className="h-4 w-4" strokeWidth={2.8} aria-hidden />
               <span className="tabular-nums text-white">{similarity.disagreeCount}</span> pass
             </span>
@@ -1081,7 +1081,7 @@ const PeerRow: React.FC<{
           {expanded && canExpand ? (
             <div className="border-t border-white/[0.06] px-4 pb-5 pt-4 sm:px-6">
               <p className="font-mono text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
-                Side-by-side Â· you vs {name}
+                Side-by-side Â/ you vs {name}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-200">
                 Your deck is above â€” this table only lines up shared picks.
@@ -1097,9 +1097,9 @@ const PeerRow: React.FC<{
                     style={{ borderColor: `${palette.hex}33`, background: `${palette.hex}10` }}
                   >
                     <span>Pick</span>
-                    <span className="text-center">You Â· {CURRENCY_SYMBOL}</span>
+                    <span className="text-center">You Â/ {CURRENCY_SYMBOL}</span>
                     <span className="text-center" style={{ color: palette.hex }}>
-                      Them Â· {CURRENCY_SYMBOL}
+                      Them Â/ {CURRENCY_SYMBOL}
                     </span>
                     <span className="text-right">Match</span>
                   </div>
@@ -1195,7 +1195,7 @@ const PeerRow: React.FC<{
                               <span className="text-white/90">{CURRENCY_SYMBOL}</span>
                             </>
                           ) : (
-                            <span className={`text-sm font-black ${row.support ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <span className={`text-sm font-black ${row.support ? 'text-intuition-success' : 'text-intuition-secondary'}`}>
                               {row.support ? 'Yes' : 'Pass'}
                             </span>
                           )}

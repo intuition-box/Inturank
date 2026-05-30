@@ -24,17 +24,17 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 const CREATE_SHELL =
   'relative overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] md:rounded-[2.25rem] ' +
   'border border-intuition-primary/30 bg-[#03050d]/[0.96] backdrop-blur-2xl backdrop-saturate-150 ' +
-  'shadow-[0_28px_90px_rgba(0,0,0,0.55),0_0_48px_rgba(0,243,255,0.1),inset_0_1px_0_rgba(255,255,255,0.07)] ' +
+  'shadow-[0_28px_90px_rgba(0,0,0,0.55),0_0_48px_rgba(255,80,57,0.1),inset_0_1px_0_rgba(255,255,255,0.07)] ' +
   'ring-1 ring-intuition-primary/20';
 const CREATE_SHELL_AURA =
   'pointer-events-none absolute -top-24 left-1/2 h-48 w-[min(100%,42rem)] -translate-x-1/2 rounded-full bg-intuition-primary/[0.12] blur-[80px]';
 const CREATE_SHELL_GRID =
-  'pointer-events-none absolute inset-0 opacity-[0.45] bg-[linear-gradient(rgba(0,243,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,30,109,0.02)_1px,transparent_1px)] bg-[size:28px_28px]';
+  'pointer-events-none absolute inset-0 opacity-[0.45] bg-[linear-gradient(rgba(255,80,57,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(239,68,68,0.02)_1px,transparent_1px)] bg-[size:28px_28px]';
 const CREATE_BACK =
   'inline-flex items-center gap-2 rounded-full border border-white/12 bg-[#05070c]/80 px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-slate-200 ' +
-  'shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all hover:border-intuition-primary/45 hover:bg-intuition-primary/10 hover:text-white hover:shadow-[0_0_24px_rgba(0,243,255,0.18)]';
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all hover:border-intuition-primary/45 hover:bg-intuition-primary/10 hover:text-white hover:shadow-[0_0_24px_rgba(255,80,57,0.18)]';
 const CREATE_STEP_CYAN =
-  'rounded-full border border-intuition-primary/35 bg-intuition-primary/10 px-3.5 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-intuition-primary shadow-[0_0_20px_rgba(0,243,255,0.15)]';
+  'rounded-full border border-intuition-primary/35 bg-intuition-primary/10 px-3.5 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-intuition-primary shadow-[0_0_20px_rgba(255,80,57,0.15)]';
 const CREATE_STEP_MUTED =
   'rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 text-[10px] font-black uppercase tracking-[0.35em] text-slate-400';
 const CREATE_STEP_AMBER =
@@ -46,7 +46,7 @@ const CREATE_INPUT =
   'hover:border-white/16 focus:border-intuition-primary/60 focus:ring-2 focus:ring-intuition-primary/20';
 const CREATE_CHOICE_CYAN =
   'group relative overflow-hidden rounded-[1.75rem] border border-intuition-primary/35 bg-gradient-to-br from-intuition-primary/[0.14] via-[#05070c]/95 to-black/90 p-8 text-left ' +
-  'shadow-[0_0_0_1px_rgba(0,243,255,0.08)_inset] transition-all duration-300 hover:-translate-y-1 hover:border-intuition-primary/55 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_40px_rgba(0,243,255,0.22)]';
+  'shadow-[0_0_0_1px_rgba(255,80,57,0.08)_inset] transition-all duration-300 hover:-translate-y-1 hover:border-intuition-primary/55 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_40px_rgba(255,80,57,0.22)]';
 const CREATE_CHOICE_VIOLET =
   'group relative overflow-hidden rounded-[1.75rem] border border-violet-500/40 bg-gradient-to-br from-violet-500/[0.12] via-[#05070c]/95 to-black/90 p-8 text-left ' +
   'shadow-[0_0_0_1px_rgba(139,92,246,0.1)_inset] transition-all duration-300 hover:-translate-y-1 hover:border-violet-400/55 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_40px_rgba(139,92,246,0.25)]';
@@ -54,9 +54,9 @@ const CREATE_CHOICE_AMBER =
   'group relative overflow-hidden rounded-[1.75rem] border border-amber-400/40 bg-gradient-to-br from-amber-500/[0.1] via-[#05070c]/95 to-black/90 p-8 text-left ' +
   'transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/60 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45),0_0_36px_rgba(251,191,36,0.2)]';
 const CREATE_TRIPLE_SLOT =
-  'relative flex min-h-[148px] flex-col items-center justify-center rounded-[1.35rem] border border-dashed border-intuition-primary/35 bg-[#04060c]/90 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm transition-all hover:border-intuition-primary/55 hover:bg-intuition-primary/[0.06] hover:shadow-[0_0_28px_rgba(0,243,255,0.12)]';
+  'relative flex min-h-[148px] flex-col items-center justify-center rounded-[1.35rem] border border-dashed border-intuition-primary/35 bg-[#04060c]/90 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm transition-all hover:border-intuition-primary/55 hover:bg-intuition-primary/[0.06] hover:shadow-[0_0_28px_rgba(255,80,57,0.12)]';
 const CREATE_BTN_PRIMARY =
-  'w-full rounded-full bg-intuition-primary py-3.5 text-sm font-bold uppercase tracking-widest text-black shadow-[0_0_28px_rgba(0,243,255,0.35)] transition-all hover:bg-white hover:shadow-[0_0_40px_rgba(0,243,255,0.45)] disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full rounded-full bg-intuition-primary py-3.5 text-sm font-bold uppercase tracking-widest text-black shadow-[0_0_28px_rgba(255,80,57,0.35)] transition-all hover:bg-white hover:shadow-[0_0_40px_rgba(255,80,57,0.45)] disabled:cursor-not-allowed disabled:opacity-50';
 const CREATE_TITLE_FORM =
   'text-center text-2xl font-bold leading-tight tracking-tight text-white font-display sm:text-[1.65rem]';
 const CREATE_BTN_VIOLET =
@@ -573,7 +573,7 @@ const CreateSignal: React.FC = () => {
       </div>
       <div className="relative mb-6 mt-4">
         <div className="absolute -inset-8 bg-intuition-primary/20 blur-3xl rounded-full animate-pulse"></div>
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-intuition-primary bg-black/60 text-intuition-primary shadow-[0_0_40px_rgba(0,243,255,0.35)]">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl border-2 border-intuition-primary bg-black/60 text-intuition-primary shadow-[0_0_40px_rgba(255,80,57,0.35)]">
           <Zap size={40} className="animate-pulse" />
         </div>
       </div>
@@ -584,14 +584,14 @@ const CreateSignal: React.FC = () => {
     <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/[0.06] pt-5 font-mono text-[9px] uppercase tracking-[0.2em] text-slate-600">
       <span className="font-black text-slate-500">S05_CREATE</span>
       <span className="text-intuition-primary/35" aria-hidden>
-        ·
+        �/
       </span>
       <span className="font-black text-intuition-success text-glow-success">Sync active</span>
     </div>
   );
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-8 sm:py-10 relative overflow-hidden font-mono bg-[#020308]">
+    <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-8 sm:py-10 relative overflow-hidden font-mono bg-intuition-dark">
       <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
       <div className="absolute inset-0 pointer-events-none opacity-[0.06] retro-grid" aria-hidden />
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-intuition-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -636,7 +636,7 @@ const CreateSignal: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => { playClick(); }}
-                      className="flex items-center justify-center gap-2 rounded-full border border-intuition-primary/45 px-6 py-3 font-black text-xs uppercase tracking-widest text-intuition-primary transition-all hover:border-intuition-primary hover:bg-intuition-primary/10 hover:shadow-[0_0_24px_rgba(0,243,255,0.2)]"
+                      className="flex items-center justify-center gap-2 rounded-full border border-intuition-primary/45 px-6 py-3 font-black text-xs uppercase tracking-widest text-intuition-primary transition-all hover:border-intuition-primary hover:bg-intuition-primary/10 hover:shadow-[0_0_24px_rgba(255,80,57,0.2)]"
                     >
                       <ExternalLink size={14} /> View in explorer
                     </a>
@@ -646,7 +646,7 @@ const CreateSignal: React.FC = () => {
                   <Link
                     to={`/markets/${successModal.termId}`}
                     onClick={() => { playClick(); setSuccessModal(null); }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-intuition-primary px-6 py-3 font-black text-xs uppercase tracking-widest text-black shadow-[0_0_28px_rgba(0,243,255,0.4)] transition-all hover:bg-white hover:shadow-[0_0_40px_rgba(0,243,255,0.5)]"
+                    className="flex items-center justify-center gap-2 rounded-full bg-intuition-primary px-6 py-3 font-black text-xs uppercase tracking-widest text-black shadow-[0_0_28px_rgba(255,80,57,0.4)] transition-all hover:bg-white hover:shadow-[0_0_40px_rgba(255,80,57,0.5)]"
                   >
                     <ExternalLink size={14} />{' '}
                     {successModal.type === 'atom' ? 'View atom' : 'View claim'}
@@ -698,7 +698,7 @@ const CreateSignal: React.FC = () => {
                   className={CREATE_CHOICE_CYAN}
                 >
                   <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-intuition-primary/20 blur-2xl transition-opacity group-hover:opacity-100" />
-                  <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-intuition-primary/30 bg-black/40 text-intuition-primary shadow-[0_0_24px_rgba(0,243,255,0.25)] transition-transform group-hover:scale-105">
+                  <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-intuition-primary/30 bg-black/40 text-intuition-primary shadow-[0_0_24px_rgba(255,80,57,0.25)] transition-transform group-hover:scale-105">
                     <UserPlus size={28} strokeWidth={2} />
                   </div>
                   <div className="relative mb-2 font-black text-sm uppercase tracking-widest text-white">Create identity</div>
@@ -747,7 +747,7 @@ const CreateSignal: React.FC = () => {
                   onMouseEnter={playHover}
                   className={`${CREATE_CHOICE_CYAN} block`}
                 >
-                  <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-intuition-primary/35 bg-black/40 text-intuition-primary shadow-[0_0_28px_rgba(0,243,255,0.3)] transition-transform group-hover:scale-105">
+                  <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-intuition-primary/35 bg-black/40 text-intuition-primary shadow-[0_0_28px_rgba(255,80,57,0.3)] transition-transform group-hover:scale-105">
                     <Sparkles size={28} strokeWidth={2} />
                   </div>
                   <div className="mb-2 font-black text-sm uppercase tracking-widest text-white">Generate identity with AI</div>
@@ -891,7 +891,7 @@ const CreateSignal: React.FC = () => {
               </div>
               <h1 className={`${PAGE_HERO_TITLE} text-center mb-8`}>Review & confirm</h1>
               <div className="w-full max-w-md space-y-5 text-left">
-                <div className="rounded-[1.25rem] border border-intuition-primary/35 bg-[#04060c]/95 p-5 shadow-[0_0_32px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
+                <div className="rounded-[1.25rem] border border-intuition-primary/35 bg-[#04060c]/95 p-5 shadow-[0_0_32px_rgba(255,80,57,0.12),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
                   <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Identity</div>
                   <div className="text-white font-mono">
                     {identitySchemaType === 'Account' ? `Account: ${accountAddress.trim().slice(0, 10)}… (${accountChain})` : `Create: ${nodeAlias.trim() || '—'}`}
@@ -931,10 +931,10 @@ const CreateSignal: React.FC = () => {
                   <p className="text-[10px] text-slate-400">You will be prompted to approve the transaction in your wallet.</p>
                 </div>
                 <div className="flex gap-4">
-                  <button type="button" onClick={() => setView('identity_manual')} className="flex-1 rounded-full border border-intuition-primary/45 py-3.5 font-black text-[10px] uppercase tracking-widest text-intuition-primary transition-all hover:bg-intuition-primary/10 hover:shadow-[0_0_24px_rgba(0,243,255,0.15)]">
+                  <button type="button" onClick={() => setView('identity_manual')} className="flex-1 rounded-full border border-intuition-primary/45 py-3.5 font-black text-[10px] uppercase tracking-widest text-intuition-primary transition-all hover:bg-intuition-primary/10 hover:shadow-[0_0_24px_rgba(255,80,57,0.15)]">
                     Back
                   </button>
-                  <button type="button" onClick={handleSubmitIdentityFromReview} disabled={creatingAtom || identityReviewApproved !== true} className="flex-1 rounded-full bg-intuition-primary py-3.5 font-black text-[10px] uppercase tracking-widest text-black shadow-[0_0_24px_rgba(0,243,255,0.35)] transition-all hover:bg-white hover:text-intuition-primary hover:shadow-[0_0_36px_rgba(0,243,255,0.45)] disabled:cursor-not-allowed disabled:opacity-60">
+                  <button type="button" onClick={handleSubmitIdentityFromReview} disabled={creatingAtom || identityReviewApproved !== true} className="flex-1 rounded-full bg-intuition-primary py-3.5 font-black text-[10px] uppercase tracking-widest text-black shadow-[0_0_24px_rgba(255,80,57,0.35)] transition-all hover:bg-white hover:text-intuition-primary hover:shadow-[0_0_36px_rgba(255,80,57,0.45)] disabled:cursor-not-allowed disabled:opacity-60">
                     {creatingAtom ? <><Loader2 size={14} className="animate-spin inline mr-2" /> Submitting…</> : 'Submit transactions'}
                   </button>
                 </div>
@@ -1067,7 +1067,7 @@ const CreateSignal: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-3 rounded-[1.35rem] border border-dashed border-white/15 bg-[#04060c]/90 p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
                   <Camera size={28} className="text-slate-500" />
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Upload image</span>
-                  <span className="text-[8px] text-slate-600">PNG / JPG · max 5MB</span>
+                  <span className="text-[8px] text-slate-600">PNG / JPG �/ max 5MB</span>
                   <label className="mt-1 cursor-pointer rounded-full border border-intuition-primary/40 bg-intuition-primary/10 px-5 py-2.5 text-[10px] font-black uppercase text-intuition-primary transition-all hover:bg-intuition-primary/20">
                     <input type="file" accept="image/png,image/jpeg,image/jpg" onChange={handleImageFileChange} className="sr-only" />
                     Choose file
@@ -1096,7 +1096,7 @@ const CreateSignal: React.FC = () => {
                   <button type="button" onClick={() => { setReturnToSynapseSlot(null); setView(returnToSynapseSlot ? 'claim' : 'manual_pathway'); }} className="flex-1 rounded-full border border-white/12 bg-white/[0.04] py-3.5 font-black text-[10px] uppercase tracking-widest text-white transition-all hover:border-white/25 hover:bg-white/10">
                     Cancel
                   </button>
-                  <button type="button" onClick={handleConstructAtom} disabled={creatingAtom} className="flex-1 rounded-full bg-intuition-primary py-3.5 font-black text-[10px] uppercase tracking-widest text-black shadow-[0_0_24px_rgba(0,243,255,0.35)] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-60">
+                  <button type="button" onClick={handleConstructAtom} disabled={creatingAtom} className="flex-1 rounded-full bg-intuition-primary py-3.5 font-black text-[10px] uppercase tracking-widest text-black shadow-[0_0_24px_rgba(255,80,57,0.35)] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-60">
                     {creatingAtom ? <Loader2 size={14} className="mr-2 inline animate-spin" /> : null} Create atom
                   </button>
                 </div>
@@ -1138,7 +1138,7 @@ const CreateSignal: React.FC = () => {
                   to="/skill-playground"
                   onClick={playClick}
                   onMouseEnter={playHover}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-intuition-primary px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-black shadow-[0_0_24px_rgba(0,243,255,0.35)] transition-all hover:bg-white"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-intuition-primary px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-black shadow-[0_0_24px_rgba(255,80,57,0.35)] transition-all hover:bg-white"
                 >
                   Open playground
                 </Link>
@@ -1188,7 +1188,7 @@ const CreateSignal: React.FC = () => {
                         autoComplete="off"
                         aria-label="Search atoms by label or term id"
                       />
-                      <button type="button" onClick={runNodeSearch} disabled={nodeSearching} className="rounded-full bg-intuition-primary px-4 py-2.5 font-black text-[10px] uppercase text-black shadow-[0_0_16px_rgba(0,243,255,0.25)] transition-all hover:bg-white disabled:opacity-60">
+                      <button type="button" onClick={runNodeSearch} disabled={nodeSearching} className="rounded-full bg-intuition-primary px-4 py-2.5 font-black text-[10px] uppercase text-black shadow-[0_0_16px_rgba(255,80,57,0.25)] transition-all hover:bg-white disabled:opacity-60">
                         {nodeSearching ? <Loader2 size={14} className="inline animate-spin" /> : 'Search'}
                       </button>
                       <button type="button" onClick={() => { setNodeSearchOpen(null); setNodeSearchResults([]); setNodeSearchError(null); }} className="rounded-full border border-white/15 px-4 py-2.5 text-[10px] text-slate-400 transition-colors hover:border-white/30 hover:text-white">Cancel</button>
@@ -1282,7 +1282,7 @@ const CreateSignal: React.FC = () => {
                 {tripleFee != null && (
                   <div className="flex justify-between text-[10px]">
                     <span className="text-slate-400">Creation cost</span>
-                    <span className="text-[#a855f7] font-mono inline-flex items-baseline gap-1">{tripleFee} <CurrencySymbol size="md" className="text-[#a855f7]/90" /></span>
+                    <span className="text-intuition-purple font-mono inline-flex items-baseline gap-1">{tripleFee} <CurrencySymbol size="md" className="text-intuition-purple/90" /></span>
                   </div>
                 )}
                 <div className="flex justify-between text-[10px]">
@@ -1308,7 +1308,7 @@ const CreateSignal: React.FC = () => {
                   </div>
                 )}
                 <div className="flex items-start gap-2 p-3 bg-white/5 border-2 border-white/10">
-                  <Info size={14} className="text-[#a855f7] shrink-0 mt-0.5" />
+                  <Info size={14} className="text-intuition-purple shrink-0 mt-0.5" />
                   <p className="text-[10px] text-slate-400">You will be prompted to approve the transaction in your wallet. The total includes the protocol creation cost.</p>
                 </div>
                 {claimReviewAtomsValid === false && claimReviewMissingAtoms.length > 0 && (
@@ -1332,7 +1332,7 @@ const CreateSignal: React.FC = () => {
                   </div>
                 )}
                 <div className="flex gap-4">
-                  <button type="button" onClick={() => setView('claim')} className="flex-1 rounded-full border border-intuition-primary/45 py-3.5 font-semibold text-sm text-intuition-primary transition-all hover:bg-intuition-primary/10 hover:shadow-[0_0_20px_rgba(0,243,255,0.12)]">
+                  <button type="button" onClick={() => setView('claim')} className="flex-1 rounded-full border border-intuition-primary/45 py-3.5 font-semibold text-sm text-intuition-primary transition-all hover:bg-intuition-primary/10 hover:shadow-[0_0_20px_rgba(255,80,57,0.12)]">
                     Back
                   </button>
                   <button type="button" onClick={handleSubmitClaimFromReview} disabled={creatingSynapse || claimReviewApproved !== true || (claimReviewAtomsValid === false && !claimReviewBypassValidation) || parseFloat(synapseDeposit || '0') < parseFloat(minClaimDeposit || '0.5')} className="flex-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3.5 font-bold text-sm text-white shadow-[0_0_28px_rgba(139,92,246,0.4)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
@@ -1398,7 +1398,7 @@ const CreateSignal: React.FC = () => {
                         autoComplete="off"
                         aria-label="Search atoms by label or term id"
                       />
-                      <button type="button" onClick={runNodeSearch} disabled={nodeSearching} className="rounded-full bg-intuition-primary px-4 py-2.5 font-black text-[10px] uppercase text-black shadow-[0_0_16px_rgba(0,243,255,0.25)] transition-all hover:bg-white disabled:opacity-60">
+                      <button type="button" onClick={runNodeSearch} disabled={nodeSearching} className="rounded-full bg-intuition-primary px-4 py-2.5 font-black text-[10px] uppercase text-black shadow-[0_0_16px_rgba(255,80,57,0.25)] transition-all hover:bg-white disabled:opacity-60">
                         {nodeSearching ? <Loader2 size={14} className="inline animate-spin" /> : 'Search'}
                       </button>
                       <button type="button" onClick={() => { setNodeSearchOpen(null); setNodeSearchResults([]); setNodeSearchError(null); }} className="rounded-full border border-white/15 px-4 py-2.5 text-[10px] text-slate-400 transition-colors hover:border-white/30 hover:text-white">Cancel</button>

@@ -61,10 +61,10 @@ const IntuitionTargetLogo = () => (
     xmlns="http://www.w3.org/2000/svg"
     className="group-hover/powered:scale-110 transition-transform duration-700"
   >
-    <circle cx="30" cy="30" r="28" stroke="#00f3ff" strokeWidth="1" strokeOpacity="0.2" />
-    <circle cx="30" cy="30" r="20" stroke="#00f3ff" strokeWidth="1" strokeOpacity="0.4" />
-    <circle cx="30" cy="30" r="12" stroke="#00f3ff" strokeWidth="2" />
-    <circle cx="30" cy="30" r="4" fill="#00f3ff" />
+    <circle cx="30" cy="30" r="28" stroke="#ff5039" strokeWidth="1" strokeOpacity="0.2" />
+    <circle cx="30" cy="30" r="20" stroke="#ff5039" strokeWidth="1" strokeOpacity="0.4" />
+    <circle cx="30" cy="30" r="12" stroke="#ff5039" strokeWidth="2" />
+    <circle cx="30" cy="30" r="4" fill="#ff5039" />
   </svg>
 );
 
@@ -80,7 +80,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
 
   return (
     <footer
-      className={`border-t border-white/5 bg-[#020308] z-20 relative overflow-hidden ${
+      className={`border-t border-white/5 bg-intuition-dark z-20 relative overflow-hidden ${
         compact ? 'mt-10 py-10' : 'mt-auto py-12 md:py-24'
       }`}
     >
@@ -104,7 +104,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                   compact
                     ? 'w-14 h-14 rounded-2xl p-2'
                     : 'w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 rounded-3xl p-2 sm:p-2.5'
-                } border-2 border-intuition-primary flex items-center justify-center text-intuition-primary group-hover:shadow-[0_0_55px_rgba(0,243,255,0.7)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-700 overflow-hidden bg-gradient-to-br from-slate-900 via-black to-slate-950`}
+                } border-2 border-intuition-primary flex items-center justify-center text-intuition-primary group-hover:shadow-[0_0_55px_rgba(255,80,57,0.7)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-700 overflow-hidden bg-gradient-to-br from-slate-900 via-black to-slate-950`}
               >
                 <Logo className="w-full h-full max-h-[88%] max-w-[88%] object-contain" />
               </div>
@@ -130,7 +130,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
-                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
+                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(255,80,57,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
               >
                 <Twitter size={compact ? 20 : 24} className="group-hover:scale-110 transition-transform" />
               </a>
@@ -139,7 +139,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
-                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
+                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(255,80,57,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
               >
                 <Github size={compact ? 20 : 24} className="group-hover:scale-110 transition-transform" />
               </a>
@@ -148,7 +148,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
-                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
+                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(255,80,57,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
               >
                 <DiscordIcon className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} group-hover:scale-110 transition-transform`} />
               </a>
@@ -157,7 +157,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
-                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
+                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(255,80,57,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
               >
                 <Send size={compact ? 20 : 24} className="group-hover:scale-110 transition-transform" />
               </a>
@@ -166,7 +166,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
-                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
+                className={`${socialBtn} bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-intuition-primary hover:shadow-[0_0_20px_rgba(255,80,57,0.3)] hover:-translate-y-1 transition-all duration-300 group`}
               >
                 <MediumIcon className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} group-hover:scale-110 transition-transform`} />
               </a>
@@ -345,7 +345,7 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
           }`}
         >
           <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest font-black text-center md:text-left justify-self-start">
-            v{APP_VERSION} · © 2025 IntuRank
+            v{APP_VERSION} �/ © 2025 IntuRank
           </div>
 
           <div className="flex flex-col items-center group/powered relative">

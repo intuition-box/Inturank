@@ -1,49 +1,43 @@
 import { createTheme, alpha } from '@mui/material/styles';
+import { darkPalette, type, surface } from './tokens';
 
-// IntuRank brand colors (align with Tailwind / existing app)
-const primary = '#00f3ff';   // cyan
-const secondary = '#ff1e6d'; // pink/rose
-const success = '#00ff9d';
-const backgroundDefault = '#020308';
-const backgroundPaper = '#0f172a'; // slate-900
-const textPrimary = '#f1f5f9';
-const textSecondary = '#94a3b8';
+const p = darkPalette;
 
 export const muiTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: primary,
-      light: alpha(primary, 0.8),
-      dark: alpha(primary, 0.9),
+      main: p.primary,
+      light: alpha(p.primary, 0.8),
+      dark: alpha(p.primary, 0.9),
       contrastText: '#000',
     },
     secondary: {
-      main: secondary,
-      light: alpha(secondary, 0.8),
-      dark: alpha(secondary, 0.9),
+      main: p.accent,
+      light: alpha(p.accent, 0.8),
+      dark: alpha(p.accent, 0.9),
       contrastText: '#fff',
     },
-    success: {
-      main: success,
-    },
+    success: { main: p.success },
+    warning: { main: p.warning },
+    error:   { main: p.danger },
     background: {
-      default: backgroundDefault,
-      paper: backgroundPaper,
+      default: p.bg,
+      paper:   p.surface2,
     },
     text: {
-      primary: textPrimary,
-      secondary: textSecondary,
+      primary:   p.text,
+      secondary: p.textMuted,
     },
-    divider: alpha('#e2e8f0', 0.08),
+    divider: p.hairline,
   },
   shape: {
     borderRadius: 16,
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h1: { fontWeight: 700, letterSpacing: '-0.02em' },
-    h2: { fontWeight: 700, letterSpacing: '-0.01em' },
+    fontFamily: type.fontFamily.sans,
+    h1: { fontWeight: 700, letterSpacing: type.tracking.tight },
+    h2: { fontWeight: 700, letterSpacing: type.tracking.normal },
     h3: { fontWeight: 600 },
     h4: { fontWeight: 600 },
     h5: { fontWeight: 600 },
@@ -62,18 +56,22 @@ export const muiTheme = createTheme({
           boxShadow: 'none',
           '&:hover': {
             boxShadow: 'none',
-            filter: 'brightness(1.08)',
+            transform: 'translateY(-1px)',
           },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
+          transition: 'transform var(--anim-duration-fast) var(--anim-ease-out), box-shadow var(--anim-duration-fast) var(--anim-ease-out)',
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 20,
+          borderRadius: surface.radius.xl,
           backgroundImage: 'none',
-          border: `1px solid ${alpha('#fff', 0.08)}`,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+          border: `1px solid ${p.hairline}`,
+          boxShadow: surface.shadow.raised,
         },
       },
     },
@@ -89,8 +87,8 @@ export const muiTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          border: `1px solid ${alpha('#fff', 0.06)}`,
-          borderRadius: 16,
+          border: `1px solid ${p.hairline}`,
+          borderRadius: surface.radius.lg,
         },
       },
     },
@@ -98,7 +96,7 @@ export const muiTheme = createTheme({
       styleOverrides: {
         root: {
           '&:hover': {
-            backgroundColor: alpha(primary, 0.08),
+            backgroundColor: alpha(p.primary, 0.08),
           },
         },
       },
@@ -113,10 +111,10 @@ export const muiTheme = createTheme({
           '& .MuiOutlinedInput-root': {
             borderRadius: 12,
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: alpha(primary, 0.4),
+              borderColor: alpha(p.primary, 0.4),
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: primary,
+              borderColor: p.primary,
               borderWidth: 1,
             },
           },

@@ -20,7 +20,7 @@ function readLastListId(): string | null {
 }
 
 /**
- * Shown on /climb with no ?list= — Arena is play-only; contest catalog lives on Home.
+ * Shown on /climb with no ?list= ,  Arena is play-only; contest catalog lives on Home.
  */
 export const ArenaClimbGate: React.FC<Props> = ({ onRandomContest, onResumeLast }) => {
   const lastId = readLastListId();
@@ -35,7 +35,7 @@ export const ArenaClimbGate: React.FC<Props> = ({ onRandomContest, onResumeLast 
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(56,232,255,0.08)',
         }}
       >
-        <p className="text-[10px] font-mono font-black uppercase tracking-[0.3em] text-cyan-200/90">Arena</p>
+        <p className="text-[10px] font-mono font-black uppercase tracking-[0.3em] text-intuition-primary/90">Arena</p>
         <h2 className="mt-2 text-lg sm:text-xl font-display font-black text-white leading-tight tracking-tight">
           Pick a contest on Home, then play here
         </h2>
@@ -51,7 +51,7 @@ export const ArenaClimbGate: React.FC<Props> = ({ onRandomContest, onResumeLast 
           state={{ scrollArenaContests: true }}
           onClick={() => playArenaUiClick()}
           onMouseEnter={() => playArenaUiHover()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-500/12 py-3 px-4 text-[11px] font-black uppercase tracking-[0.12em] text-cyan-100 transition-colors hover:border-cyan-400/60 hover:bg-cyan-500/18"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-intuition-primary/40 bg-intuition-primary/12 py-3 px-4 text-[11px] font-black uppercase tracking-[0.12em] text-intuition-primary transition-colors hover:border-intuition-primary/60 hover:bg-intuition-primary/18"
         >
           <Home className="h-4 w-4 shrink-0 opacity-90" strokeWidth={2.3} aria-hidden />
           Browse contests on Home
@@ -78,10 +78,10 @@ export const ArenaClimbGate: React.FC<Props> = ({ onRandomContest, onResumeLast 
               onResumeLast();
             }}
             onMouseEnter={() => playArenaUiHover()}
-            className="inline-flex w-full flex-col items-stretch gap-1 rounded-xl border border-white/[0.12] bg-white/[0.04] py-3 px-4 text-left transition-colors hover:border-cyan-400/35 hover:bg-white/[0.06]"
+            className="inline-flex w-full flex-col items-stretch gap-1 rounded-xl border border-white/[0.12] bg-white/[0.04] py-3 px-4 text-left transition-colors hover:border-intuition-primary/35 hover:bg-white/[0.06]"
           >
             <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-slate-200">
-              <Play className="h-4 w-4 shrink-0 text-cyan-300" strokeWidth={2.3} aria-hidden />
+              <Play className="h-4 w-4 shrink-0 text-intuition-primary" strokeWidth={2.3} aria-hidden />
               Resume last
             </span>
             <span className="text-[12px] font-semibold text-white truncate pl-6">{lastList.title}</span>

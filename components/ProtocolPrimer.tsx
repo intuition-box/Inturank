@@ -69,7 +69,7 @@ const ProtocolPrimer: React.FC<ProtocolPrimerProps> = ({ isOpen, onClose }) => {
             
             <div className="max-w-2xl">
                 <p className="text-slate-500 text-xs font-black uppercase tracking-widest leading-relaxed">
-                    {" >> "} Welcome, Architect. IntuRank is more than a market—it is a semantic intelligence layer. To navigate this sector effectively, you must understand the primitives of the trust graph.
+                    {" >> "} Welcome, Architect. IntuRank is more than a market, it is a semantic intelligence layer. To navigate this sector effectively, you must understand the primitives of the trust graph.
                 </p>
             </div>
 

@@ -17,7 +17,7 @@ type Props = {
 export const AnimatedXpFigure: React.FC<Props> = ({
   ready,
   value,
-  loadingChar = '—',
+  loadingChar = '…',
   className = '',
 }) => {
   const reduceMotion = useReducedMotion();
@@ -29,9 +29,9 @@ export const AnimatedXpFigure: React.FC<Props> = ({
           <motion.span
             key="xp-loading"
             className="inline-block tabular-nums"
-            initial={{ opacity: 0, filter: 'blur(4px)' }}
-            animate={{ opacity: 0.55, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -3, filter: 'blur(3px)' }}
+            initial={{ opacity: 0, y: 2 }}
+            animate={{ opacity: 0.55, y: 0 }}
+            exit={{ opacity: 0, y: -3 }}
             transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
           >
             {loadingChar}
@@ -43,9 +43,9 @@ export const AnimatedXpFigure: React.FC<Props> = ({
             initial={
               reduceMotion
                 ? false
-                : { opacity: 0.35, y: 5, scale: 0.97, filter: 'blur(2px)' }
+                : { opacity: 0.35, y: 5, scale: 0.97 }
             }
-            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={
               reduceMotion
                 ? { duration: 0 }

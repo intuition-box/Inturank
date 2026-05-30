@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dices, Plus, Play, Sparkles, Flame, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Reveal } from '../Reveal';
 import {
   getArenaDataSourceFootprint,
   getArenaListConstituents,
@@ -51,15 +52,15 @@ type TagPalette = {
 };
 
 const TAG_PALETTE: Record<string, TagPalette> = {
-  heat:        { text: 'text-amber-200',   border: 'border-amber-400/50',   bg: 'bg-amber-500/10',   accent: '#fbbf24' },
-  ecosystem:   { text: 'text-cyan-200',    border: 'border-cyan-400/45',    bg: 'bg-cyan-500/10',    accent: '#00f3ff' },
-  community:   { text: 'text-emerald-200', border: 'border-emerald-400/45', bg: 'bg-emerald-500/10', accent: '#34d399' },
-  claims:      { text: 'text-fuchsia-200', border: 'border-fuchsia-400/45', bg: 'bg-fuchsia-500/10', accent: '#e879f9' },
-  narratives:  { text: 'text-violet-200',  border: 'border-violet-400/45',  bg: 'bg-violet-500/10',  accent: '#a78bfa' },
-  themes:      { text: 'text-sky-200',     border: 'border-sky-400/45',     bg: 'bg-sky-500/10',     accent: '#38bdf8' },
-  daily:       { text: 'text-rose-200',    border: 'border-rose-400/45',    bg: 'bg-rose-500/10',    accent: '#fb7185' },
-  ict:         { text: 'text-cyan-200',    border: 'border-cyan-400/45',    bg: 'bg-cyan-500/10',    accent: '#22d3ee' },
-  'signal city': { text: 'text-indigo-200', border: 'border-indigo-400/45', bg: 'bg-indigo-500/10',  accent: '#818cf8' },
+  heat:        { text: 'text-intuition-warning',   border: 'border-intuition-warning/50',   bg: 'bg-intuition-warning/10',   accent: '#fbbf24' },
+  ecosystem:   { text: 'text-intuition-primary',    border: 'border-intuition-primary/45',    bg: 'bg-intuition-primary/10',    accent: '#ff5039' },
+  community:   { text: 'text-intuition-success', border: 'border-intuition-success/45', bg: 'bg-intuition-success/10', accent: '#34d399' },
+  claims:      { text: 'text-intuition-primary', border: 'border-intuition-primary/45', bg: 'bg-intuition-primary/10', accent: '#e879f9' },
+  narratives:  { text: 'text-intuition-primary',  border: 'border-intuition-primary/45',  bg: 'bg-intuition-primary/10',  accent: '#a78bfa' },
+  themes:      { text: 'text-intuition-primary',     border: 'border-intuition-primary/45',     bg: 'bg-intuition-primary/10',     accent: '#38bdf8' },
+  daily:       { text: 'text-intuition-secondary',    border: 'border-intuition-secondary/45',    bg: 'bg-intuition-secondary/10',    accent: '#fb7185' },
+  ict:         { text: 'text-intuition-primary',    border: 'border-intuition-primary/45',    bg: 'bg-intuition-primary/10',    accent: '#ff7038' },
+  'signal city': { text: 'text-intuition-primary', border: 'border-intuition-primary/45', bg: 'bg-intuition-primary/10',  accent: '#818cf8' },
 };
 
 const FALLBACK_PALETTE: TagPalette = {
@@ -76,11 +77,11 @@ function paletteFor(tag: string): TagPalette {
 function footprintTopRightClasses(kind: ArenaDataSourceFootprintKind): string {
   switch (kind) {
     case 'live_indexer':
-      return 'border-emerald-400/45 bg-emerald-500/10 text-emerald-200';
+      return 'border-intuition-success/45 bg-intuition-success/10 text-intuition-success';
     case 'portal_chain':
-      return 'border-violet-400/45 bg-violet-500/10 text-violet-100';
+      return 'border-intuition-primary/45 bg-intuition-primary/10 text-intuition-primary';
     default:
-      return 'border-amber-400/45 bg-amber-500/10 text-amber-100';
+      return 'border-intuition-warning/45 bg-intuition-warning/10 text-intuition-warning';
   }
 }
 
@@ -89,7 +90,7 @@ function contestCardInteractClasses(reducedMotion: boolean, isHot: boolean): str
   if (reducedMotion) return 'transition-colors duration-150 active:opacity-[0.92]';
   const glow = isHot
     ? 'motion-safe:hover:shadow-[0_14px_38px_-12px_rgba(251,191,36,0.22)]'
-    : 'motion-safe:hover:shadow-[0_14px_38px_-12px_rgba(0,243,255,0.14)]';
+    : 'motion-safe:hover:shadow-[0_14px_38px_-12px_rgba(255,80,57,0.14)]';
   return [
     'transition-colors duration-150',
     'motion-safe:transition-[transform,box-shadow] motion-safe:duration-[200ms] motion-safe:ease-out',
@@ -151,7 +152,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-3.5 md:gap-4">
         {visible.map((L) => {
           const previews = getArenaPreviewItems(L, previewPoolByListId?.[L.id] ?? []);
           const cover = L.coverImage || firstPreviewImage(previews);
@@ -176,7 +177,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
               onMouseEnter={() => playArenaUiHover()}
               className={`group relative flex min-h-0 flex-col overflow-hidden rounded-xl border bg-[#0a0d15] text-left shadow-[0_8px_24px_-14px_rgba(0,0,0,0.65)] ${cardInteract} ${
                 isHot
-                  ? 'border-amber-400/35 hover:border-amber-300/70'
+                  ? 'border-intuition-warning/35 hover:border-intuition-warning/70'
                   : 'border-white/[0.07] hover:border-white/20'
               }`}
             >
@@ -199,7 +200,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                           : 'motion-safe:origin-center motion-safe:transition-[transform] motion-safe:duration-[280ms] motion-safe:ease-out motion-safe:group-hover:scale-[1.04]'
                       }`}
                       style={{
-                        background: `linear-gradient(135deg, ${palette.accent}26 0%, rgba(5,10,18,0.95) 55%, rgba(255,30,109,0.08) 100%)`,
+                        background: `linear-gradient(135deg, ${palette.accent}26 0%, rgba(5,10,18,0.95) 55%, rgba(239,68,68,0.08) 100%)`,
                       }}
                     />
                   </ArenaPortraitImg>
@@ -211,7 +212,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                         : 'motion-safe:origin-center motion-safe:transition-[transform] motion-safe:duration-[280ms] motion-safe:ease-out motion-safe:group-hover:scale-[1.04]'
                     }`}
                     style={{
-                      background: `linear-gradient(135deg, ${palette.accent}26 0%, rgba(5,10,18,0.95) 55%, rgba(255,30,109,0.08) 100%)`,
+                      background: `linear-gradient(135deg, ${palette.accent}26 0%, rgba(5,10,18,0.95) 55%, rgba(239,68,68,0.08) 100%)`,
                     }}
                   />
                 )}
@@ -251,7 +252,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                 </span>
               </div>
               <div className="flex flex-1 flex-col p-3.5 pt-3">
-                <p className="font-display text-[14px] sm:text-[15px] font-bold text-white leading-snug line-clamp-2 transition-colors group-hover:text-cyan-100">
+                <p className="font-display text-[14px] sm:text-[15px] font-bold text-white leading-snug line-clamp-2 transition-colors group-hover:text-intuition-primary">
                   {L.title}
                 </p>
                 <p className="mt-1 flex-1 text-[12px] leading-relaxed text-slate-500 line-clamp-2">{L.description}</p>
@@ -390,51 +391,44 @@ export const ArenaContestHub: React.FC<Props> = ({
   const heroInteract = heroCtaInteractClasses(rm);
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-9 min-w-0 pb-2">
-      {/* ===== Hero ===== */}
+    <div className="flex flex-col gap-5 sm:gap-6 min-w-0 pb-2">
+      {/* ===== Compact toolbar (was a big duplicate hero — RankedList already
+           shows the THE ARENA title above, so this is just the action row + a
+           single-line label so users know they're at the contest floor) ===== */}
       <header
-        className={`relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#070a12] px-5 py-7 sm:px-8 sm:py-9 ${
+        className={`relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#070a12] px-4 py-3 sm:px-5 sm:py-4 ${
           rm
             ? ''
-            : 'motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 motion-safe:hover:border-white/15 motion-safe:hover:shadow-[0_24px_48px_-32px_rgba(0,243,255,0.12)]'
+            : 'motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 motion-safe:hover:border-white/15'
         }`}
         style={{
           backgroundImage:
-            'linear-gradient(150deg, rgba(0,243,255,0.06) 0%, rgba(7,8,12,0) 45%), linear-gradient(330deg, rgba(255,30,109,0.05) 0%, rgba(7,8,12,0) 50%)',
+            'linear-gradient(120deg, rgba(255,80,57,0.05) 0%, rgba(7,8,12,0) 60%)',
         }}
       >
-        {/* Static cyan top hairline */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(0,243,255,0.6) 50%, transparent 100%)' }}
+          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,80,57,0.5) 50%, transparent 100%)' }}
           aria-hidden
         />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-400/40 bg-cyan-500/8 px-2 py-0.5 text-[10px] font-mono font-black uppercase tracking-[0.22em] text-cyan-200">
-                <span className="block h-1.5 w-1.5 rounded-full bg-cyan-300" />
-                The Arena
-              </span>
-              <span className="text-slate-600">·</span>
-              <span className="font-mono text-[10px] tabular-nums uppercase tracking-[0.2em] text-slate-500">
-                <span className="text-slate-200">{totalGames}</span> games live
-              </span>
-            </div>
-
-            <h1 className="mt-4 text-[26px] sm:text-3xl md:text-[2.2rem] font-display font-black text-white leading-[1.05] tracking-tight">
-              Pick a game<span className="text-cyan-300">.</span>{' '}
-              <span className="block sm:inline mt-1 sm:mt-0 text-slate-500 font-bold text-lg sm:text-xl md:text-2xl font-sans tracking-normal">
-                Curate. Rank. Compare.
-              </span>
-            </h1>
-            <p className="mt-3 max-w-xl text-[13px] sm:text-sm text-slate-400/95 leading-relaxed">
-              Every contest below pulls a live roster: stance in Curate, order your Rank deck, then Compare. Submitting stakes is optional.
-            </p>
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-intuition-primary/40 bg-intuition-primary/[0.08] px-2 py-0.5 text-[10px] font-mono font-black uppercase tracking-[0.22em] text-intuition-primary">
+              <span className="block h-1.5 w-1.5 rounded-full bg-intuition-primary" />
+              Contest floor
+            </span>
+            <span className="text-slate-600">�/</span>
+            <span className="font-mono text-[10px] tabular-nums uppercase tracking-[0.2em] text-slate-500">
+              <span className="text-slate-200">{totalGames}</span> games live
+            </span>
+            <span className="hidden sm:inline text-slate-700">�/</span>
+            <span className="hidden sm:inline text-[12px] text-slate-400 truncate">
+              Pick a list. Stance, rank, then compare.
+            </span>
           </div>
 
-          {/* Action stack */}
+          {/* Action stack — supports optional headerExtras for spotlight CTAs */}
           <div className="flex flex-col items-stretch gap-3 shrink-0 sm:items-end">
             {headerExtras ? (
               <div className="flex flex-wrap items-center justify-end gap-2">{headerExtras}</div>
@@ -445,8 +439,8 @@ export const ArenaContestHub: React.FC<Props> = ({
               state={{ scrollArenaContests: true, showArenaCreateGameToast: true }}
               onClick={() => playArenaUiClick()}
               onMouseEnter={() => playArenaUiHover()}
-              className={`group inline-flex items-center gap-2 rounded-lg border border-[#ff1e6d]/55 bg-gradient-to-br from-[#ff1e6d]/20 to-[#ff1e6d]/8 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white hover:from-[#ff1e6d]/30 hover:to-[#ff1e6d]/12 ${heroInteract} ${
-                rm ? '' : 'motion-safe:hover:shadow-[0_0_26px_-4px_rgba(255,30,109,0.35)]'
+              className={`group inline-flex items-center gap-2 rounded-lg border border-intuition-danger/55 bg-gradient-to-br from-intuition-danger/20 to-intuition-danger/8 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-white hover:from-intuition-danger/30 hover:to-intuition-danger/12 ${heroInteract} ${
+                rm ? '' : 'motion-safe:hover:shadow-[0_0_26px_-4px_rgba(239,68,68,0.35)]'
               }`}
             >
               <Plus
@@ -465,8 +459,8 @@ export const ArenaContestHub: React.FC<Props> = ({
                   onRandomContest();
                 }}
                 onMouseEnter={() => playArenaUiHover()}
-                className={`group inline-flex items-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-cyan-100 hover:bg-cyan-500/18 ${heroInteract} ${
-                  rm ? '' : 'motion-safe:hover:shadow-[0_0_22px_-6px_rgba(0,243,255,0.28)]'
+                className={`group inline-flex items-center gap-2 rounded-lg border border-intuition-primary/40 bg-intuition-primary/10 px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-intuition-primary hover:bg-intuition-primary/18 ${heroInteract} ${
+                  rm ? '' : 'motion-safe:hover:shadow-[0_0_22px_-6px_rgba(255,80,57,0.28)]'
                 }`}
               >
                 <Dices
@@ -487,10 +481,10 @@ export const ArenaContestHub: React.FC<Props> = ({
                 }}
                 onMouseEnter={() => playArenaUiHover()}
                 title={`Resume “${resumeListTitle}”`}
-                className={`group inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-200 hover:border-cyan-400/35 hover:bg-white/[0.08] ${heroInteract}`}
+                className={`group inline-flex items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3.5 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-200 hover:border-intuition-primary/35 hover:bg-white/[0.08] ${heroInteract}`}
               >
                 <Play
-                  className={`h-3.5 w-3.5 shrink-0 text-cyan-300 ${rm ? '' : 'motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:scale-110'}`}
+                  className={`h-3.5 w-3.5 shrink-0 text-intuition-primary ${rm ? '' : 'motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:scale-110'}`}
                   strokeWidth={2.5}
                   aria-hidden
                 />
@@ -519,15 +513,19 @@ export const ArenaContestHub: React.FC<Props> = ({
         </div>
       </header>
 
-      {/* ===== Sections ===== */}
-      {sections.map((sec) => (
-        <section
+      {/* ===== Sections ===== Wide screens (xl:+) get 2-up; smaller stays
+           single column. Reduces vertical scroll by half on wide monitors. */}
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-2 xl:gap-6 items-start">
+      {sections.map((sec, i) => (
+        <Reveal
           key={sec.id}
+          as="section"
+          delay={i * 80}
           aria-label={sec.title}
           className={`min-w-0 rounded-[1.25rem] border border-white/[0.07] bg-[#060912]/80 px-4 py-5 sm:px-5 sm:py-6 ${
             rm
               ? ''
-              : 'motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 motion-safe:hover:border-white/11 motion-safe:hover:shadow-[0_22px_50px_-32px_rgba(0,243,255,0.13)]'
+              : 'motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 motion-safe:hover:border-white/11 motion-safe:hover:shadow-[0_22px_50px_-32px_rgba(255,80,57,0.13)]'
           }`}
           style={{
             boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), inset 3px 0 0 ${sec.accent}55`,
@@ -556,7 +554,7 @@ export const ArenaContestHub: React.FC<Props> = ({
               </div>
             </div>
             <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
-              pick · curate · rank
+              pick �/ curate �/ rank
             </span>
           </div>
 
@@ -568,8 +566,9 @@ export const ArenaContestHub: React.FC<Props> = ({
             onSelectList={onSelectList}
             reduceMotion={reduceMotion}
           />
-        </section>
+        </Reveal>
       ))}
+      </div>
     </div>
   );
 };

@@ -11,7 +11,7 @@ export const ArenaContestStepShell = memo(function ArenaContestStepShell({
   chromeTitle: string;
   /** Tailwind max-width / width utilities (`max-w-none w-full` uses parent width). */
   maxWidthClass?: string;
-  /** Inner padding around step content — tighten horizontally when using full width. */
+  /** Inner padding around step content ,  tighten horizontally when using full width. */
   innerPaddingClassName?: string;
   children: React.ReactNode;
 }) {

@@ -55,7 +55,7 @@ const ComingSoon: React.FC = () => {
               to="/markets" 
               onClick={playClick}
               onMouseEnter={playHover}
-              className="flex-1 bg-intuition-primary hover:bg-white text-black font-semibold py-4 text-sm flex items-center justify-center gap-3 transition-all rounded-xl shadow-[0_0_24px_rgba(0,243,255,0.2)]"
+              className="flex-1 bg-intuition-primary hover:bg-white text-black font-semibold py-4 text-sm flex items-center justify-center gap-3 transition-all rounded-xl shadow-[0_0_24px_rgba(255,80,57,0.2)]"
             >
               <Network size={16} /> Browse markets
             </Link>

@@ -12,13 +12,13 @@ import '@rainbow-me/rainbowkit/styles.css';
 import { wagmiConfig, intuitionChain } from './wagmi-config';
 import { muiTheme } from './theme/muiTheme';
 
-// IntuRank palette
+// IntuRank palette — cinnabar brand for RainbowKit modal theming.
 const INTURANK = {
-  dark: '#020308',
-  card: '#080a12',
-  border: '#1a2a4a',
-  primary: '#00f3ff',
-  secondary: '#ff1e6d',
+  dark: '#1c1620',
+  card: '#251d27',
+  border: '#3a2e3c',
+  primary: '#ff5039',
+  secondary: '#dc2626',
 } as const;
 
 const rainbowKitTheme: Theme = (() => {
@@ -34,7 +34,7 @@ const rainbowKitTheme: Theme = (() => {
       ...base.colors,
       modalBackground: INTURANK.card,
       modalBackdrop: 'rgba(2, 3, 8, 0.88)',
-      modalBorder: 'rgba(0, 243, 255, 0.25)',
+      modalBorder: 'rgba(255,80,57, 0.25)',
       generalBorder: INTURANK.border,
       generalBorderDim: 'rgba(26, 42, 74, 0.7)',
       menuItemBackground: INTURANK.card,
@@ -50,7 +50,7 @@ const rainbowKitTheme: Theme = (() => {
       modalTextSecondary: '#64748b',
       profileForeground: '#e2e8f0',
       profileAction: INTURANK.card,
-      profileActionHover: 'rgba(0, 243, 255, 0.12)',
+      profileActionHover: 'rgba(255,80,57, 0.12)',
     },
   };
 })();
@@ -58,22 +58,26 @@ import { EmailNotifyProvider } from './contexts/EmailNotifyContext';
 import Layout from './components/Layout';
 import MobileLayout from './components/MobileLayout';
 import { useIsMobile } from './hooks/useIsMobile';
+import { useLenis, getLenis } from './hooks/useLenis';
+// Eager: Home + MobileHome (landing pages — first paint critical)
 import Home from './pages/Home';
 import MobileHome from './pages/MobileHome';
-import Stats from './pages/Stats';
-import Markets from './pages/Markets';
-import MarketDetail from './pages/MarketDetail';
-import Feed from './pages/Feed';
-import Portfolio from './pages/Portfolio';
-import PublicProfile from './pages/PublicProfile';
-import Account from './pages/Account';
-import KPIDashboard from './pages/KPIDashboard';
-import Documentation from './pages/Documentation';
-import ComingSoon from './pages/ComingSoon';
-import CreateSignal from './pages/CreateSignal';
-import SendTrust from './pages/SendTrust';
-import SkillPlayground from './pages/SkillPlayground';
-import DailyTrustHub from './pages/DailyTrustHub';
+
+// Lazy: everything else. Pulled out of the main bundle into per-route chunks.
+const Stats           = lazy(() => import('./pages/Stats'));
+const Markets         = lazy(() => import('./pages/Markets'));
+const MarketDetail    = lazy(() => import('./pages/MarketDetail'));
+const Feed            = lazy(() => import('./pages/Feed'));
+const Portfolio       = lazy(() => import('./pages/Portfolio'));
+const PublicProfile   = lazy(() => import('./pages/PublicProfile'));
+const Account         = lazy(() => import('./pages/Account'));
+const KPIDashboard    = lazy(() => import('./pages/KPIDashboard'));
+const Documentation   = lazy(() => import('./pages/Documentation'));
+const ComingSoon      = lazy(() => import('./pages/ComingSoon'));
+const CreateSignal    = lazy(() => import('./pages/CreateSignal'));
+const SendTrust       = lazy(() => import('./pages/SendTrust'));
+const SkillPlayground = lazy(() => import('./pages/SkillPlayground'));
+const DailyTrustHub   = lazy(() => import('./pages/DailyTrustHub'));
 import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
@@ -113,8 +117,30 @@ const queryClient = new QueryClient({
  * users get `MobileLayout` (floating bottom tabs + header menu sheet) and `MobileHome`.
  */
 const AppRoutes: React.FC = () => {
+  // Desktop-only smooth scroll (mobile uses native scroll for gesture safety).
+  useLenis();
+
   const isMobile = useIsMobile();
   const location = useLocation();
+  const onArena = location.pathname === '/climb';
+
+  // Smooth scroll-to-top on every route change. Desktop uses Lenis for a
+  // buttery momentum-eased glide; mobile uses native `scrollTo` (which the
+  // browser already animates smoothly on iOS/Android). Skipped on /climb
+  // because Arena has its own per-phase scroll choreography.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (location.pathname === '/climb') return;
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo(0, { duration: 0.85, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+    } else {
+      const reduceMotion =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+  }, [location.pathname]);
   const Shell = isMobile ? MobileLayout : Layout;
   const Landing = isMobile ? MobileHome : Home;
   /**
@@ -174,8 +200,19 @@ const AppRoutes: React.FC = () => {
       <ArenaTapOptic />
       <Shell>
       <ToastContainer />
-      <RouteTransition routeKey={routeKey} variant={isMobile ? 'mobile-slide' : 'desktop-fade'}>
-        {routeTree}
+      {/*
+        Arena (/climb) has its own gesture flows — opt out of Lenis on this
+        route so wheel/touch events on the Arena page reach gesture handlers
+        directly. `data-lenis-prevent` tells Lenis to skip this subtree.
+      */}
+      <RouteTransition
+        routeKey={routeKey}
+        variant={isMobile ? 'mobile-slide' : 'desktop-fade'}
+        {...(onArena ? { 'data-lenis-prevent': true } : {})}
+      >
+        <Suspense fallback={<ArenaRouteFallback />}>
+          {routeTree}
+        </Suspense>
       </RouteTransition>
     </Shell>
     </>

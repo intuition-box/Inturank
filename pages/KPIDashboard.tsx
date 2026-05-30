@@ -161,7 +161,7 @@ const KPIDashboard: React.FC = () => {
                 <div className="space-y-2 min-w-0">
                     <div className="flex items-center gap-2 text-slate-500">
                         <ShieldCheck size={16} className="shrink-0 text-intuition-secondary/90" aria-hidden />
-                        <p className={PAGE_HERO_EYEBROW}>Intuition Mainnet Â· operator metrics</p>
+                        <p className={PAGE_HERO_EYEBROW}>Intuition Mainnet Â/ operator metrics</p>
                     </div>
                     <h1 className={`${PAGE_HERO_TITLE} mobile-break`}>System health</h1>
                 </div>
@@ -283,13 +283,13 @@ const KPIDashboard: React.FC = () => {
                     {/* Sidebar: full-width grid below ledger so table gets all horizontal space */}
                     <div className="grid w-full grid-cols-1 gap-6 md:gap-8 lg:grid-cols-[minmax(0,1fr)_min(100%,260px)] xl:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
                         {/* Activity log */}
-                        <div className="group/feeact flex min-h-[220px] min-w-0 flex-col rounded-2xl border border-cyan-500/30 bg-[#020308]/90 p-5 shadow-lg shadow-black/40 ring-1 ring-white/[0.04] transition-all duration-300 [text-shadow:none] clip-path-slant hover:border-cyan-400/45 hover:shadow-xl hover:shadow-black/50 sm:p-6 [&_*]:[text-shadow:none]">
+                        <div className="group/feeact flex min-h-[220px] min-w-0 flex-col rounded-2xl border border-cyan-500/30 bg-intuition-dark/90 p-5 shadow-lg shadow-black/40 ring-1 ring-white/[0.04] transition-all duration-300 [text-shadow:none] clip-path-slant hover:border-cyan-400/45 hover:shadow-xl hover:shadow-black/50 sm:p-6 [&_*]:[text-shadow:none]">
                             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
                                 <div className="flex min-w-0 items-center gap-3">
                                     <Terminal size={14} className="shrink-0 text-cyan-400" aria-hidden />
                                     <div>
                                         <h4 className="text-sm font-bold tracking-tight text-cyan-200">Fee proxy activity</h4>
-                                        <p className="mt-1 text-[10px] font-medium text-slate-400">Indexed deposits &amp; redemptions Â· auto ~12s</p>
+                                        <p className="mt-1 text-[10px] font-medium text-slate-400">Indexed deposits &amp; redemptions Â/ auto ~12s</p>
                                     </div>
                                 </div>
                                 <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -436,7 +436,7 @@ const KPIDashboard: React.FC = () => {
                         </div>
 
                         {/* Fee proxy â€” narrow column so activity table gets most width */}
-                        <div className="relative w-full self-start overflow-hidden rounded-2xl border-2 border-intuition-secondary/30 bg-[#050505] p-5 shadow-2xl clip-path-slant transition-all duration-500 group hover:border-intuition-secondary/60 hover:shadow-[0_0_30px_rgba(255,30,109,0.12)]">
+                        <div className="relative w-full self-start overflow-hidden rounded-2xl border-2 border-intuition-secondary/30 bg-[#050505] p-5 shadow-2xl clip-path-slant transition-all duration-500 group hover:border-intuition-secondary/60 hover:shadow-[0_0_30px_rgba(239,68,68,0.12)]">
                              <div className="relative z-10 flex flex-col">
                                 <div className="mb-4 flex items-center gap-3">
                                     <Lock size={16} className="shrink-0 animate-pulse text-intuition-secondary text-glow-red" aria-hidden />
@@ -459,12 +459,12 @@ const KPIDashboard: React.FC = () => {
                          </div>
                          <div>
                              <div className="text-xs font-semibold font-display text-white mb-1">IntuRank health report</div>
-                             <div className="text-[10px] font-medium text-slate-500">On-chain metrics Â· subgraph + fee proxy</div>
+                             <div className="text-[10px] font-medium text-slate-500">On-chain metrics Â/ subgraph + fee proxy</div>
                          </div>
                     </div>
                     <div className="text-left sm:text-right flex flex-col items-start sm:items-end gap-1">
                          <div className="text-xs font-medium text-slate-300">{new Date().toLocaleDateString(undefined, { dateStyle: 'medium' })}</div>
-                         <div className="text-[10px] font-medium text-slate-600">Exported view Â· not financial advice</div>
+                         <div className="text-[10px] font-medium text-slate-600">Exported view Â/ not financial advice</div>
                     </div>
                 </div>
             </div>

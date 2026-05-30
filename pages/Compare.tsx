@@ -80,7 +80,7 @@ export const RivalryAnalysis: React.FC<{
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white font-display">Battle summary</h3>
-                            <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Plain-language Â· optional AI</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Plain-language Â/ optional AI</p>
                         </div>
                     </div>
 
@@ -396,7 +396,7 @@ const Compare: React.FC = () => {
     const filteredAgents = agents.filter(a => (a.label || '').toLowerCase().includes(search.toLowerCase()) || a.id.includes(search));
 
     return (
-        <div className="min-h-screen bg-[#020308] pt-6 pb-28 px-3 sm:pt-12 sm:pb-32 sm:px-6 max-w-[1500px] mx-auto relative font-mono selection:bg-intuition-primary selection:text-black min-w-0 overflow-x-hidden">
+        <div className="min-h-screen bg-intuition-dark pt-6 pb-28 px-3 sm:pt-12 sm:pb-32 sm:px-6 max-w-[1500px] mx-auto relative font-mono selection:bg-intuition-primary selection:text-black min-w-0 overflow-x-hidden">
             <div className="fixed inset-0 pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
 
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-4 border-b border-white/10 pb-6 relative z-10 sm:mb-12 sm:gap-8 sm:pb-10">

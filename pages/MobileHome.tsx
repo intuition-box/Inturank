@@ -146,7 +146,7 @@ const MobileHome: React.FC = () => {
     <div className="w-full min-w-0 px-4 pt-3 pb-36 space-y-8 text-slate-200 max-[380px]:px-3">
       <HomeArenaEntryEffects />
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-[2rem] p-5 pb-6 border border-white/[0.1] bg-[#05070c] shadow-[0_18px_60px_rgba(0,243,255,0.1),inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <section className="relative overflow-hidden rounded-[2rem] p-5 pb-6 border border-white/[0.1] bg-[#05070c] shadow-[0_18px_60px_rgba(255,80,57,0.1),inset_0_1px_0_rgba(255,255,255,0.05)]">
         {/* glow accents */}
         <div
           aria-hidden
@@ -192,18 +192,18 @@ const MobileHome: React.FC = () => {
               </p>
               <div
                 className="mt-1 flex items-baseline gap-2"
-                title={`Arena ${arenaSelf.xp.toLocaleString()} Â· Activity ${activityXp.toLocaleString()} (this browser)`}
+                title={`Arena ${arenaSelf.xp.toLocaleString()} Â/ Activity ${activityXp.toLocaleString()} (this browser)`}
               >
                 <span className="text-3xl font-display font-black text-white leading-none tracking-tight">
                   {compact(arenaSelf.xp + activityXp)}
                 </span>
                 <span className="text-[11px] font-mono text-slate-500">
-                  Â· {compact(arenaSelf.duels)} duels
+                  Â/ {compact(arenaSelf.duels)} duels
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
                 {isConnected
-                  ? 'Arena from the graph Â· activity from trades & creates on this device.'
+                  ? 'Arena from the graph Â/ activity from trades & creates on this device.'
                   : 'Connect to start earning XP.'}
               </p>
             </div>
@@ -217,7 +217,7 @@ const MobileHome: React.FC = () => {
                 }
                 playClick();
               }}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-intuition-primary to-cyan-300 text-black text-[11px] font-mono font-black uppercase tracking-[0.16em] active:scale-95 transition-transform shadow-[0_10px_28px_rgba(0,243,255,0.35)]"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-intuition-primary to-cyan-300 text-black text-[11px] font-mono font-black uppercase tracking-[0.16em] active:scale-95 transition-transform shadow-[0_10px_28px_rgba(255,80,57,0.35)]"
             >
               {isConnected ? (
                 <>
@@ -327,13 +327,13 @@ const MobileHome: React.FC = () => {
         <Link
           to="/create"
           onClick={() => playClick()}
-          className="group relative flex min-h-[8.5rem] flex-col items-center gap-2 overflow-hidden rounded-2xl border border-intuition-primary/25 bg-gradient-to-b from-[#001a26] via-[#0a0612] to-[#1a0617] p-2.5 pt-3 text-center shadow-[0_12px_32px_rgba(0,243,255,0.12)] active:scale-[0.99] transition-transform sm:p-3"
+          className="group relative flex min-h-[8.5rem] flex-col items-center gap-2 overflow-hidden rounded-2xl border border-intuition-primary/25 bg-gradient-to-b from-[#001a26] via-[#0a0612] to-[#1a0617] p-2.5 pt-3 text-center shadow-[0_12px_32px_rgba(255,80,57,0.12)] active:scale-[0.99] transition-transform sm:p-3"
         >
           <span
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-gradient-to-t from-intuition-secondary/10 to-transparent opacity-60"
           />
-          <span className="relative h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-intuition-primary to-intuition-secondary text-black flex items-center justify-center shadow-[0_6px_16px_rgba(0,243,255,0.35)]">
+          <span className="relative h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br from-intuition-primary to-intuition-secondary text-black flex items-center justify-center shadow-[0_6px_16px_rgba(255,80,57,0.35)]">
             <Plus size={18} strokeWidth={2.6} />
           </span>
           <span className="relative text-[10px] font-display font-black uppercase tracking-[0.12em] text-white leading-tight sm:text-[11px] sm:tracking-[0.14em]">

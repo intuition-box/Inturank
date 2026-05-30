@@ -21,7 +21,7 @@ type Props = {
   onFavoriteToggle?: () => void;
 };
 
-/** Trust-terminal lane row — matches Pulse “Hot” cards: amber rim, heat top bar, teal chips, red depth accents. */
+/** Trust-terminal lane row ,  matches Pulse “Hot” cards: amber rim, heat top bar, teal chips, red depth accents. */
 const ArenaListCard: React.FC<Props> = ({
   title,
   description,
@@ -66,9 +66,9 @@ const ArenaListCard: React.FC<Props> = ({
   );
 
   return (
-    <article className="group/card relative min-w-0 w-full rounded-2xl border border-amber-700/55 bg-zinc-950/95 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-[border-color,box-shadow] duration-300 hover:border-amber-500/70 hover:shadow-[0_0_30px_rgba(232,197,71,0.2),0_0_42px_rgba(248,113,113,0.12)]">
+    <article className="group/card relative min-w-0 w-full rounded-2xl border border-intuition-warning/55 bg-zinc-950/95 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-[border-color,box-shadow] duration-300 hover:border-intuition-warning/70 hover:shadow-[0_0_30px_rgba(232,197,71,0.2),0_0_42px_rgba(248,113,113,0.12)]">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] opacity-95 group-hover/card:opacity-100 transition-opacity rounded-t-2xl bg-gradient-to-r from-amber-400/85 via-orange-500/55 via-fuchsia-500/45 to-rose-600/55"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] opacity-95 group-hover/card:opacity-100 transition-opacity rounded-t-2xl bg-gradient-to-r from-intuition-warning/85 via-intuition-primary/55 via-intuition-primary/45 to-intuition-secondary/55"
         aria-hidden
       />
       <div
@@ -92,8 +92,8 @@ const ArenaListCard: React.FC<Props> = ({
           onMouseEnter={playArenaUiHover}
           className={`absolute top-2 right-2 z-30 flex h-8 w-8 items-center justify-center rounded-lg border backdrop-blur-sm transition-colors ${
             isFavorite
-              ? 'border-rose-400/55 bg-black/75 text-rose-300 hover:bg-rose-500/15'
-              : 'border-white/[0.08] bg-black/55 text-slate-500 hover:text-rose-200/95 hover:border-rose-400/35 hover:bg-black/75'
+              ? 'border-intuition-secondary/55 bg-black/75 text-intuition-secondary hover:bg-intuition-secondary/15'
+              : 'border-white/[0.08] bg-black/55 text-slate-500 hover:text-intuition-secondary/95 hover:border-intuition-secondary/35 hover:bg-black/75'
           }`}
         >
           <Star className="h-4 w-4" strokeWidth={2.25} fill={isFavorite ? 'currentColor' : 'none'} />
@@ -207,7 +207,7 @@ const ArenaListCard: React.FC<Props> = ({
             ) : null}
           </div>
           <span
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors group-hover/card:border-rose-400/40"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors group-hover/card:border-intuition-secondary/40"
             style={{
               borderColor: `${ARENA_THEME.gold}35`,
               background: 'rgba(255,255,255,0.04)',

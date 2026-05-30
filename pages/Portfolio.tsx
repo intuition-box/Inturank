@@ -10,7 +10,7 @@ const EquityChartTooltip = ({ active, payload }: any) => {
   const val = p.value;
   const date = ts ? new Date(ts) : new Date();
   return (
-    <div className="bg-black/95 border border-intuition-primary/60 px-3 py-2.5 rounded-lg shadow-[0_0_24px_rgba(0,243,255,0.25)] backdrop-blur-sm font-mono">
+    <div className="bg-black/95 border border-intuition-primary/60 px-3 py-2.5 rounded-lg shadow-[0_0_24px_rgba(255,80,57,0.25)] backdrop-blur-sm font-mono">
       <div className="text-[9px] text-slate-400 uppercase tracking-widest mb-1">{date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' })}</div>
       <div className="text-sm font-black text-intuition-primary tracking-tight">
         Equity : {Number(val).toFixed(4)}
@@ -45,7 +45,7 @@ const COLORS = ['#00f3ff', '#00ff9d', '#a855f7', '#facc15', '#ff1e6d', '#ff8c00'
 
 const StatCard: React.FC<{ label: string; value: string; unit: string | React.ReactNode; icon: any; trendColor?: string; isLoading?: boolean }> = ({ label, value, unit, icon: Icon, trendColor, isLoading }) => (
   <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 p-3 sm:p-5 md:p-6 xl:p-6 shadow-[0_18px_45px_rgba(0,0,0,0.7)] hover:border-intuition-primary/40 transition-all flex flex-col justify-between min-h-[92px] sm:min-h-[128px] xl:min-h-[140px] 2xl:min-h-[152px] min-w-0">
-    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_top_left,rgba(0,243,255,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.18),transparent_55%)]" />
+    <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_top_left,rgba(255,80,57,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.18),transparent_55%)]" />
     <div className="absolute top-3 right-3 sm:top-4 sm:right-4 xl:top-5 xl:right-5 text-slate-700 group-hover:text-slate-300 transition-colors z-10 shrink-0">
       <Icon className="w-4 h-4 sm:w-6 sm:h-6 xl:w-7 xl:h-7 2xl:w-8 2xl:h-8" strokeWidth={1.5} />
     </div>
@@ -613,9 +613,9 @@ const Portfolio: React.FC = () => {
 
   if (!account) return (
     <div className="min-h-[90vh] flex flex-col items-center justify-center bg-transparent relative overflow-hidden font-mono px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,243,255,0.03)_0%,transparent_70%)] pointer-events-none"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,80,57,0.03)_0%,transparent_70%)] pointer-events-none"></div>
       <div className="relative z-10 w-full max-w-[500px] animate-in fade-in zoom-in-95 duration-700">
-        <div className="bg-[#020308] border-2 border-intuition-primary/30 p-10 sm:p-12 flex flex-col items-center text-center rounded-3xl shadow-[0_0_120px_rgba(0,0,0,1)] relative overflow-hidden group">
+        <div className="bg-intuition-dark border-2 border-intuition-primary/30 p-10 sm:p-12 flex flex-col items-center text-center rounded-3xl shadow-[0_0_120px_rgba(0,0,0,1)] relative overflow-hidden group">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-intuition-secondary px-8 py-1.5 text-[10px] font-semibold text-white tracking-wide rounded-b-2xl shadow-glow-red">
               Not connected
             </div>
@@ -689,8 +689,8 @@ const Portfolio: React.FC = () => {
 
       {sharePosition && (
         <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/80 backdrop-blur-md px-4 pt-20 sm:pt-28">
-          <div className="w-full max-w-xl bg-[#020308] border border-white/10 rounded-[32px] shadow-[0_0_120px_rgba(0,0,0,1)] p-6 sm:p-8 relative overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top_left,rgba(0,243,255,0.16),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(250,204,21,0.18),transparent_55%)]" />
+          <div className="w-full max-w-xl bg-intuition-dark border border-white/10 rounded-[32px] shadow-[0_0_120px_rgba(0,0,0,1)] p-6 sm:p-8 relative overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top_left,rgba(255,80,57,0.16),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(250,204,21,0.18),transparent_55%)]" />
             <button
               type="button"
               onClick={() => { playClick(); closeShareModal(); }}
@@ -735,13 +735,13 @@ const Portfolio: React.FC = () => {
                   </div>
                   <div className="min-w-0 flex flex-col gap-1">
                     <div className="text-[9px] text-slate-500 uppercase tracking-[0.24em]">
-                      Intuition Network Â· IntuRank
+                      Intuition Network Â/ IntuRank
                     </div>
                     <div className="text-base sm:text-lg font-black text-white uppercase tracking-tight leading-tight truncate" title={sharePosition.atom?.label}>
                       {sharePosition.atom?.label}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono truncate">
-                      UID: {sharePosition.id.slice(0, 12)}â€¦ Â· Curve: {getCurveLabel(sharePosition.curveId ?? 1)}
+                      UID: {sharePosition.id.slice(0, 12)}â€¦ Â/ Curve: {getCurveLabel(sharePosition.curveId ?? 1)}
                     </div>
                   </div>
                 </div>
@@ -912,7 +912,7 @@ const Portfolio: React.FC = () => {
                             >
                               {pos.atom?.label || 'Unknown'}
                             </p>
-                            <p className="mt-0.5 font-mono text-[10px] text-slate-500 truncate">UID Â· {pos.id.slice(0, 10)}â€¦</p>
+                            <p className="mt-0.5 font-mono text-[10px] text-slate-500 truncate">UID Â/ {pos.id.slice(0, 10)}â€¦</p>
                           </div>
                           <div className={`shrink-0 text-right text-sm font-bold tabular-nums ${pos.pnl >= 0 ? 'text-intuition-success' : 'text-intuition-danger'}`}>
                             {pos.pnl >= 0 ? '+' : ''}
@@ -933,7 +933,7 @@ const Portfolio: React.FC = () => {
                           </div>
                         </div>
                         <p className="mt-2 text-[10px] text-slate-500 truncate" title={getCurveLabel(pos.curveId ?? 1)}>
-                          Curve Â· {getCurveLabel(pos.curveId ?? 1)}
+                          Curve Â/ {getCurveLabel(pos.curveId ?? 1)}
                         </p>
                         <div className="mt-3 flex gap-2">
                           <Link
@@ -1066,7 +1066,7 @@ const Portfolio: React.FC = () => {
             {sortedPositions.length > HOLDINGS_PER_PAGE && (
               <div className="px-4 sm:px-5 md:px-6 xl:px-8 py-4 border-t border-slate-900 flex flex-wrap items-center justify-between gap-4">
                 <div className="text-[10px] sm:text-xs font-mono text-slate-500 uppercase tracking-widest">
-                  Page {holdingsPage} of {totalHoldingsPages} Â· {sortedPositions.length} total
+                  Page {holdingsPage} of {totalHoldingsPages} Â/ {sortedPositions.length} total
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1150,7 +1150,7 @@ const Portfolio: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="relative z-10 h-[200px] min-h-[180px] w-full rounded-xl overflow-hidden bg-black/60 border border-slate-800/80 sm:h-[260px] sm:min-h-[220px]" style={{ boxShadow: 'inset 0 0 80px rgba(0,243,255,0.04), 0 0 40px rgba(0,0,0,0.4)' }}>
+                <div className="relative z-10 h-[200px] min-h-[180px] w-full rounded-xl overflow-hidden bg-black/60 border border-slate-800/80 sm:h-[260px] sm:min-h-[220px]" style={{ boxShadow: 'inset 0 0 80px rgba(255,80,57,0.04), 0 0 40px rgba(0,0,0,0.4)' }}>
                     <ResponsiveContainer width="100%" height="100%" debounce={50}>
                         <ComposedChart
                             data={(() => {
@@ -1169,19 +1169,19 @@ const Portfolio: React.FC = () => {
                                     <stop offset="100%" stopColor="#00f3ff" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(0,243,255,0.06)" vertical={false} horizontal={true} />
+                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,80,57,0.06)" vertical={false} horizontal={true} />
                             <XAxis dataKey="timestamp" hide />
                             <YAxis 
                                 orientation="right" 
                                 stroke="transparent" 
                                 width={48}
-                                tick={{ fill: 'rgba(0,243,255,0.7)', fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600 }}
+                                tick={{ fill: 'rgba(255,80,57,0.7)', fontSize: 11, fontFamily: 'ui-monospace, monospace', fontWeight: 600 }}
                                 tickLine={false} 
                                 axisLine={false} 
                                 domain={[0, 'dataMax + 1']}
                                 tickFormatter={(v) => Number(v).toFixed(1)}
                             />
-                            <RechartTooltip content={<EquityChartTooltip />} cursor={{ stroke: 'rgba(0,243,255,0.6)', strokeWidth: 1 }} />
+                            <RechartTooltip content={<EquityChartTooltip />} cursor={{ stroke: 'rgba(255,80,57,0.6)', strokeWidth: 1 }} />
                             <Area 
                                 type="monotone" 
                                 dataKey="val" 
@@ -1197,7 +1197,7 @@ const Portfolio: React.FC = () => {
                                 stroke="#00f3ff" 
                                 strokeWidth={2.5}
                                 dot={false}
-                                activeDot={{ r: 6, fill: '#00f3ff', stroke: 'rgba(0,243,255,0.5)', strokeWidth: 2 }}
+                                activeDot={{ r: 6, fill: '#00f3ff', stroke: 'rgba(255,80,57,0.5)', strokeWidth: 2 }}
                                 isAnimationActive={true}
                                 animationDuration={1000}
                             />

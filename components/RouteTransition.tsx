@@ -3,19 +3,31 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 type Variant = 'mobile-slide' | 'desktop-fade';
 
-const ease = [0.22, 1, 0.36, 1] as const;
+/** Smooth ease-out-quint ,  long settle, no bounce. */
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
- * Wraps route tree so each navigation plays enter/exit (mobile: horizontal slide;
- * desktop: soft fade + small vertical shift). Respects `prefers-reduced-motion`.
+ * Buttery cross-fade between routes.
+ *
+ * Both desktop and mobile use the same gentle opacity + micro-scale enter/exit.
+ * No horizontal or vertical slide ,  the previous "fly in from the right" /
+ * "jump up" feel comes from large translate values, which read as motion rather
+ * than transition. Pure opacity + 1% scale gives a fluid dissolve.
+ *
+ * Transform + opacity only (project rule: no `filter`, no layout animations).
+ * Honors `prefers-reduced-motion`.
+ *
+ * Variant kept in the signature for backward compat ,  both variants currently
+ * resolve to the same animation since the slide-in pattern was the source of
+ * the "flying in" complaint.
  */
 export const RouteTransition: React.FC<{
   children: React.ReactNode;
   routeKey: string;
   variant: Variant;
-}> = ({ children, routeKey, variant }) => {
+  'data-lenis-prevent'?: boolean;
+}> = ({ children, routeKey, ...rest }) => {
   const reduceMotion = useReducedMotion();
-  const mobile = variant === 'mobile-slide';
 
   if (reduceMotion) {
     return (
@@ -27,24 +39,7 @@ export const RouteTransition: React.FC<{
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12, ease: 'easeOut' }}
           className="min-w-0 w-full"
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  if (mobile) {
-    return (
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={routeKey}
-          initial={{ opacity: 0, x: 36 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -28 }}
-          transition={{ duration: 0.29, ease }}
-          className="min-w-0 w-full"
-          style={{ willChange: 'transform, opacity' }}
+          {...rest}
         >
           {children}
         </motion.div>
@@ -56,11 +51,13 @@ export const RouteTransition: React.FC<{
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={routeKey}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.22, ease }}
+        initial={{ opacity: 0, scale: 0.992 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.996 }}
+        transition={{ duration: 0.42, ease: EASE }}
         className="min-w-0 w-full"
+        style={{ willChange: 'transform, opacity', transformOrigin: '50% 30%' }}
+        {...rest}
       >
         {children}
       </motion.div>

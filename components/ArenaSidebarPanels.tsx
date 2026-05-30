@@ -12,7 +12,7 @@ export const ArenaBrowseLaneHud: React.FC<{ laneLabel: string; listCount: number
 }) => (
   <div className="rounded-3xl border border-white/[0.08] bg-black/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
     <p className="text-[8px] font-mono font-black uppercase tracking-[0.28em] text-[#38e8ff]/85 mb-1">
-      Lane Â· browse
+      Lane Â/ browse
     </p>
     <p className="text-[13px] font-bold text-white truncate leading-tight">{laneLabel}</p>
     <p className="text-[11px] font-mono tabular-nums text-slate-500 mt-2">
@@ -149,7 +149,7 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
         onMouseEnter={playArenaUiHover}
         className={deckInner}
       >
-        <Trophy className="w-4 h-4 text-amber-300/90 shrink-0" strokeWidth={2.2} aria-hidden />
+        <Trophy className="w-4 h-4 text-intuition-warning/90 shrink-0" strokeWidth={2.2} aria-hidden />
         <span className="min-w-0">
           <span className="block text-[9px] font-mono font-black uppercase tracking-wider text-slate-500">
             Ladder
@@ -161,11 +161,11 @@ export const ArenaSidebarDeck: React.FC<DeckProps> = ({ flagshipListId }) => (
         to={`/climb?list=${flagshipListId}`}
         onClick={playArenaUiClick}
         onMouseEnter={playArenaUiHover}
-        className={`${deckInner} ring-1 ring-amber-400/20`}
+        className={`${deckInner} ring-1 ring-intuition-warning/20`}
       >
-        <Zap className="w-4 h-4 text-amber-300 shrink-0" strokeWidth={2.2} aria-hidden />
+        <Zap className="w-4 h-4 text-intuition-warning shrink-0" strokeWidth={2.2} aria-hidden />
         <span className="min-w-0">
-          <span className="block text-[9px] font-mono font-black uppercase tracking-wider text-amber-200/85">
+          <span className="block text-[9px] font-mono font-black uppercase tracking-wider text-intuition-warning/85">
             Flagship
           </span>
           <span className="block text-[12px] font-bold text-white truncate">Jump in list</span>
