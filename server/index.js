@@ -21,6 +21,8 @@ import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getWelcomeEmailHtml } from './welcomeEmailHtml.mjs';
+import { verifyAdmin, adminConfigured, ADMIN_SIG_TTL_MS } from './adminAuth.js';
+import * as xpStore from './store.js';
 
 // Load .env and .env.local from project root (when run as node server/index.js)
 dotenv.config();
@@ -41,8 +43,14 @@ try {
 }
 const SUBS_PATH = path.join(DATA_DIR, 'email-subs.json');
 const FOLLOWS_PATH = path.join(DATA_DIR, 'follows.json');
-const ARENA_LB_PATH = path.join(DATA_DIR, 'arena-leaderboard.json');
 const USER_PREFS_PATH = path.join(DATA_DIR, 'arena-user-prefs.json');
+
+// XP / leaderboard / gift persistence now lives in SQLite (arena.db on EMAIL_DATA_DIR).
+// One-time imports any legacy arena-leaderboard.json into the active season.
+xpStore.initStore(DATA_DIR);
+
+/** Per-gift ceiling (env-tunable). Authoritative XP grants from the team are admin-gated, not capped like earned XP. */
+const GIFT_MAX = Math.max(1, Math.floor(Number(process.env.ARENA_GIFT_MAX || 100000)));
 
 /** @type {Set<string>} */
 const PROTOCOL_XP_REASONS = new Set([
@@ -114,54 +122,6 @@ function normArenaWallet(v) {
   return s.startsWith('0x') && s.length >= 42 ? s.slice(0, 42) : '';
 }
 
-async function loadArenaLbMap() {
-  try {
-    const raw = await fs.readFile(ARENA_LB_PATH, 'utf8');
-    const p = JSON.parse(raw);
-    if (p?.rows && typeof p.rows === 'object') return { ...p.rows };
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-async function saveArenaLbMap(map) {
-  try {
-    await fs.writeFile(ARENA_LB_PATH, JSON.stringify({ updatedAt: Date.now(), rows: map }, null, 2), 'utf8');
-  } catch (e) {
-    console.error('[inturank-api] Failed to persist arena-leaderboard', e);
-    throw e;
-  }
-}
-
-function buildLeaderboardPayload(map) {
-  const rows = [];
-  for (const r of Object.values(map)) {
-    const addr = normArenaWallet(r.address);
-    if (!addr) continue;
-    const arenaXp = Math.max(0, Math.floor(Number(r.arenaXp ?? r.xp ?? 0) || 0));
-    const protocolXp = Math.max(0, Math.floor(Number(r.protocolXp ?? r.protocolXpTotal ?? 0) || 0));
-    const xp = arenaXp + protocolXp;
-    const duels = Math.max(0, Math.floor(Number(r.duels) || 0));
-    const atomsRanked = Math.max(0, Math.floor(Number(r.atomsRanked) || 0));
-    const listsPlayed = Math.max(0, Math.floor(Number(r.listsPlayed) || 0));
-    const updatedAt = Math.floor(Number(r.updatedAt) || 0);
-    if (xp <= 0) continue;
-    rows.push({
-      address: addr,
-      xp,
-      arenaXp,
-      protocolXp,
-      duels,
-      atomsRanked,
-      listsPlayed,
-      updatedAt,
-    });
-  }
-  rows.sort((a, b) => b.xp - a.xp || b.updatedAt - a.updatedAt);
-  return rows;
-}
-
 async function loadUserPrefsWallets() {
   try {
     const raw = await fs.readFile(USER_PREFS_PATH, 'utf8');
@@ -221,8 +181,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'inturank-api',
-    features: ['email', 'follows', 'arena-leaderboard', 'user-preferences'],
+    features: ['email', 'follows', 'arena-leaderboard', 'user-preferences', 'xp-gift'],
     emailConfigured: !!(secret && sender),
+    adminConfigured: adminConfigured(),
+    season: xpStore.getActiveSeason(),
   });
 });
 
@@ -241,6 +203,8 @@ app.get('/', (_req, res) => {
       '/api/sync-follows',
       '/api/arena-leaderboard',
       '/api/user-preferences',
+      '/api/xp/gift',
+      '/api/xp/summary',
     ],
   });
 });
@@ -365,33 +329,23 @@ app.post('/api/sync-follows', async (req, res) => {
 // --- Arena: leaderboard mirror (GET list + POST telemetry + protocol_xp) ---
 // Prefer POST kind=protocol_xp_event (additive, idempotent per tx/reason or dedupeKey).
 // Legacy kind=protocol_xp overwrites protocolXp from client total — deprecated for untrusted clients.
-app.get('/api/arena-leaderboard', async (_req, res) => {
+app.get('/api/arena-leaderboard', (req, res) => {
   try {
-    const map = await loadArenaLbMap();
-    const leaderboard = buildLeaderboardPayload(map);
-    res.json({ leaderboard });
+    const q = String(req.query.season || '').trim().slice(0, 32);
+    const season = q || xpStore.getActiveSeason();
+    res.json({ leaderboard: xpStore.leaderboard(season), season });
   } catch (e) {
     console.error('[inturank-api] arena-leaderboard GET', e);
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 });
 
-app.post('/api/arena-leaderboard', async (req, res) => {
+app.post('/api/arena-leaderboard', (req, res) => {
   const body = req.body || {};
   const w = normArenaWallet(body.address);
   if (!w) return res.status(400).json({ error: 'Missing or invalid address' });
+  const season = xpStore.getActiveSeason();
   try {
-    const map = await loadArenaLbMap();
-    const prev = map[w] || {
-      address: w,
-      arenaXp: 0,
-      protocolXp: 0,
-      duels: 0,
-      atomsRanked: 0,
-      listsPlayed: 0,
-      updatedAt: 0,
-    };
-
     if (body.kind === 'protocol_xp_event') {
       const reason = String(body.reason || '').trim();
       if (!PROTOCOL_XP_REASONS.has(reason)) {
@@ -406,42 +360,27 @@ app.post('/api/arena-leaderboard', async (req, res) => {
         return res.status(400).json({ error: 'Invalid delta' });
       }
       const delta = Math.min(Math.max(0, Math.floor(deltaRaw)), MAX_PROTOCOL_XP_EVENT_DELTA);
-
-      const seenList = Array.isArray(prev.protocolXpSeenKeys) ? [...prev.protocolXpSeenKeys] : [];
-      if (seenList.includes(dedupeKey)) {
-        return res.json({ ok: true, duplicate: true });
-      }
-      seenList.push(dedupeKey);
-      while (seenList.length > 500) seenList.shift();
-
-      prev.protocolXpSeenKeys = seenList;
-      prev.protocolXp = Math.max(0, Math.floor(Number(prev.protocolXp) || 0)) + delta;
-      prev.updatedAt = Date.now();
-      map[w] = prev;
-      await saveArenaLbMap(map);
-      return res.json({ ok: true, applied: delta });
+      const r = xpStore.addProtocolXpEvent(w, season, delta, dedupeKey);
+      if (r.duplicate) return res.json({ ok: true, duplicate: true });
+      return res.json({ ok: true, applied: r.applied });
     }
 
     if (body.kind === 'protocol_xp') {
       const t = Number(body.protocolXpTotal);
-      if (Number.isFinite(t)) prev.protocolXp = Math.max(0, Math.floor(t));
-      prev.updatedAt = Date.now();
-      map[w] = prev;
-      await saveArenaLbMap(map);
+      if (Number.isFinite(t)) xpStore.setProtocolXpTotal(w, season, t);
       return res.json({ ok: true });
     }
 
     const ax = Number(body.xp ?? body.arenaXp);
-    if (Number.isFinite(ax)) prev.arenaXp = Math.max(0, Math.floor(ax));
     const duels = Number(body.duels);
-    if (Number.isFinite(duels)) prev.duels = Math.max(0, Math.floor(duels));
     const atomsRanked = Number(body.atomsRanked);
-    if (Number.isFinite(atomsRanked)) prev.atomsRanked = Math.max(0, Math.floor(atomsRanked));
     const listsPlayed = Number(body.listsPlayed);
-    if (Number.isFinite(listsPlayed)) prev.listsPlayed = Math.max(0, Math.floor(listsPlayed));
-    prev.updatedAt = Date.now();
-    map[w] = prev;
-    await saveArenaLbMap(map);
+    xpStore.upsertArenaTelemetry(w, season, {
+      arenaXp: Number.isFinite(ax) ? ax : undefined,
+      duels: Number.isFinite(duels) ? duels : undefined,
+      atomsRanked: Number.isFinite(atomsRanked) ? atomsRanked : undefined,
+      listsPlayed: Number.isFinite(listsPlayed) ? listsPlayed : undefined,
+    });
     return res.json({ ok: true });
   } catch (e) {
     console.error('[inturank-api] arena-leaderboard POST', e);
@@ -486,6 +425,59 @@ app.post('/api/user-preferences', async (req, res) => {
   } catch (e) {
     console.error('[inturank-api] user-preferences POST', e);
     res.status(500).json({ error: 'Failed to save preferences' });
+  }
+});
+
+// --- Arena: admin XP gift (authoritative grant). Closed by default — see server/adminAuth.js.
+// Idempotent per giftId; gifts are a separate bucket from earned XP and count toward the leaderboard total.
+app.post('/api/xp/gift', async (req, res) => {
+  if (!adminConfigured()) {
+    return res.status(503).json({
+      error: 'Admin auth not configured',
+      message: 'Set ARENA_ADMIN_API_KEY (>=16 chars) or ARENA_ADMIN_WALLETS to enable gifting.',
+    });
+  }
+  const body = req.body || {};
+  const w = normArenaWallet(body.address);
+  if (!w) return res.status(400).json({ error: 'Missing or invalid address' });
+  const amount = Math.floor(Number(body.amount));
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+  if (amount > GIFT_MAX) return res.status(400).json({ error: `amount exceeds ARENA_GIFT_MAX (${GIFT_MAX})` });
+  const giftId = String(body.giftId || '').trim();
+  if (giftId.length < 6 || giftId.length > 128) return res.status(400).json({ error: 'giftId required (6-128 chars)' });
+  const reason = (String(body.reason || 'gift').trim().slice(0, 64)) || 'gift';
+  const ts = Math.floor(Number(req.headers['x-admin-ts'] ?? body.ts ?? 0));
+
+  // Canonical, action-bound message the admin wallet must have signed (replay-bounded by ts + idempotent by giftId).
+  const expectedMessage = `IntuRank|gift|${giftId}|${w}|${amount}|${reason}|${ts}`;
+  // Wallet-signature path requires a fresh ts; the API-key path ignores it.
+  if (req.headers['x-admin-address'] && (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > ADMIN_SIG_TTL_MS)) {
+    return res.status(401).json({ error: 'Stale or missing x-admin-ts' });
+  }
+  const auth = await verifyAdmin(req, expectedMessage);
+  if (!auth.ok) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const r = xpStore.addGift(w, xpStore.getActiveSeason(), amount, reason, giftId, auth.who);
+    if (r.duplicate) return res.json({ ok: true, duplicate: true, giftXp: r.giftXp });
+    return res.json({ ok: true, applied: r.applied, giftXp: r.giftXp });
+  } catch (e) {
+    console.error('[inturank-api] xp/gift', e);
+    return res.status(500).json({ error: 'Failed to apply gift' });
+  }
+});
+
+// Arena: per-wallet XP summary (earned / gift / total + live rank).
+app.get('/api/xp/summary', async (req, res) => {
+  const w = normArenaWallet(req.query.address ?? req.query.wallet);
+  if (!w) return res.status(400).json({ error: 'Missing or invalid address' });
+  try {
+    const q = String(req.query.season || '').trim().slice(0, 32);
+    const season = q || xpStore.getActiveSeason();
+    return res.json(xpStore.summary(w, season));
+  } catch (e) {
+    console.error('[inturank-api] xp/summary', e);
+    return res.status(500).json({ error: 'Failed to load summary' });
   }
 });
 
