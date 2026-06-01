@@ -1266,7 +1266,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-sm font-semibold text-white font-sans tracking-tight leading-tight">Skill agent</span>
-                        <span className="text-[11px] text-slate-500 font-sans leading-tight mt-0.5">{NETWORK_NAME} Â/ chain {CHAIN_ID}</span>
+                        <span className="text-[11px] text-slate-500 font-sans leading-tight mt-0.5">{NETWORK_NAME} Â· chain {CHAIN_ID}</span>
                     </div>
                 </div>
                 <button
@@ -1816,7 +1816,7 @@ const SkillChat: React.FC<SkillChatProps> = ({ className = '' }) => {
                 <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 px-0.5">
                     <p className="text-[10px] text-slate-600 font-sans select-none">
                         <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px font-mono text-[9px] text-slate-500">Enter</kbd>
-                        {' '}to send Â/{' '}
+                        {' '}to send Â·{' '}
                         <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px font-mono text-[9px] text-slate-500">Shift</kbd>
                         +
                         <kbd className="rounded border border-white/10 bg-white/[0.04] px-1 py-px font-mono text-[9px] text-slate-500">Enter</kbd>

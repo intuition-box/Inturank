@@ -52,7 +52,7 @@ export interface IntuRankXpBadgeProps {
   size?: IntuRankXpBadgeSize;
   /** Optional rank number from the leaderboard — rendered as a small chip. */
   rank?: number | null;
-  /** When true, hides the breakdown line (Arena �/ Activity). Useful in tight spaces. */
+  /** When true, hides the breakdown line (Arena · Activity). Useful in tight spaces. */
   compact?: boolean;
   className?: string;
   /** Shown when the connected wallet hasn't loaded yet — keeps layout stable. */
@@ -184,7 +184,7 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
             <span className={light ? 'text-sky-700' : 'text-intuition-primary/85'}>
               Arena {arenaXp.toLocaleString()}
             </span>
-            <span className="text-slate-600 mx-1.5">�/</span>
+            <span className="text-slate-600 mx-1.5">·</span>
             <span className={light ? 'text-amber-700' : 'text-amber-300/85'}>
               Activity {activityXp.toLocaleString()}
             </span>

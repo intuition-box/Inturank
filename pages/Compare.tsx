@@ -80,7 +80,7 @@ export const RivalryAnalysis: React.FC<{
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white font-display">Battle summary</h3>
-                            <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Plain-language Â/ optional AI</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Plain-language Â· optional AI</p>
                         </div>
                     </div>
 

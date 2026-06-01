@@ -12,7 +12,7 @@ export const ArenaBrowseLaneHud: React.FC<{ laneLabel: string; listCount: number
 }) => (
   <div className="rounded-3xl border border-white/[0.08] bg-black/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
     <p className="text-[8px] font-mono font-black uppercase tracking-[0.28em] text-[#38e8ff]/85 mb-1">
-      Lane Â/ browse
+      Lane Â· browse
     </p>
     <p className="text-[13px] font-bold text-white truncate leading-tight">{laneLabel}</p>
     <p className="text-[11px] font-mono tabular-nums text-slate-500 mt-2">

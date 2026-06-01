@@ -96,7 +96,7 @@ function peerDisplayName(label: string, address: string): string {
 }
 
 /**
- * Step 3 Â/ Similarity. Two-column composition (deck preview | similarity rail)
+ * Step 3 Â· Similarity. Two-column composition (deck preview | similarity rail)
  * with an honest peer list below. All numbers come from on-chain claims; if
  * the contest is off-chain or no overlap exists, the section is hidden or
  * clearly labelled when missing so nothing is fabricated.
@@ -172,7 +172,7 @@ export const ArenaCompareView: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Compare Â/ ${palette.label}`}
+      chromeTitle={`Compare Â· ${palette.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -188,7 +188,7 @@ export const ArenaCompareView: React.FC<Props> = ({
           className="font-mono text-[10px] font-black uppercase tracking-[0.32em]"
           style={{ color: palette.hex }}
         >
-          Step 3 Â/ Compare Â/ {palette.label}
+          Step 3 Â· Compare Â· {palette.label}
         </p>
         <h1 className="mt-2 font-display text-2xl font-black leading-[1.05] tracking-tight text-white sm:text-3xl">
           Your deck vs the board
@@ -883,7 +883,7 @@ const PeerList: React.FC<{
             Arena Explorer
           </Link>
           <span className="text-slate-600" aria-hidden>
-            Â/
+            Â·
           </span>
           <Link
             to="/portfolio#arena-rankings"
@@ -1081,7 +1081,7 @@ const PeerRow: React.FC<{
           {expanded && canExpand ? (
             <div className="border-t border-white/[0.06] px-4 pb-5 pt-4 sm:px-6">
               <p className="font-mono text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
-                Side-by-side Â/ you vs {name}
+                Side-by-side Â· you vs {name}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-200">
                 Your deck is above â€” this table only lines up shared picks.
@@ -1097,9 +1097,9 @@ const PeerRow: React.FC<{
                     style={{ borderColor: `${palette.hex}33`, background: `${palette.hex}10` }}
                   >
                     <span>Pick</span>
-                    <span className="text-center">You Â/ {CURRENCY_SYMBOL}</span>
+                    <span className="text-center">You Â· {CURRENCY_SYMBOL}</span>
                     <span className="text-center" style={{ color: palette.hex }}>
-                      Them Â/ {CURRENCY_SYMBOL}
+                      Them Â· {CURRENCY_SYMBOL}
                     </span>
                     <span className="text-right">Match</span>
                   </div>

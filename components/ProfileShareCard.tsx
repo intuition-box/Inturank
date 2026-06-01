@@ -227,7 +227,7 @@ export default function ProfileShareCard({
               {arenaXpTotal > 0 || protocolXpTotal > 0 ? (
                 <p className="mt-1 font-mono text-[10px] sm:text-[11px] font-semibold text-slate-400 antialiased [text-rendering:geometricPrecision]">
                   <span className="text-intuition-primary/85">Arena {arenaXpTotal.toLocaleString()}</span>
-                  <span className="text-slate-600 mx-1.5">Â/</span>
+                  <span className="text-slate-600 mx-1.5">Â·</span>
                   <span className="text-amber-300/85">Activity {protocolXpTotal.toLocaleString()}</span>
                 </p>
               ) : null}

@@ -716,7 +716,7 @@ const PublicProfile: React.FC = () => {
                 <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start sm:gap-3">
                   {/* {address && <BadgesSection address={address} compact />} */}
                   <span className="rounded-full border border-intuition-primary/40 bg-gradient-to-r from-intuition-primary/25 to-intuition-primary/10 px-3.5 py-2 font-sans text-xs font-semibold text-intuition-primary shadow-[0_0_24px_rgba(255,80,57,0.12)] [text-rendering:geometricPrecision]">
-                    {activeHoldingsCount > 50 ? 'Level Â/ Elite' : activeHoldingsCount > 10 ? 'Level Â/ Pro' : 'Level Â/ Explorer'}
+                    {activeHoldingsCount > 50 ? 'Level Â· Elite' : activeHoldingsCount > 10 ? 'Level Â· Pro' : 'Level Â· Explorer'}
                   </span>
                   <span className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-2 font-sans text-xs font-medium text-slate-200 backdrop-blur-sm [text-rendering:geometricPrecision]">
                     {activeHoldingsCount >= 100 ? `${activeHoldingsCount}+` : activeHoldingsCount} open positions
@@ -797,7 +797,7 @@ const PublicProfile: React.FC = () => {
                       >
                         <UserPlus size={16} strokeWidth={2} className="shrink-0" />
                         <span className="text-sm font-semibold tracking-normal antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                          Follow Â/ Email when they buy
+                          Follow Â· Email when they buy
                         </span>
                       </button>
                     )}
@@ -946,7 +946,7 @@ const PublicProfile: React.FC = () => {
               <div className="mb-2 flex min-w-0 items-center gap-2 sm:mb-3">
                 <Wallet size={14} className="shrink-0 text-intuition-primary" />
                 <span className="min-w-0 truncate font-sans text-[10px] font-semibold text-slate-300 sm:text-xs [text-rendering:geometricPrecision]">
-                  Wallet Â/ TNS / ENS / address
+                  Wallet Â· TNS / ENS / address
                 </span>
               </div>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
@@ -1036,7 +1036,7 @@ const PublicProfile: React.FC = () => {
       )}
       
       {/*
-        5-column row at lg: mix 40% Â/ activity 60%. From sm: two columns so charts sit side-by-side on phones/tablets.
+        5-column row at lg: mix 40% Â· activity 60%. From sm: two columns so charts sit side-by-side on phones/tablets.
       */}
       <div className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5 lg:gap-6">
           <div className={`${GLASS_SHEET} group flex min-h-[300px] flex-col p-4 sm:min-h-[320px] sm:p-6 lg:col-span-2 lg:min-h-[360px] lg:p-8 motion-hover-lift`}>

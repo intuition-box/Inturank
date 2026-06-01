@@ -235,7 +235,7 @@ const RankRow: React.FC<RowProps> = ({
               className="mt-1.5 font-mono text-[11px] font-bold tabular-nums sm:hidden"
               style={{ color: deck.hex }}
             >
-              {trustAmt} TRUST <span className="text-slate-500">Â/ Ã—{u}</span>
+              {trustAmt} TRUST <span className="text-slate-500">Â· Ã—{u}</span>
             </p>
           </div>
         </div>
@@ -426,7 +426,7 @@ const RankRow: React.FC<RowProps> = ({
 /* ============================== Page ============================== */
 
 /**
- * Step 2 Â/ Rank â€” 2-column composition: vertical leaderboard list on the left,
+ * Step 2 Â· Rank â€” 2-column composition: vertical leaderboard list on the left,
  * a rich rail (podium summary + stake distribution + action buttons) on the right
  * that fills vertical space regardless of how many cards are in the deck. Drag
  * works on the dedicated grip handle (single Y axis, no grid).
@@ -498,7 +498,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Ranking Â/ ${deck.label}`}
+      chromeTitle={`Ranking Â· ${deck.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -508,7 +508,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
           className="font-mono text-[10px] font-black uppercase tracking-[0.32em]"
           style={{ color: deck.hex }}
         >
-          Step 2 Â/ Rank Â/ {deck.label}
+          Step 2 Â· Rank Â· {deck.label}
         </p>
         <h2 className="font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl md:text-[2rem]">
           Order & weight your deck
@@ -531,7 +531,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
               {typeof poolParticipantCount === 'number' ? (
                 <span className="inline-flex items-center gap-1.5 tabular-nums">
                   <Users className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-                  Pool Â/ {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
+                  Pool Â· {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
                 </span>
               ) : null}
               {(listStakersLoading || listStakersCount != null) && (
@@ -620,7 +620,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 <Plus className="h-5 w-5" strokeWidth={2.6} />
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wider">Create a new card</span>
-              <span className="text-[10px] text-slate-500">Â/ add an item to the list</span>
+              <span className="text-[10px] text-slate-500">Â· add an item to the list</span>
             </button>
           ) : null}
         </div>
@@ -677,7 +677,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 Stake distribution
               </p>
               <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-600">
-                {totalUnits} units Â/ strongest first
+                {totalUnits} units Â· strongest first
               </span>
             </div>
             {stakePerItemSorted.length === 0 ? (
@@ -694,7 +694,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                         <span className="truncate text-[11px] font-semibold text-slate-200">{r.label}</span>
                         <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
                           {formatTrust(base, r.units)}{' '}
-                          <span className="text-slate-600">Â/ Ã—{r.units}</span>{' '}
+                          <span className="text-slate-600">Â· Ã—{r.units}</span>{' '}
                           <span className="text-slate-700">({pct}%)</span>
                         </span>
                       </div>
@@ -759,7 +759,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
               <ArrowRight size={14} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </button>
             <p className="mt-1 text-center font-mono text-[9px] uppercase tracking-wider text-slate-600">
-              Preset Â/ {stakeBaseLabel} TRUST per unit
+              Preset Â· {stakeBaseLabel} TRUST per unit
             </p>
           </div>
         </aside>

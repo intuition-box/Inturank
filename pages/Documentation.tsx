@@ -523,7 +523,7 @@ const Documentation: React.FC = () => {
           >
             <div className="mb-10 md:mb-14 max-w-[52rem]">
               <p className="text-[11px] font-mono text-slate-500 uppercase tracking-[0.2em] mb-3">
-                {APP_VERSION_DISPLAY} �/ {NETWORK_NAME} �/ chain {CHAIN_ID}
+                {APP_VERSION_DISPLAY} · {NETWORK_NAME} · chain {CHAIN_ID}
               </p>
               <p className="text-base sm:text-lg text-slate-400 leading-relaxed">
                 A full-stack guide to IntuRank {APP_VERSION_DISPLAY}: the trust graph, how markets price conviction with
@@ -726,7 +726,7 @@ const Documentation: React.FC = () => {
                 <ProseLink href={EXPLORER_URL}>explorer</ProseLink>.
               </p>
               <p className="text-xs font-mono text-slate-500 bg-black/40 border border-white/5 rounded-lg px-3 py-2">
-                App release {APP_VERSION} �/ curve IDs {LINEAR_CURVE_ID} (linear) and {OFFSET_PROGRESSIVE_CURVE_ID}{' '}
+                App release {APP_VERSION} · curve IDs {LINEAR_CURVE_ID} (linear) and {OFFSET_PROGRESSIVE_CURVE_ID}{' '}
                 (offset progressive) match protocol constants in this build
               </p>
 
@@ -888,7 +888,7 @@ const Documentation: React.FC = () => {
 
               <div className="not-prose space-y-4 mt-4 text-[13px]">
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">French �/ create atom</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">French · create atom</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Crée un atome nommé « Réseau Nova » avec un dépôt de 0,5 TRUST. Description : communauté open-source autour de la réputation on-chain.`}
                   </pre>
@@ -899,7 +899,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">Spanish �/ triple / claim</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">Spanish · triple / claim</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Quiero registrar la afirmación: el sujeto es "DAO Alpha", el predicado es "colabora_con", el objeto es "Estudio Beta". Depósito de bóveda 0.5 TRUST.`}
                   </pre>
@@ -913,7 +913,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">German �/ question only (no tx)</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">German · question only (no tx)</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Was ist der Unterschied zwischen einem Atom und einem Triple im Intuition-Protokoll? Antworte kurz auf Deutsch.`}
                   </pre>
@@ -923,7 +923,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">Japanese �/ explain + create</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">Japanese · explain + create</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`TRUSTのデポジット最小値を日本語で一言で教えて。そのあと「オープン研究ラボ」という名前の原子を0.5 TRUSTで作るための手順を出して。`}
                   </pre>
@@ -934,7 +934,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">English �/ explicit triple (labels)</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">English · explicit triple (labels)</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Create a triple: subject "Alice", predicate "endorses", object "Bob", depositTrust 0.5, chain 1155. One-line description: social trust edge.`}
                   </pre>
@@ -1166,7 +1166,7 @@ const Documentation: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Arena �/ stance batch (vault deposit)</td>
+                      <td className="px-4 py-3 text-slate-200">Arena · stance batch (vault deposit)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_ADD_TO_LIST}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
                         Same <strong className="text-slate-400 font-semibold">add-to-list</strong> category when you submit ranked picks: deposit-scaled, then the gross is multiplied by{' '}
@@ -1174,7 +1174,7 @@ const Documentation: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Signal �/ Vouch batch (FeeProxy createTriples)</td>
+                      <td className="px-4 py-3 text-slate-200">Signal · Vouch batch (FeeProxy createTriples)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
                         Activity XP — treated like <strong className="text-slate-400 font-semibold">created a claim</strong>. One transaction can mint several “vouches for” triples; the deposit basis is the{' '}
@@ -1794,7 +1794,7 @@ const Documentation: React.FC = () => {
             </div>
 
             <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-              <span>© 2026 IntuRank �/ {APP_VERSION_DISPLAY}</span>
+              <span>© 2026 IntuRank · {APP_VERSION_DISPLAY}</span>
               <span className="font-mono text-[10px] uppercase tracking-wider">{NETWORK_NAME}</span>
             </footer>
           </div>

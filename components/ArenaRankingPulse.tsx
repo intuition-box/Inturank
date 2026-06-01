@@ -389,7 +389,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                         variant === 'explorer' ? 'text-slate-400 font-medium' : 'text-slate-500 font-medium'
                       }
                     >
-                      Â/
+                      Â·
                     </span>{' '}
                     <Link
                       to={climbHrefForListTerm(row.listTermId)}
@@ -428,7 +428,7 @@ const ArenaRankingPulse: React.FC<Props> = ({ className, variant = 'compact', vi
                             className="inline-flex items-center rounded-md border border-slate-500/40 bg-slate-900/90 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-200 text-right max-w-[13rem] sm:max-w-none leading-tight"
                             title="Arena pick credit applies once the indexer attributes the rank. Submit ranks from this browser to store XPDN per tx locally."
                           >
-                            +{ARENA_XP_PER_RANK_PICK} Arena Â/ XPDN
+                            +{ARENA_XP_PER_RANK_PICK} Arena Â· XPDN
                           </span>
                         )
                       ) : null}

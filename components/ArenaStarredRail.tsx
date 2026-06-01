@@ -82,7 +82,7 @@ const ArenaStarredRail: React.FC<Props> = ({
                     className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 text-left hover:bg-intuition-primary/[0.06] transition-colors"
                   >
                     <span className="w-7 h-7 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-[11px] font-black text-intuition-primary/90 shrink-0">
-                      {row.listGlyph?.slice(0, 2) ?? 'Â/'}
+                      {row.listGlyph?.slice(0, 2) ?? 'Â·'}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[11px] font-bold text-slate-100 truncate leading-tight">{row.title}</span>

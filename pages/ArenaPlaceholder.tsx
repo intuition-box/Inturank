@@ -45,7 +45,7 @@ const ArenaPlaceholder: React.FC = () => {
           </p>
           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600 mb-10 flex items-center justify-center gap-2">
             <Swords size={12} className="text-fuchsia-400/80" />
-            Masked for this build Â/ route preserved
+            Masked for this build Â· route preserved
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

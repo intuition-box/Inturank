@@ -145,7 +145,7 @@ export const ArenaCreateCardModal: React.FC<Props> = ({
             >
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] opacity-80">
-                  {palette.label} Â/ Add to deck
+                  {palette.label} Â· Add to deck
                 </p>
                 <h2
                   id="arena-create-card-title"
@@ -288,10 +288,10 @@ const FormBody: React.FC<FormProps> = ({
         />
       </Field>
 
-      <Field label="Subtitle" hint={`${subtitle.length}/${MAX_SUBTITLE} Â/ optional`}>
+      <Field label="Subtitle" hint={`${subtitle.length}/${MAX_SUBTITLE} Â· optional`}>
         <input
           type="text"
-          placeholder="e.g. Ecosystem Â/ community lead"
+          placeholder="e.g. Ecosystem Â· community lead"
           maxLength={MAX_SUBTITLE}
           value={subtitle}
           onChange={(e) => setSubtitle(e.target.value)}
@@ -301,7 +301,7 @@ const FormBody: React.FC<FormProps> = ({
 
       <Field
         label="Image URL"
-        hint="optional Â/ http(s)://"
+        hint="optional Â· http(s)://"
         error={touched && error?.field === 'image' ? error.message : null}
       >
         <div className="flex items-stretch gap-2">
