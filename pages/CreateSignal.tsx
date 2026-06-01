@@ -584,7 +584,7 @@ const CreateSignal: React.FC = () => {
     <div className="mt-6 flex w-full items-center justify-center gap-3 border-t border-white/[0.06] pt-5 font-mono text-[9px] uppercase tracking-[0.2em] text-slate-600">
       <span className="font-black text-slate-500">S05_CREATE</span>
       <span className="text-intuition-primary/35" aria-hidden>
-        Â/
+        Â·
       </span>
       <span className="font-black text-intuition-success text-glow-success">Sync active</span>
     </div>
@@ -1067,7 +1067,7 @@ const CreateSignal: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-3 rounded-[1.35rem] border border-dashed border-white/15 bg-[#04060c]/90 p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
                   <Camera size={28} className="text-slate-500" />
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Upload image</span>
-                  <span className="text-[8px] text-slate-600">PNG / JPG Â/ max 5MB</span>
+                  <span className="text-[8px] text-slate-600">PNG / JPG Â· max 5MB</span>
                   <label className="mt-1 cursor-pointer rounded-full border border-intuition-primary/40 bg-intuition-primary/10 px-5 py-2.5 text-[10px] font-black uppercase text-intuition-primary transition-all hover:bg-intuition-primary/20">
                     <input type="file" accept="image/png,image/jpeg,image/jpg" onChange={handleImageFileChange} className="sr-only" />
                     Choose file

@@ -148,7 +148,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ event }) => {
                         color: colorHex,
                     }}
                 >
-                    {isWhale ? `Large Â/ ${statusLabel}` : statusLabel}
+                    {isWhale ? `Large Â· ${statusLabel}` : statusLabel}
                 </div>
                 
                 {!(isAtomCreation || isTripleCreation) && (
@@ -160,7 +160,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ event }) => {
                     </div>
                 )}
 
-                <span className="text-slate-600 font-sans text-[10px] px-0.5" aria-hidden>Â/</span>
+                <span className="text-slate-600 font-sans text-[10px] px-0.5" aria-hidden>Â·</span>
 
                 <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] px-2 py-1.5 rounded-xl hover:border-white/15 transition-all duration-300 group/target cursor-pointer min-w-0 max-w-full">
                     <div className="w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-md bg-black/50 flex items-center justify-center overflow-hidden border border-white/10 shrink-0 group-hover:scale-105 transition-transform">

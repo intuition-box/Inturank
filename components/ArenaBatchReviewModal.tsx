@@ -185,7 +185,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                     Conviction cart
                   </h2>
                   <p className="text-[10px] text-slate-500 font-mono mt-1 truncate">
-                    Review batch Â/ <span className="text-intuition-primary/90">{contextSuffix}</span>
+                    Review batch Â· <span className="text-intuition-primary/90">{contextSuffix}</span>
                   </p>
                 </div>
               </div>
@@ -286,7 +286,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                           <p className="text-[9px] text-slate-500 mt-0.5 font-mono uppercase tracking-wide truncate">
                             {row.item.pairKind}
                             {row.sourceListTitle ? (
-                              <span className="text-slate-600 normal-case"> Â/ {row.sourceListTitle}</span>
+                              <span className="text-slate-600 normal-case"> Â· {row.sourceListTitle}</span>
                             ) : null}
                           </p>
                           <p className="text-[10px] font-mono font-bold mt-1.5 text-intuition-primary tabular-nums">
@@ -297,7 +297,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                               </span>
                             ) : null}
                             {row.units > 1 ? (
-                              <span className="text-slate-500 font-normal"> Â/ {stakeN.toFixed(2)} Ã— {row.units}</span>
+                              <span className="text-slate-500 font-normal"> Â· {stakeN.toFixed(2)} Ã— {row.units}</span>
                             ) : null}
                           </p>
                         </div>
@@ -395,7 +395,7 @@ const ArenaBatchReviewModal: React.FC<Props> = ({
                     </span>
                   </div>
                 ) : (
-                  <>Confirm Â/ {trustTotal.toFixed(2)} TRUST</>
+                  <>Confirm Â· {trustTotal.toFixed(2)} TRUST</>
                 )}
               </button>
             </div>

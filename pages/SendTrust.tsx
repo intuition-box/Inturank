@@ -310,7 +310,7 @@ const SendTrust: React.FC = () => {
                   type="text"
                   value={recipientInput}
                   onChange={(e) => setRecipientInput(e.target.value)}
-                  placeholder="0xâ€¦ Â/ alice.trust Â/ name.eth (complete names only)"
+                  placeholder="0xâ€¦ Â· alice.trust Â· name.eth (complete names only)"
                   autoComplete="off"
                   spellCheck={false}
                   className="w-full px-4 py-4 rounded-xl bg-black/55 border border-[#F0C14B]/28 text-white font-mono text-sm placeholder:text-slate-600 focus:border-[#F0C14B]/55 focus:ring-2 focus:ring-[#F0C14B]/15 focus:outline-none transition-all"
@@ -354,7 +354,7 @@ const SendTrust: React.FC = () => {
                 </div>
                 <p className="mt-3 text-xs text-slate-500 font-mono flex items-center gap-1.5 flex-wrap">
                   <Coins size={12} className="text-[#F0C14B]/80 shrink-0" /> Balance: {balanceFormatted} TRUST
-                  <span className="text-[#8B5CF6]/80">Â/ Live</span>
+                  <span className="text-[#8B5CF6]/80">Â· Live</span>
                 </p>
               </div>
 

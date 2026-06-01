@@ -167,7 +167,7 @@ const GameRow: React.FC<{
           <p className="mt-1 max-w-xl text-[12px] text-slate-500 leading-relaxed">{section.subtitle}</p>
         </div>
         <span className="mx-auto shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300 sm:mx-0">
-          ~{section.lists.reduce((s, L) => s + getArenaListConstituents(L), 0).toLocaleString()} pick slots Â/{' '}
+          ~{section.lists.reduce((s, L) => s + getArenaListConstituents(L), 0).toLocaleString()} pick slots Â·{' '}
           <span className="text-slate-500">{section.lists.length}</span> contest{section.lists.length === 1 ? '' : 's'}
         </span>
       </div>

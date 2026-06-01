@@ -138,7 +138,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
               <Layers className="w-5 h-5 text-intuition-primary" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] xl:text-xs font-black text-slate-500 uppercase tracking-[0.28em] mb-1">Arena Â/ Portfolio</p>
+              <p className="text-[10px] xl:text-xs font-black text-slate-500 uppercase tracking-[0.28em] mb-1">Arena Â· Portfolio</p>
               <h2 className="text-xl sm:text-2xl font-black font-display text-white tracking-tight">My ranked lists</h2>
               <p className="text-[13px] text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
                 FeeProxy/MultiVault deposits only â€” your wallet is the{' '}
@@ -289,11 +289,11 @@ function ArenaListOnchainCard({
             <p className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
               <span>
                 <span className="text-intuition-success font-semibold tabular-nums">{group.yesCount}</span>
-                {' yes Â/ '}
+                {' yes Â· '}
                 <span className="text-intuition-danger font-semibold tabular-nums">{group.noCount}</span>
                 {' no'}
               </span>
-              <span className="text-slate-600">Â/</span>
+              <span className="text-slate-600">Â·</span>
               <span className="tabular-nums uppercase tracking-wider">Latest block {group.maxBlock || 'â€”'}</span>
             </p>
             {!expanded && preview.length > 0 ? (
@@ -319,7 +319,7 @@ function ArenaListOnchainCard({
             ) : null}
             {!expanded && group.rows.length > preview.length ? (
               <p className="mt-2 text-[10px] font-medium text-slate-600">
-                +{group.rows.length - preview.length} more Â/ expand for full table
+                +{group.rows.length - preview.length} more Â· expand for full table
               </p>
             ) : null}
           </div>

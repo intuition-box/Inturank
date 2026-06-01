@@ -256,7 +256,7 @@ export const ArenaPromoteContestModal: React.FC<Props> = ({
             >
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] opacity-85">
-                  {palette.label} Â/ Promote contest
+                  {palette.label} Â· Promote contest
                 </p>
                 <h2
                   id="arena-promote-title"
@@ -489,7 +489,7 @@ const FormView: React.FC<{
       </footer>
 
       <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-wider text-slate-600">
-        Min deposit / leg Â/ {minDeposit} {CURRENCY_SYMBOL}
+        Min deposit / leg Â· {minDeposit} {CURRENCY_SYMBOL}
       </p>
     </div>
   );

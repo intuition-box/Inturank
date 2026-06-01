@@ -463,7 +463,7 @@ const Markets: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-6 md:mb-12 gap-4 md:gap-8 border-b border-white/10 pb-6 md:pb-10 relative z-10 max-md:pb-5">
         <div className="relative z-10 min-w-0 max-w-2xl shrink-0 space-y-2 md:space-y-3">
           <p className="text-xs md:text-sm text-slate-500 font-sans">
-            Reputation Â/ {APP_VERSION_DISPLAY}
+            Reputation Â· {APP_VERSION_DISPLAY}
           </p>
           <h1 className={`${PAGE_HERO_TITLE} max-md:text-2xl max-md:leading-tight`}>Markets</h1>
           <p className="text-sm md:text-[15px] text-slate-400 leading-relaxed font-sans max-md:line-clamp-3">
@@ -852,7 +852,7 @@ const Markets: React.FC = () => {
                 const obj = claim.object?.label || 'â€”';
                 const predRaw = String(claim.predicate || 'link').replace(/_/g, ' ');
                 const pred = predRaw.charAt(0).toUpperCase() + predRaw.slice(1).toLowerCase();
-                const titleHint = `${subj} Â/ ${pred} Â/ ${obj}`;
+                const titleHint = `${subj} Â· ${pred} Â· ${obj}`;
                 return (
                   <div
                     key={claim.id}
@@ -888,7 +888,7 @@ const Markets: React.FC = () => {
                               <Users size={12} /> Support
                             </div>
                             <p className="text-xs font-bold text-[#3498DB] tabular-nums">
-                              {formatLargeNumber(claim.holders)} Â/ {formatMarketValue(claim.value)}
+                              {formatLargeNumber(claim.holders)} Â· {formatMarketValue(claim.value)}
                             </p>
                           </div>
                           <div className="rounded-xl bg-[#F39C12]/10 border border-[#F39C12]/25 px-3 py-2">
@@ -896,7 +896,7 @@ const Markets: React.FC = () => {
                               <Users size={12} /> Oppose
                             </div>
                             <p className="text-xs font-bold text-[#F39C12] tabular-nums">
-                              {formatLargeNumber(claim.opposeHolders || 0)} Â/ {formatMarketValue(claim.opposeValue || 0)}
+                              {formatLargeNumber(claim.opposeHolders || 0)} Â· {formatMarketValue(claim.opposeValue || 0)}
                             </p>
                           </div>
                         </div>

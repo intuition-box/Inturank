@@ -735,13 +735,13 @@ const Portfolio: React.FC = () => {
                   </div>
                   <div className="min-w-0 flex flex-col gap-1">
                     <div className="text-[9px] text-slate-500 uppercase tracking-[0.24em]">
-                      Intuition Network Â/ IntuRank
+                      Intuition Network Â· IntuRank
                     </div>
                     <div className="text-base sm:text-lg font-black text-white uppercase tracking-tight leading-tight truncate" title={sharePosition.atom?.label}>
                       {sharePosition.atom?.label}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono truncate">
-                      UID: {sharePosition.id.slice(0, 12)}â€¦ Â/ Curve: {getCurveLabel(sharePosition.curveId ?? 1)}
+                      UID: {sharePosition.id.slice(0, 12)}â€¦ Â· Curve: {getCurveLabel(sharePosition.curveId ?? 1)}
                     </div>
                   </div>
                 </div>
@@ -912,7 +912,7 @@ const Portfolio: React.FC = () => {
                             >
                               {pos.atom?.label || 'Unknown'}
                             </p>
-                            <p className="mt-0.5 font-mono text-[10px] text-slate-500 truncate">UID Â/ {pos.id.slice(0, 10)}â€¦</p>
+                            <p className="mt-0.5 font-mono text-[10px] text-slate-500 truncate">UID Â· {pos.id.slice(0, 10)}â€¦</p>
                           </div>
                           <div className={`shrink-0 text-right text-sm font-bold tabular-nums ${pos.pnl >= 0 ? 'text-intuition-success' : 'text-intuition-danger'}`}>
                             {pos.pnl >= 0 ? '+' : ''}
@@ -933,7 +933,7 @@ const Portfolio: React.FC = () => {
                           </div>
                         </div>
                         <p className="mt-2 text-[10px] text-slate-500 truncate" title={getCurveLabel(pos.curveId ?? 1)}>
-                          Curve Â/ {getCurveLabel(pos.curveId ?? 1)}
+                          Curve Â· {getCurveLabel(pos.curveId ?? 1)}
                         </p>
                         <div className="mt-3 flex gap-2">
                           <Link
@@ -1066,7 +1066,7 @@ const Portfolio: React.FC = () => {
             {sortedPositions.length > HOLDINGS_PER_PAGE && (
               <div className="px-4 sm:px-5 md:px-6 xl:px-8 py-4 border-t border-slate-900 flex flex-wrap items-center justify-between gap-4">
                 <div className="text-[10px] sm:text-xs font-mono text-slate-500 uppercase tracking-widest">
-                  Page {holdingsPage} of {totalHoldingsPages} Â/ {sortedPositions.length} total
+                  Page {holdingsPage} of {totalHoldingsPages} Â· {sortedPositions.length} total
                 </div>
                 <div className="flex items-center gap-2">
                   <button

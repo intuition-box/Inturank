@@ -406,7 +406,7 @@ export const Season2LeaderboardPanel: React.FC<{
                 <Link to={HREF_NETWORK_PNL} onClick={playClick} className="text-slate-400 hover:text-slate-300">
                   All-time
                 </Link>
-                {' Â/ '}
+                {' Â· '}
                 <Link
                   to="/markets/atoms"
                   onClick={playClick}
@@ -451,7 +451,7 @@ export const Season2LeaderboardPanel: React.FC<{
                     <span className="font-medium text-slate-100 truncate w-full">
                       {selectedEpoch.label}
                       {epochIsLiveNow(selectedEpoch) || epochIsCurrent(selectedEpoch) ? (
-                        <span className="text-amber-400/90 font-normal"> Â/ Current</span>
+                        <span className="text-amber-400/90 font-normal"> Â· Current</span>
                       ) : null}
                     </span>
                     <span className="text-[11px] text-slate-500 truncate w-full mt-0.5">{selectedEpoch.range}</span>
@@ -481,7 +481,7 @@ export const Season2LeaderboardPanel: React.FC<{
                         <span className="block truncate">
                           {epoch.label}
                           {epochIsLiveNow(epoch) || epochIsCurrent(epoch) ? (
-                            <span className="text-amber-400/80"> Â/ Current</span>
+                            <span className="text-amber-400/80"> Â· Current</span>
                           ) : null}
                         </span>
                         <span className="block text-[10px] text-slate-500 truncate mt-0.5">{epoch.range}</span>
@@ -598,7 +598,7 @@ export const Season2LeaderboardPanel: React.FC<{
                             {u.display}
                           </span>
                           <span className="text-slate-600 shrink-0" aria-hidden>
-                            Â/
+                            Â·
                           </span>
                           <span
                             className={`min-w-0 font-semibold tabular-nums ${p.value >= 0 ? 'text-intuition-success' : 'text-red-400'}`}
@@ -620,7 +620,7 @@ export const Season2LeaderboardPanel: React.FC<{
                           {formatPctPretty(src.unrealized_pnl_pct)}
                         </span>
                         <span className="text-slate-600 shrink-0" aria-hidden>
-                          Â/
+                          Â·
                         </span>
                         <span
                           className={`min-w-0 font-semibold tabular-nums ${pctTextClass(rPct)}`}

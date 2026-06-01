@@ -384,7 +384,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                     {view === 'IDENTITY_CREATOR' && 'New atom'}
                 </h2>
                 <div className="text-xs text-slate-500">
-                    {view === 'IDLE' && 'Atoms are atoms Â/ Claims are claims'}
+                    {view === 'IDLE' && 'Atoms are atoms Â· Claims are claims'}
                     {view === 'CLAIM_OVERVIEW' && 'Subject + predicate + object, then deposit'}
                     {view === 'SELECTOR' && 'Search or create a new atom'}
                     {view === 'IDENTITY_CREATOR' && 'A person, org, thing, or account on the graph'}
@@ -590,7 +590,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
              <div className="w-1.5 h-1.5 rounded-full bg-intuition-success animate-pulse shadow-[0_0_8px_#00ff9d]" />
              <span className="text-xs text-slate-500">Ready to create on IntuRank</span>
            </div>
-           <span className="text-[11px] text-slate-600 hidden sm:inline">Â/</span>
+           <span className="text-[11px] text-slate-600 hidden sm:inline">Â·</span>
            <span className="text-[11px] text-slate-600">Your wallet signs each transaction</span>
         </div>
       </div>

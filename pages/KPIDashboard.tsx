@@ -161,7 +161,7 @@ const KPIDashboard: React.FC = () => {
                 <div className="space-y-2 min-w-0">
                     <div className="flex items-center gap-2 text-slate-500">
                         <ShieldCheck size={16} className="shrink-0 text-intuition-secondary/90" aria-hidden />
-                        <p className={PAGE_HERO_EYEBROW}>Intuition Mainnet Â/ operator metrics</p>
+                        <p className={PAGE_HERO_EYEBROW}>Intuition Mainnet Â· operator metrics</p>
                     </div>
                     <h1 className={`${PAGE_HERO_TITLE} mobile-break`}>System health</h1>
                 </div>
@@ -289,7 +289,7 @@ const KPIDashboard: React.FC = () => {
                                     <Terminal size={14} className="shrink-0 text-cyan-400" aria-hidden />
                                     <div>
                                         <h4 className="text-sm font-bold tracking-tight text-cyan-200">Fee proxy activity</h4>
-                                        <p className="mt-1 text-[10px] font-medium text-slate-400">Indexed deposits &amp; redemptions Â/ auto ~12s</p>
+                                        <p className="mt-1 text-[10px] font-medium text-slate-400">Indexed deposits &amp; redemptions Â· auto ~12s</p>
                                     </div>
                                 </div>
                                 <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -459,12 +459,12 @@ const KPIDashboard: React.FC = () => {
                          </div>
                          <div>
                              <div className="text-xs font-semibold font-display text-white mb-1">IntuRank health report</div>
-                             <div className="text-[10px] font-medium text-slate-500">On-chain metrics Â/ subgraph + fee proxy</div>
+                             <div className="text-[10px] font-medium text-slate-500">On-chain metrics Â· subgraph + fee proxy</div>
                          </div>
                     </div>
                     <div className="text-left sm:text-right flex flex-col items-start sm:items-end gap-1">
                          <div className="text-xs font-medium text-slate-300">{new Date().toLocaleDateString(undefined, { dateStyle: 'medium' })}</div>
-                         <div className="text-[10px] font-medium text-slate-600">Exported view Â/ not financial advice</div>
+                         <div className="text-[10px] font-medium text-slate-600">Exported view Â· not financial advice</div>
                     </div>
                 </div>
             </div>

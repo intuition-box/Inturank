@@ -369,7 +369,7 @@ const ARENA_STAKE_TITLES = ARENA_BATCH_MODE
   ? (['Pulse', 'Surge', 'Blitz', 'Nova', 'Forge', 'Singularity'] as const)
   : (['Spark', 'Pulse', 'Surge', 'Blitz', 'Nova', 'Singularity'] as const);
 
-/** Per-card multiplier in Step 2 Â/ Rank (batch deposit = stake preset Ã— units per row). */
+/** Per-card multiplier in Step 2 Â· Rank (batch deposit = stake preset Ã— units per row). */
 const RANK_TRUST_UNITS_MAX = 12;
 
 const NARRATIVE_PRED = /predict|forecast|will\b|should\b|believe|future|outcome|if\s+.+\s+then/i;
@@ -881,13 +881,13 @@ function ArenaLaneCard({
                 <Zap size={12} className="shrink-0 text-intuition-primary/90" aria-hidden />+{xpRoundTotal} XP
               </span>
               <span className="text-slate-600" aria-hidden>
-                Â/
+                Â·
               </span>
               {item.subtitle ? (
                 <>
                   <span className="truncate text-slate-500">{item.subtitle}</span>
                   <span className="text-slate-600" aria-hidden>
-                    Â/
+                    Â·
                   </span>
                 </>
               ) : null}
@@ -1481,7 +1481,7 @@ const RankedList: React.FC = () => {
             source: 'portal' as const,
             listObjectTermId: row.id,
             title: row.label || 'Untitled list',
-            description: `Intuition list Â/ ${
+            description: `Intuition list Â· ${
               typeof row.totalItems === 'number' ? `${row.totalItems} members indexed` : 'live on the graph'
             }`,
             tag: 'Live',
@@ -2412,8 +2412,8 @@ const RankedList: React.FC = () => {
       if (tripleCreateInputs.length > 0) {
         setSubmitProgress(
           tripleCreateInputs.length > 1
-            ? `Confirm in wallet Â/ create ${tripleCreateInputs.length} claims (one transaction)`
-            : 'Confirm in wallet Â/ create claim',
+            ? `Confirm in wallet Â· create ${tripleCreateInputs.length} claims (one transaction)`
+            : 'Confirm in wallet Â· create claim',
         );
         const createHash = await createSemanticTriplesBatch(tripleCreateInputs, address, progressCb);
         for (const x of tripleCreateLegacyRows) {
@@ -2431,8 +2431,8 @@ const RankedList: React.FC = () => {
       if (mergedDepositLegs.length > 0) {
         setSubmitProgress(
           mergedDepositLegs.length > 1
-            ? `Confirm in wallet Â/ ${mergedDepositLegs.length} vault deposits (one transaction)`
-            : 'Confirm in wallet Â/ vault deposit',
+            ? `Confirm in wallet Â· ${mergedDepositLegs.length} vault deposits (one transaction)`
+            : 'Confirm in wallet Â· vault deposit',
         );
         const { hash: depHash } = await depositBatchToVaults(mergedDepositLegs, address, progressCb);
         for (const x of depositXpRows) {
@@ -2509,7 +2509,7 @@ const RankedList: React.FC = () => {
           const side = r.support ? 'YES' : 'NO';
           return `${side} for â€œ${r.item.label}â€ in â€œ${lt}â€`;
         });
-        humanLine = `${who}: ${rowSummaries.join(' Â/ ')}`;
+        humanLine = `${who}: ${rowSummaries.join(' Â· ')}`;
       } catch {
         /* ignore */
       }
@@ -3352,7 +3352,7 @@ const RankedList: React.FC = () => {
                 }}
               >
                 <span aria-hidden className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: ARENA_THEME.cyan }} />
-                IntuRank Â/ Climb
+                IntuRank Â· Climb
               </p>
               <h1
                 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-black font-display tracking-tight bg-clip-text text-transparent drop-shadow-[0_0_42px_rgba(255,80,57,0.12)] leading-[1.05]"
@@ -3392,7 +3392,7 @@ const RankedList: React.FC = () => {
                 ) : climbViewMode === 'signal' ? (
                   <>
                     Stake your conviction on triples surfacing across Intuition.{' '}
-                    <span className="text-intuition-primary font-semibold">STAND</span> Â/ or Â/{' '}
+                    <span className="text-intuition-primary font-semibold">STAND</span> Â· or Â·{' '}
                     <span className="text-intuition-secondary font-semibold">OPPOSE</span>.
                   </>
                 ) : listId ? (
@@ -3401,7 +3401,7 @@ const RankedList: React.FC = () => {
                       <span style={{ color: ARENA_THEME.cyanMuted }} className="font-semibold">Yes</span>
                       {' / '}
                       <span style={{ color: ARENA_THEME.roseNo }} className="font-semibold">No</span>
-                      {' Â/ batch when ready.'}
+                      {' Â· batch when ready.'}
                     </>
                   ) : (
                     'Pick now. Wallet only when you stake.'
@@ -3496,7 +3496,7 @@ const RankedList: React.FC = () => {
                         type="button"
                         onClick={() => setClimbViewMode('signal')}
                         aria-pressed={climbViewMode === 'signal'}
-                        title="Stance feed Â/ stake your conviction on circulating triples"
+                        title="Stance feed Â· stake your conviction on circulating triples"
                         whileTap={reduceMotion ? undefined : { scale: 0.96 }}
                         transition={{ type: 'spring', stiffness: 520, damping: 32 }}
                         className={`relative inline-flex flex-1 min-w-[4.75rem] items-center justify-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-200 ${
@@ -3592,7 +3592,7 @@ const RankedList: React.FC = () => {
                                 <span className="text-slate-600 font-mono uppercase tracking-wider text-[9px] shrink-0">XP</span>
                                 <span
                                   className="text-slate-500 min-w-0 truncate"
-                                  title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} Â/ this device picks ${arenaPickXp.toLocaleString()}) Â/ Activity ${myProtocolXp.toLocaleString()} Â/ Total`}
+                                  title={`Arena ${arenaXpUi.toLocaleString()} (indexer ${graphArenaXp.toLocaleString()} Â· this device picks ${arenaPickXp.toLocaleString()}) Â· Activity ${myProtocolXp.toLocaleString()} Â· Total`}
                                 >
                                   <AnimatedXpFigure
                                     ready={arenaGraphReady}
@@ -3636,7 +3636,7 @@ const RankedList: React.FC = () => {
                                     playArenaUiClick();
                                     setStakePresetIdx(idx);
                                   }}
-                                  title={`${amt} TRUST per unit Â/ cart line deposit = preset Ã— weight`}
+                                  title={`${amt} TRUST per unit Â· cart line deposit = preset Ã— weight`}
                                   className={`rounded-md px-2 py-0.5 text-[9px] font-bold tabular-nums transition-colors ${
                                     on
                                       ? 'bg-intuition-primary/25 text-intuition-primary shadow-[inset_0_0_0_1px_rgba(34,211,238,0.45)]'
@@ -3649,7 +3649,7 @@ const RankedList: React.FC = () => {
                             })}
                           </div>
                           <span className="text-[9px] text-slate-600 font-mono">
-                            TRUST/unit Â/ batch: preset Ã— weight
+                            TRUST/unit Â· batch: preset Ã— weight
                           </span>
                         </div>
                       </>
@@ -3803,7 +3803,7 @@ const RankedList: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">
-                      IntuRank Â/ Arena
+                      IntuRank Â· Arena
                     </p>
                     <p className="text-[13px] text-slate-200 leading-snug mt-0.5">
                       Same dark glass and cyan numbers as your IntuRank profile.
@@ -3881,7 +3881,7 @@ const RankedList: React.FC = () => {
                     <Scale size={18} className="text-intuition-primary" strokeWidth={2.35} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">Arena Â/ Climb</p>
+                    <p className="text-[10px] font-mono font-black uppercase tracking-[0.28em] text-intuition-primary/90">Arena Â· Climb</p>
                     <h2 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">Pick a list</h2>
                     <p className="text-[11px] text-slate-400 mt-0.5">Tap a list card below to start.</p>
                   </div>
@@ -4211,11 +4211,11 @@ const RankedList: React.FC = () => {
                   </h2>
                   {stanceSummary.total > 0 ? (
                     <p className="text-[11px] text-slate-500 shrink-0 tabular-nums sm:text-right">
-                      {stanceSummary.total} indexed Â/{' '}
+                      {stanceSummary.total} indexed Â·{' '}
                       <span className="font-semibold" style={{ color: ARENA_THEME.cyan }}>
                         yes {stanceSummary.yes}
                       </span>
-                      {' Â/ '}
+                      {' Â· '}
                       <span className="font-semibold" style={{ color: ARENA_THEME.red }}>
                         no {stanceSummary.no}
                       </span>
@@ -4600,7 +4600,7 @@ const RankedList: React.FC = () => {
                           </div>
                           <div className="mt-3 text-center w-full min-w-0 px-1">
                             <div className="text-[12px] font-bold text-slate-100 truncate drop-shadow-sm">
-                              {isYou ? <span className="text-intuition-primary">You Â/ </span> : null}
+                              {isYou ? <span className="text-intuition-primary">You Â· </span> : null}
                               {p.label}
                             </div>
                             <div className="mt-2 h-1.5 rounded-full bg-slate-800/90 overflow-hidden ring-1 ring-white/5">
@@ -4697,12 +4697,12 @@ const RankedList: React.FC = () => {
                                     <span className="font-mono tabular-nums font-bold text-white">{p.duels}</span>
                                     <span className="text-slate-400 font-medium">duels</span>
                                   </span>
-                                  <span className="text-slate-600">Â/</span>
+                                  <span className="text-slate-600">Â·</span>
                                   <span className="text-slate-300">
                                     <span className="text-intuition-warning font-mono tabular-nums font-bold">{avgPick}</span>{' '}
                                     <span className="text-slate-500 font-medium">XP/pick</span>
                                   </span>
-                                  <span className="text-slate-600">Â/</span>
+                                  <span className="text-slate-600">Â·</span>
                                   <span className="inline-flex items-center gap-1 text-slate-300">
                                     <Clock size={11} className="text-intuition-primary/80 shrink-0" />
                                     <span className="font-medium text-slate-200">{formatRelativeArenaActive(p.updatedAt)}</span>
@@ -5000,7 +5000,7 @@ const RankedList: React.FC = () => {
             description:
               activeList && 'description' in activeList && activeList.description
                 ? activeList.description
-                : 'Promoted on-chain Â/ live on the graph',
+                : 'Promoted on-chain Â· live on the graph',
             tag: 'Live',
             arenaCategory,
             listGlyph: activeList?.listGlyph ?? 'â—†',

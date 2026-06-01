@@ -192,18 +192,18 @@ const MobileHome: React.FC = () => {
               </p>
               <div
                 className="mt-1 flex items-baseline gap-2"
-                title={`Arena ${arenaSelf.xp.toLocaleString()} Â/ Activity ${activityXp.toLocaleString()} (this browser)`}
+                title={`Arena ${arenaSelf.xp.toLocaleString()} Â· Activity ${activityXp.toLocaleString()} (this browser)`}
               >
                 <span className="text-3xl font-display font-black text-white leading-none tracking-tight">
                   {compact(arenaSelf.xp + activityXp)}
                 </span>
                 <span className="text-[11px] font-mono text-slate-500">
-                  Â/ {compact(arenaSelf.duels)} duels
+                  Â· {compact(arenaSelf.duels)} duels
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
                 {isConnected
-                  ? 'Arena from the graph Â/ activity from trades & creates on this device.'
+                  ? 'Arena from the graph Â· activity from trades & creates on this device.'
                   : 'Connect to start earning XP.'}
               </p>
             </div>

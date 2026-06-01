@@ -56,7 +56,7 @@ const ArenaClimbTerrace: React.FC<ArenaClimbTerraceProps> = ({
           }`}
         >
           <Layers size={13} strokeWidth={2.2} className={`shrink-0 ${light ? 'text-intuition-primary' : 'text-intuition-primary'}`} aria-hidden />
-          Review cart Â/ {queuedBatchCount}
+          Review cart Â· {queuedBatchCount}
         </button>
       </div>
     </div>
