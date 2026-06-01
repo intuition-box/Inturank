@@ -3,7 +3,6 @@
 import {
   resumeArenaAudio,
   playArenaUiClick,
-  playArenaUiHover,
   playArenaCelebrateMini,
 } from './arenaAudio';
 
@@ -18,6 +17,8 @@ export {
   playArenaSwipePass,
   playArenaRankSlide,
   playArenaCelebrateMini,
+  playArenaXpClaim,
+  playArenaVictory,
 } from './arenaAudio';
 
 export {
@@ -34,11 +35,9 @@ export function playClick(): void {
   playArenaUiClick();
 }
 
-/** @deprecated Non-Arena pages; shimmer uses Arena hover patch. */
-export function playHover(): void {
-  resumeArenaAudio();
-  playArenaUiHover();
-}
+/** Global hover sound removed — too noisy outside Arena. Arena components
+ *  call `playArenaUiHover` directly so this no-op leaves them untouched. */
+export function playHover(): void {}
 
 /** @deprecated Success moments — mini celebration chord. */
 export function playSuccess(): void {

@@ -384,7 +384,7 @@ export const Season2LeaderboardPanel: React.FC<{
       className={`min-w-0 ${isHome ? '' : 'scroll-mt-28'}`}
     >
       <div
-        className={`min-w-0 rounded-[1.65rem] border border-intuition-primary/20 bg-[#03050d]/[0.94] shadow-[0_20px_60px_rgba(0,0,0,0.45),0_0_36px_rgba(0,243,255,0.08),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-white/[0.04] backdrop-blur-xl backdrop-saturate-150 ${
+        className={`min-w-0 rounded-[1.65rem] border border-intuition-primary/20 bg-[#03050d]/[0.94] shadow-[0_20px_60px_rgba(0,0,0,0.45),0_0_36px_rgba(255,80,57,0.08),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-white/[0.04] backdrop-blur-xl backdrop-saturate-150 ${
           isHome ? 'p-4 sm:p-5' : 'p-5 sm:p-8'
         }`}
       >
@@ -406,7 +406,7 @@ export const Season2LeaderboardPanel: React.FC<{
                 <Link to={HREF_NETWORK_PNL} onClick={playClick} className="text-slate-400 hover:text-slate-300">
                   All-time
                 </Link>
-                {' Â· '}
+                {' Â/ '}
                 <Link
                   to="/markets/atoms"
                   onClick={playClick}
@@ -451,7 +451,7 @@ export const Season2LeaderboardPanel: React.FC<{
                     <span className="font-medium text-slate-100 truncate w-full">
                       {selectedEpoch.label}
                       {epochIsLiveNow(selectedEpoch) || epochIsCurrent(selectedEpoch) ? (
-                        <span className="text-amber-400/90 font-normal"> Â· Current</span>
+                        <span className="text-amber-400/90 font-normal"> Â/ Current</span>
                       ) : null}
                     </span>
                     <span className="text-[11px] text-slate-500 truncate w-full mt-0.5">{selectedEpoch.range}</span>
@@ -481,7 +481,7 @@ export const Season2LeaderboardPanel: React.FC<{
                         <span className="block truncate">
                           {epoch.label}
                           {epochIsLiveNow(epoch) || epochIsCurrent(epoch) ? (
-                            <span className="text-amber-400/80"> Â· Current</span>
+                            <span className="text-amber-400/80"> Â/ Current</span>
                           ) : null}
                         </span>
                         <span className="block text-[10px] text-slate-500 truncate mt-0.5">{epoch.range}</span>
@@ -598,7 +598,7 @@ export const Season2LeaderboardPanel: React.FC<{
                             {u.display}
                           </span>
                           <span className="text-slate-600 shrink-0" aria-hidden>
-                            Â·
+                            Â/
                           </span>
                           <span
                             className={`min-w-0 font-semibold tabular-nums ${p.value >= 0 ? 'text-intuition-success' : 'text-red-400'}`}
@@ -620,7 +620,7 @@ export const Season2LeaderboardPanel: React.FC<{
                           {formatPctPretty(src.unrealized_pnl_pct)}
                         </span>
                         <span className="text-slate-600 shrink-0" aria-hidden>
-                          Â·
+                          Â/
                         </span>
                         <span
                           className={`min-w-0 font-semibold tabular-nums ${pctTextClass(rPct)}`}
@@ -850,7 +850,7 @@ export const Season2LeaderboardPanel: React.FC<{
           <Link
             to={HREF_SEASON2_PANEL}
             onClick={playClick}
-            className="group inline-flex items-center gap-2 rounded-full border border-intuition-primary/45 bg-intuition-primary/10 px-5 py-3 font-mono text-xs font-black uppercase tracking-[0.15em] text-intuition-primary shadow-[0_0_24px_rgba(0,243,255,0.15)] backdrop-blur-sm transition-all hover:border-intuition-primary hover:bg-intuition-primary/20 hover:text-white hover:shadow-[0_0_32px_rgba(0,243,255,0.25)] sm:text-sm"
+            className="group inline-flex items-center gap-2 rounded-full border border-intuition-primary/45 bg-intuition-primary/10 px-5 py-3 font-mono text-xs font-black uppercase tracking-[0.15em] text-intuition-primary shadow-[0_0_24px_rgba(255,80,57,0.15)] backdrop-blur-sm transition-all hover:border-intuition-primary hover:bg-intuition-primary/20 hover:text-white hover:shadow-[0_0_32px_rgba(255,80,57,0.25)] sm:text-sm"
           >
             Full board
             <ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5" />

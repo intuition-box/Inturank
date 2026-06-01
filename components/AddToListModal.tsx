@@ -1,5 +1,5 @@
 /**
- * Add identity to list — creates triple (subject=atom, predicate=LIST_PREDICATE, object=list).
+ * Add identity to list ,  creates triple (subject=atom, predicate=LIST_PREDICATE, object=list).
  * Mirrors Intuition Portal "Add to List" / "Locked In" flow.
  */
 import React, { useState, useCallback } from 'react';
@@ -158,7 +158,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, listId, listLab
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg bg-[#020308] border-2 border-intuition-primary/40 rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,243,255,0.15)]">
+      <div className="relative w-full max-w-lg bg-intuition-dark border-2 border-intuition-primary/40 rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(255,80,57,0.15)]">
         {txStatus !== 'idle' ? (
           <TransactionModal
             isOpen={txStatus !== 'idle'}

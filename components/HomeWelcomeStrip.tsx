@@ -26,7 +26,7 @@ function HudCorners({ className = '' }: { className?: string }) {
 }
 
 /**
- * Landing hero — glass + cyan/magenta arena language, HUD framing, optimized motion (CSS-only nudge).
+ * Landing hero ,  glass + cyan/magenta arena language, HUD framing, optimized motion (CSS-only nudge).
  */
 export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'desktop' }) => {
   const mobile = variant === 'mobile';
@@ -56,15 +56,15 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
       }
       style={mobile ? undefined : H_PAD}
     >
-      <div className="absolute inset-0 bg-[#020308]" />
+      <div className="absolute inset-0 bg-intuition-dark" />
 
-      {/* Soft twin auroras — static, cheap paint */}
+      {/* Soft twin auroras ,  static, cheap paint */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.95]"
         style={{
           background:
-            'radial-gradient(ellipse 85% 60% at 8% -8%, rgba(0,243,255,0.14), transparent 55%), radial-gradient(ellipse 70% 55% at 92% 108%, rgba(255,30,109,0.11), transparent 50%), radial-gradient(ellipse 50% 40% at 52% 45%, rgba(168,85,247,0.06), transparent 60%)',
+            'radial-gradient(ellipse 85% 60% at 8% -8%, rgba(255,80,57,0.14), transparent 55%), radial-gradient(ellipse 70% 55% at 92% 108%, rgba(239,68,68,0.11), transparent 50%), radial-gradient(ellipse 50% 40% at 52% 45%, rgba(168,85,247,0.06), transparent 60%)',
         }}
       />
 
@@ -74,7 +74,7 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
         className="pointer-events-none absolute inset-0 opacity-[0.22]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(0,243,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0,243,255,0.045) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,80,57,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,80,57,0.045) 1px, transparent 1px)',
           backgroundSize: '44px 44px',
         }}
       />
@@ -95,13 +95,13 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
       >
         {/* Top marquee strip */}
         <div className="mx-auto mb-6 flex max-w-3xl justify-center sm:mb-8">
-          <div className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-[#05070c]/85 px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_rgba(0,243,255,0.06)] backdrop-blur-sm sm:px-5 sm:py-3">
+          <div className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-[#05070c]/85 px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_40px_rgba(255,80,57,0.06)] backdrop-blur-sm sm:px-5 sm:py-3">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full rounded-full bg-intuition-success/40 opacity-75 motion-safe:animate-ping motion-reduce:animate-none" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-intuition-success shadow-[0_0_10px_rgba(0,255,157,0.55)]" />
             </span>
             <p className="text-center text-[11px] font-semibold leading-snug text-slate-300 sm:text-[13px]">
-              IntuRank — a gamified way to <span className="font-bold text-white">rank items inside lists</span> and share
+              IntuRank ,  a gamified way to <span className="font-bold text-white">rank items inside lists</span> and share
               that with friends, on Intuition.
             </p>
             <Crosshair className="hidden h-3.5 w-3.5 shrink-0 text-intuition-primary/70 sm:block" aria-hidden strokeWidth={2.5} />
@@ -109,11 +109,11 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
         </div>
 
         <div
-          className={`mx-auto flex w-full max-w-5xl flex-col gap-8 ${mobile ? '' : 'lg:flex-row lg:items-stretch lg:gap-10'}`}
+          className={`mx-auto flex w-full max-w-7xl flex-col gap-8 ${mobile ? '' : 'lg:flex-row lg:items-stretch lg:gap-12'}`}
         >
-          <div className={`${GLASS_PANEL} min-w-0 flex-1 p-6 sm:p-8 lg:p-10`}>
+          <div className={`${GLASS_PANEL} min-w-0 flex-1 p-7 sm:p-10 lg:p-14`}>
             <HudCorners />
-            {/* Single moving shine — tiny layer, opacity + transform */}
+            {/* Single moving shine ,  tiny layer, opacity + transform */}
             <div
               aria-hidden
               className="pointer-events-none absolute -left-1/2 top-0 z-0 h-full w-[45%] rotate-[12deg] bg-gradient-to-r from-transparent via-white/[0.04] to-transparent motion-safe:animate-slot-shimmer motion-reduce:hidden"
@@ -124,7 +124,7 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
               aria-hidden
               className="pointer-events-none absolute inset-0 z-0 opacity-80"
               style={{
-                boxShadow: 'inset 0 0 90px rgba(0,243,255,0.055)',
+                boxShadow: 'inset 0 0 90px rgba(255,80,57,0.055)',
               }}
             />
 
@@ -134,32 +134,32 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
                   IntuRank
                 </p>
                 <span className="hidden h-1 w-1 rounded-full bg-white/25 sm:inline sm:h-1.5 sm:w-1.5" aria-hidden />
-                <span className="rounded border border-intuition-secondary/35 bg-intuition-secondary/[0.08] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-fuchsia-200/90">
+                <span className="rounded border border-intuition-primary/35 bg-intuition-primary/[0.08] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-intuition-primary/95">
                   Rank engine online
                 </span>
               </div>
 
-              <h1 className="mt-3 font-display text-[1.65rem] font-black leading-[1.08] tracking-tight text-white sm:text-3xl md:text-4xl lg:text-[2.75rem]">
+              <h1 className="mt-4 font-display text-3xl font-black leading-[0.98] tracking-tight text-white sm:text-4xl md:text-5xl lg:text-[3.75rem]">
                 Anyone can create a game
-                <span className="mt-3 block text-lg font-bold text-slate-200 sm:text-xl md:text-2xl">
+                <span className="mt-4 block text-xl font-bold text-slate-200 sm:text-2xl md:text-3xl lg:text-[2rem]">
                   Where the collective output is{' '}
-                  <span className="bg-gradient-to-r from-white via-cyan-100 to-intuition-primary bg-clip-text font-black text-transparent drop-shadow-[0_0_24px_rgba(0,243,255,0.25)]">
+                  <span className="bg-gradient-to-r from-white via-white to-intuition-primary bg-clip-text font-black text-transparent drop-shadow-[0_0_24px_rgba(255,80,57,0.25)]">
                     rank anything
                   </span>
                 </span>
               </h1>
 
-              {/* Energy tick — narrow; arena-pulse is opacity-only */}
+              {/* Energy tick ,  narrow; arena-pulse is opacity-only */}
               <div
                 aria-hidden
                 className="mx-auto mt-5 h-[3px] max-w-xs overflow-hidden rounded-full bg-white/[0.06] lg:mx-0"
               >
-                <div className="h-full w-[42%] rounded-full bg-gradient-to-r from-intuition-primary via-fuchsia-400 to-intuition-secondary motion-safe:animate-arena-pulse motion-reduce:opacity-90" />
+                <div className="h-full w-[42%] rounded-full bg-gradient-to-r from-intuition-primary via-intuition-primary to-intuition-secondary motion-safe:animate-arena-pulse motion-reduce:opacity-90" />
               </div>
 
               <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-slate-400 sm:text-base lg:mx-0">
                 <span className="font-semibold text-intuition-primary/90">A game for your knowledge</span>
-                {' — '}
+                {' ,  '}
                 stack cards, fight for what belongs on top, then show your deck to the crowd.
               </p>
 
@@ -168,7 +168,7 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
                   to="/climb"
                   onClick={() => playClick()}
                   onMouseEnter={() => playHover()}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-intuition-primary/45 bg-black/55 px-7 py-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_28px_rgba(0,243,255,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition-[transform,filter,box-shadow] hover:shadow-[0_0_42px_rgba(0,243,255,0.28)] active:scale-[0.99] sm:text-xs"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-intuition-primary/45 bg-black/55 px-7 py-3.5 text-[11px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_0_28px_rgba(255,80,57,0.18),inset_0_1px_0_rgba(255,255,255,0.06)] transition-[transform,filter,box-shadow] hover:shadow-[0_0_42px_rgba(255,80,57,0.28)] active:scale-[0.99] sm:text-xs"
                 >
                   <Sparkles className="h-4 w-4 shrink-0 text-intuition-primary" strokeWidth={2.5} aria-hidden />
                   Enter the Arena
@@ -187,16 +187,16 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
           </div>
 
           <div
-            className={`relative flex shrink-0 flex-col items-center justify-center gap-2 ${
-              mobile ? 'w-full' : 'lg:w-48 xl:w-52'
+            className={`relative flex shrink-0 flex-col items-center justify-center gap-3 ${
+              mobile ? 'w-full' : 'lg:w-64 xl:w-72'
             }`}
           >
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10 opacity-55 blur-[48px]"
+              className="pointer-events-none absolute inset-0 -z-10 opacity-65 blur-[56px]"
               style={{
                 background:
-                  'radial-gradient(circle at 50% 30%, rgba(255,36,112,0.35), transparent 55%), radial-gradient(circle at 50% 80%, rgba(234,88,12,0.28), transparent 52%)',
+                  'radial-gradient(circle at 50% 30%, rgba(255,80,57,0.45), transparent 55%), radial-gradient(circle at 50% 80%, rgba(220,38,38,0.32), transparent 52%)',
               }}
             />
             <Link
@@ -204,7 +204,7 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
               state={{ scrollArenaContests: true, showArenaCreateGameToast: true }}
               onClick={() => playClick()}
               onMouseEnter={() => playHover()}
-              className="group relative flex w-full max-w-[16rem] flex-col items-center justify-center gap-3 overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-gradient-to-br from-intuition-secondary via-rose-600 to-orange-600 py-9 shadow-[0_16px_40px_rgba(255,30,109,0.28),inset_0_1px_0_rgba(255,255,255,0.14)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] lg:max-w-none lg:flex-1 lg:py-11 motion-reduce:active:scale-100"
+              className="group relative flex w-full max-w-[20rem] flex-col items-center justify-center gap-4 overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-gradient-to-br from-intuition-primary via-intuition-primary to-intuition-secondary py-12 shadow-[0_18px_44px_rgba(255,80,57,0.32),inset_0_1px_0_rgba(255,255,255,0.14)] transition-[transform,filter] hover:brightness-110 active:scale-[0.99] lg:max-w-none lg:flex-1 lg:py-16 motion-reduce:active:scale-100"
             >
               <span
                 aria-hidden
@@ -216,15 +216,15 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
                   animationDuration: '3.2s',
                 }}
               />
-              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-black/25 text-white shadow-[0_0_28px_rgba(0,0,0,0.45)] transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
-                <Plus className="h-7 w-7" strokeWidth={2.5} aria-hidden />
+              <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/35 bg-black/25 text-white shadow-[0_0_28px_rgba(0,0,0,0.45)] transition-transform duration-200 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+                <Plus className="h-8 w-8" strokeWidth={2.5} aria-hidden />
               </span>
-              <span className="relative px-2 text-center text-[11px] font-black uppercase tracking-[0.2em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]">
-                Create your game
+              <span className="relative px-3 text-center font-display text-sm font-black uppercase tracking-[0.2em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.35)]">
+                Publish a list
               </span>
             </Link>
             <p className="max-w-[14rem] text-center text-[10px] leading-snug text-slate-500">
-              Contest picker lives below. Use nav for graph create (identities + claims).
+              Play a contest below, then Publish on-chain at Compare to mint a live ranking list.
             </p>
           </div>
         </div>
@@ -241,7 +241,7 @@ export const HomeWelcomeStrip: React.FC<HomeWelcomeStripProps> = ({ variant = 'd
             onMouseEnter={() => playHover()}
             aria-controls="arena-home-contests"
             aria-label="Scroll to contest floor to pick a ranking game"
-            className="group mt-7 flex flex-col items-center gap-1.5 rounded-2xl border border-intuition-primary/25 bg-black/40 px-6 py-3 text-intuition-primary/95 shadow-[0_0_32px_rgba(0,243,255,0.06)] backdrop-blur-sm transition-[transform,border-color,box-shadow,color] hover:border-intuition-primary/55 hover:text-intuition-primary hover:shadow-[0_0_40px_rgba(0,243,255,0.12)] active:scale-[0.98] motion-reduce:active:scale-100"
+            className="group mt-7 flex flex-col items-center gap-1.5 rounded-2xl border border-intuition-primary/25 bg-black/40 px-6 py-3 text-intuition-primary/95 shadow-[0_0_32px_rgba(255,80,57,0.06)] backdrop-blur-sm transition-[transform,border-color,box-shadow,color] hover:border-intuition-primary/55 hover:text-intuition-primary hover:shadow-[0_0_40px_rgba(255,80,57,0.12)] active:scale-[0.98] motion-reduce:active:scale-100"
           >
             <span className="font-mono text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 transition-colors group-hover:text-intuition-primary/80">
               Scroll to play

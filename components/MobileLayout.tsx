@@ -2,7 +2,7 @@
  * MobileLayout: top bar + floating bottom nav (five primary tabs).
  * Used in place of the desktop `Layout` chrome whenever `useIsMobile()` is true.
  *
- * Dock: Home · Markets · Skill · Leaderboard · Portfolio (all in-app routes).
+ * Dock: Home �/ Markets �/ Skill �/ Leaderboard �/ Portfolio (all in-app routes).
  * Header “Menu” opens a sheet with Activity, Arena, Trust tools, docs, Create, etc.
  */
 import React, { memo, useEffect, useState } from 'react';
@@ -69,7 +69,9 @@ const BottomNavTab = memo(function BottomNavTab({
   onNavigate: () => void;
 }) {
   const chipClass = `flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.35rem] px-1.5 py-2 transition-[background-color,color,transform] duration-200 ease-out ${
-    active ? 'bg-white/[0.14] text-white' : 'text-zinc-400 active:bg-white/[0.06]'
+    active
+      ? 'bg-intuition-primary/[0.16] text-white ring-1 ring-inset ring-intuition-primary/30 shadow-[0_0_18px_-6px_rgba(255,80,57,0.65)]'
+      : 'text-zinc-400 active:bg-white/[0.06]'
   }`;
 
   const label = (
@@ -194,7 +196,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
     <div className="mobile-app-shell min-h-screen bg-intuition-dark text-slate-200 font-sans selection:bg-intuition-primary selection:text-black">
       {/* Top app bar */}
       <header
-        className="fixed top-0 inset-x-0 z-[150] backdrop-blur-xl bg-[#03050d]/82 border-b border-white/[0.06]"
+        className="fixed top-0 inset-x-0 z-[150] backdrop-blur-xl bg-intuition-dark/80 border-b border-white/[0.06]"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="px-4 h-14 flex items-center justify-between gap-3">
@@ -204,12 +206,12 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
             className="flex items-center gap-2.5 min-w-0 no-underline"
             aria-label="IntuRank home"
           >
-            <span className="h-9 w-9 shrink-0 rounded-2xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/60 flex items-center justify-center shadow-[0_0_14px_rgba(0,243,255,0.28)] p-1.5">
+            <span className="h-9 w-9 shrink-0 rounded-2xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/60 flex items-center justify-center shadow-[0_0_14px_rgba(255,80,57,0.28)] p-1.5">
               <Logo className="h-full w-full object-contain" />
             </span>
             <span className="text-base font-display font-black tracking-[0.18em] truncate">
               <span className="text-white">INTU</span>
-              <span className="text-intuition-primary" style={{ textShadow: '0 0 12px rgba(0,243,255,0.6)' }}>
+              <span className="text-intuition-primary" style={{ textShadow: '0 0 12px rgba(255,80,57,0.6)' }}>
                 RANK
               </span>
             </span>
@@ -265,7 +267,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
                       onClick={() => setWalletDropOpen(false)}
                     />
                     <motion.div
-                      className="absolute right-0 mt-2 z-[170] w-56 rounded-2xl border border-intuition-primary/35 bg-[#020308] shadow-[0_24px_60px_rgba(0,0,0,0.92)] overflow-hidden"
+                      className="absolute right-0 mt-2 z-[170] w-56 rounded-2xl border border-intuition-primary/35 bg-intuition-dark shadow-[0_24px_60px_rgba(0,0,0,0.92)] overflow-hidden"
                       initial={{ opacity: 0, y: -8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -6, scale: 0.98 }}
@@ -312,7 +314,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
               <button
                 type="button"
                 onClick={handleConnect}
-                className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-intuition-primary to-cyan-300 text-black text-[11px] font-mono font-black tracking-[0.16em] uppercase shadow-[0_8px_22px_rgba(0,243,255,0.3)] transition-transform duration-200 ease-out active:scale-95"
+                className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-intuition-primary to-intuition-secondary text-white text-[11px] font-mono font-black tracking-[0.16em] uppercase shadow-[0_8px_22px_rgba(255,80,57,0.3)] transition-transform duration-200 ease-out active:scale-95"
               >
                 <Wallet size={14} /> Connect
               </button>

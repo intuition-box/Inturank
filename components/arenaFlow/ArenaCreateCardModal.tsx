@@ -145,7 +145,7 @@ export const ArenaCreateCardModal: React.FC<Props> = ({
             >
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] opacity-80">
-                  {palette.label} Â· Add to deck
+                  {palette.label} Â/ Add to deck
                 </p>
                 <h2
                   id="arena-create-card-title"
@@ -288,10 +288,10 @@ const FormBody: React.FC<FormProps> = ({
         />
       </Field>
 
-      <Field label="Subtitle" hint={`${subtitle.length}/${MAX_SUBTITLE} Â· optional`}>
+      <Field label="Subtitle" hint={`${subtitle.length}/${MAX_SUBTITLE} Â/ optional`}>
         <input
           type="text"
-          placeholder="e.g. Ecosystem Â· community lead"
+          placeholder="e.g. Ecosystem Â/ community lead"
           maxLength={MAX_SUBTITLE}
           value={subtitle}
           onChange={(e) => setSubtitle(e.target.value)}
@@ -301,7 +301,7 @@ const FormBody: React.FC<FormProps> = ({
 
       <Field
         label="Image URL"
-        hint="optional Â· http(s)://"
+        hint="optional Â/ http(s)://"
         error={touched && error?.field === 'image' ? error.message : null}
       >
         <div className="flex items-stretch gap-2">
@@ -346,7 +346,7 @@ const FormBody: React.FC<FormProps> = ({
       </footer>
 
       {touched && error && !error.field ? (
-        <p className="text-[11px] text-rose-300">{error.message}</p>
+        <p className="text-[11px] text-intuition-secondary">{error.message}</p>
       ) : null}
     </form>
   </div>
@@ -365,12 +365,12 @@ const Field: React.FC<{
     <div className="mb-1.5 flex items-baseline justify-between gap-2">
       <label className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
         {label}
-        {required ? <span className="ml-1 text-rose-400">*</span> : null}
+        {required ? <span className="ml-1 text-intuition-secondary">*</span> : null}
       </label>
       {hint ? <span className="font-mono text-[10px] text-slate-600">{hint}</span> : null}
     </div>
     {children}
-    {error ? <p className="mt-1 text-[11px] text-rose-300">{error}</p> : null}
+    {error ? <p className="mt-1 text-[11px] text-intuition-secondary">{error}</p> : null}
   </div>
 );
 

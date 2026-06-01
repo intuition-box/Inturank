@@ -72,7 +72,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       );
     };
 
-    const myTotal = inturankLeaderboardTotalXp({ arenaXp: myArenaXp, activityXp: myActivityXp });
+    const myTotal = inturankLeaderboardTotalXp({ arenaXp: myArenaXp, activityXp: myActivityXp, giftXp: 0 });
     if (!myAddrLc) return players;
 
     const exists = players.some((p) => p.address === myAddrLc);
@@ -86,6 +86,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       label: 'You',
       arenaXp: myArenaXp,
       activityXp: myActivityXp,
+      giftXp: 0,
       duels: 0,
       atomsRanked: 0,
       listsPlayed: 0,
@@ -110,8 +111,8 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       onMouseEnter={playArenaUiHover}
       className={`group block rounded-3xl border overflow-hidden transition-all duration-300 ${
         isLight
-          ? 'border-slate-200/90 bg-white shadow-sm hover:border-sky-300/80 hover:shadow-md hover:-translate-y-0.5'
-          : 'border-white/[0.1] hover:border-amber-400/40 hover:shadow-[0_0_28px_rgba(251,191,36,0.12),0_0_32px_rgba(248,113,113,0.1)] hover:-translate-y-0.5'
+          ? 'border-slate-200/90 bg-white shadow-sm hover:border-intuition-primary/80 hover:shadow-md hover:-translate-y-0.5'
+          : 'border-white/[0.1] hover:border-intuition-warning/40 hover:shadow-[0_0_28px_rgba(251,191,36,0.12),0_0_32px_rgba(248,113,113,0.1)] hover:-translate-y-0.5'
       }`}
       style={
         isLight
@@ -126,7 +127,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
     >
       {/* Header */}
       <div
-        className={`relative px-3.5 pt-3 pb-2.5 border-b ${isLight ? 'border-slate-100 bg-sky-50/60' : 'border-white/[0.06]'}`}
+        className={`relative px-3.5 pt-3 pb-2.5 border-b ${isLight ? 'border-slate-100 bg-intuition-primary/60' : 'border-white/[0.06]'}`}
       >
         {!isLight ? (
           <div
@@ -141,7 +142,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
           <div className="flex items-center gap-2 min-w-0">
             <div
               className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center border ${
-                isLight ? 'border-sky-200 bg-white' : ''
+                isLight ? 'border-intuition-primary bg-white' : ''
               }`}
               style={
                 isLight
@@ -154,10 +155,10 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
             <div className="min-w-0">
               <p
                 className={`text-[9px] font-mono uppercase tracking-[0.28em] font-bold leading-none ${
-                  isLight ? 'text-sky-800/90' : 'text-amber-200/90'
+                  isLight ? 'text-intuition-primary/90' : 'text-intuition-warning/90'
                 }`}
               >
-                IntuRank · Rankers
+                IntuRank �/ Rankers
               </p>
               <p
                 className={`text-[11px] font-bold leading-tight mt-0.5 ${isLight ? 'text-slate-900' : 'text-white'}`}
@@ -170,8 +171,8 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
             size={15}
             className={`shrink-0 transition-all ${
               isLight
-                ? 'text-slate-400 group-hover:text-sky-600 group-hover:-translate-y-0.5 group-hover:translate-x-0.5'
-                : 'text-slate-500 group-hover:text-cyan-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5'
+                ? 'text-slate-400 group-hover:text-intuition-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5'
+                : 'text-slate-500 group-hover:text-intuition-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5'
             }`}
           />
         </div>
@@ -181,7 +182,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       <div className="px-3.5 py-3">
         {loading ? (
           <div className="flex items-center justify-center py-6 gap-2">
-            <Loader2 size={14} className={`animate-spin ${isLight ? 'text-sky-600' : 'text-amber-300'}`} />
+            <Loader2 size={14} className={`animate-spin ${isLight ? 'text-intuition-primary' : 'text-intuition-warning'}`} />
             <span className={`text-[10px] font-mono uppercase tracking-wider ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>
               Loading
             </span>
@@ -231,7 +232,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
                           <img src={p.image} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div
-                            className={`w-full h-full flex items-center justify-center text-xs font-black ${isLight ? 'text-sky-800' : 'text-cyan-200/90'}`}
+                            className={`w-full h-full flex items-center justify-center text-xs font-black ${isLight ? 'text-intuition-primary' : 'text-intuition-primary/90'}`}
                           >
                             {avatarGlyph(p.label)}
                           </div>
@@ -306,7 +307,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
           >
             <div className="min-w-0">
               <p
-                className={`text-[9px] font-mono uppercase tracking-[0.25em] font-bold ${isLight ? 'text-sky-800' : 'text-cyan-300/90'}`}
+                className={`text-[9px] font-mono uppercase tracking-[0.25em] font-bold ${isLight ? 'text-intuition-primary' : 'text-intuition-primary/90'}`}
               >
                 You
               </p>
@@ -319,7 +320,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
                     >
                       #{myRow.rank}
                     </span>
-                    <span className={`font-normal text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'}`}> · {augmentedPlayers.length}</span>
+                    <span className={`font-normal text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'}`}> �/ {augmentedPlayers.length}</span>
                   </p>
               ) : (
                 <p className={`text-[11px] leading-tight mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
@@ -329,7 +330,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
             </div>
             <div className="text-right shrink-0 space-y-1.5 tabular-nums">
               <div title="Arena XP — indexer plus device pick credit until the graph catches up (matches Climb uplink).">
-                <p className={`text-[8px] font-mono uppercase tracking-wider font-bold leading-none ${isLight ? 'text-sky-800/90' : 'text-cyan-300/85'}`}>Arena</p>
+                <p className={`text-[8px] font-mono uppercase tracking-wider font-bold leading-none ${isLight ? 'text-intuition-primary/90' : 'text-intuition-primary/85'}`}>Arena</p>
                 <p
                   className="text-base font-black leading-none mt-0.5"
                   style={{ color: GOLD, textShadow: isLight ? 'none' : `0 0 8px ${GOLD}40` }}
@@ -353,13 +354,13 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
         }`}
         style={isLight ? undefined : { background: `linear-gradient(90deg, ${ARENA_THEME.gold}08, ${CY}06)` }}
       >
-        <span className={`text-[10px] font-bold inline-flex items-center gap-1.5 ${isLight ? 'text-sky-800' : 'text-cyan-200'}`}>
+        <span className={`text-[10px] font-bold inline-flex items-center gap-1.5 ${isLight ? 'text-intuition-primary' : 'text-intuition-primary'}`}>
           <Award size={11} />
-          Full board · stats · streaks
+          Full board �/ stats �/ streaks
         </span>
         <span
           className={`text-[10px] font-black uppercase tracking-widest transition-colors inline-flex items-center gap-1 ${
-            isLight ? 'text-sky-700 group-hover:text-slate-900' : 'text-cyan-300 group-hover:text-white'
+            isLight ? 'text-intuition-primary group-hover:text-slate-900' : 'text-intuition-primary group-hover:text-white'
           }`}
         >
           Open

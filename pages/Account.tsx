@@ -8,7 +8,7 @@ import { PageLoading } from '../components/PageLoading';
 import { playClick, playHover } from '../services/audio';
 
 /**
- * Account entry — when connected, redirects to profile. When not, shows connect prompt.
+ * Account entry ,  when connected, redirects to profile. When not, shows connect prompt.
  */
 const Account: React.FC = () => {
   const { address } = useAccount();
@@ -25,7 +25,7 @@ const Account: React.FC = () => {
         variant="section"
         message="Opening profile…"
         backLink={null}
-        className="min-h-[60vh] bg-[#020308] w-full"
+        className="min-h-[60vh] bg-intuition-dark w-full"
       />
     );
   }

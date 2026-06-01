@@ -47,7 +47,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
     <div 
       className={`relative group border transition-all duration-300 bg-[#05080f] clip-path-slant overflow-hidden mb-1.5 cursor-pointer select-none ${
         expanded 
-          ? 'border-intuition-primary shadow-[0_0_30px_rgba(0,243,255,0.1)] bg-slate-900/40' 
+          ? 'border-intuition-primary shadow-[0_0_30px_rgba(255,80,57,0.1)] bg-slate-900/40' 
           : 'border-white/5 hover:border-white/20 hover:bg-white/5'
       }`}
       onClick={handleToggle}

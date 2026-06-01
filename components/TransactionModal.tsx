@@ -65,13 +65,13 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, status, tit
   const isProcessing = status === 'processing';
   const explorerBase = EXPLORER_URL || "https://explorer.intuition.systems";
 
-  const themeColor = isSuccess ? '#00ff9d' : isError ? '#ff0055' : '#00f3ff';
-  const shadowColor = isSuccess ? 'rgba(0,255,157,0.2)' : isError ? 'rgba(255,0,85,0.3)' : 'rgba(0,243,255,0.2)';
+  const themeColor = isSuccess ? '#00ff9d' : isError ? '#ff0055' : '#ff5039';
+  const shadowColor = isSuccess ? 'rgba(0,255,157,0.2)' : isError ? 'rgba(255,0,85,0.3)' : 'rgba(255,80,57,0.2)';
 
   const modalContent = (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-backdrop-fade-fluid font-mono">
       <div
-        className="relative w-full max-w-lg bg-[#020308] border shadow-[0_0_80px_rgba(0,0,0,1)] rounded-3xl overflow-hidden animate-modal-pop-fluid transition-all duration-500"
+        className="relative w-full max-w-lg bg-intuition-dark border shadow-[0_0_80px_rgba(0,0,0,1)] rounded-3xl overflow-hidden animate-modal-pop-fluid transition-all duration-500"
         style={{
           borderColor: themeColor,
           boxShadow: `0 0 50px ${shadowColor}`,
@@ -186,7 +186,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, status, tit
           )}
         </div>
         
-        <div className={`h-1.5 w-full transition-colors duration-500 ${isProcessing ? 'bg-intuition-primary animate-pulse shadow-[0_0_10px_#00f3ff]' : isSuccess ? 'bg-intuition-success shadow-[0_0_10px_#00ff9d]' : 'bg-intuition-danger shadow-[0_0_10px_#ff0055]'}`} />
+        <div className={`h-1.5 w-full transition-colors duration-500 ${isProcessing ? 'bg-intuition-primary animate-pulse shadow-[0_0_10px_#ff5039]' : isSuccess ? 'bg-intuition-success shadow-[0_0_10px_#00ff9d]' : 'bg-intuition-danger shadow-[0_0_10px_#ff0055]'}`} />
       </div>
     </div>
   );

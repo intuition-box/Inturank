@@ -1,9 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect, useConnect, useConfig } from 'wagmi';
 import { getWalletClient } from '@wagmi/core';
-import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
+import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
 import { switchNetwork, disconnectWallet, setWagmiConnection, setOpenConnectModalRef } from '../services/web3';
 import { APP_VERSION_DISPLAY, CHAIN_ID } from '../constants';
 import { playHover, playClick } from '../services/audio';
@@ -19,6 +20,7 @@ import { ARENA_BATCH_MODE } from '../constants';
 import { isNavPathActive } from '../services/navActive';
 import { useEffectiveChainId } from '../hooks/useEffectiveChainId';
 import SiteFooter from './SiteFooter';
+import { getSidebarCollapsed, setSidebarCollapsed } from '../services/sidebarState';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -83,6 +85,8 @@ interface NavItemProps {
   /** External tab links (e.g. Get TRUST) use <a>, not router Link */
   external?: boolean;
   linkState?: Record<string, unknown>;
+  /** Icon-rail mode: hide label, center icon, lean on title tooltip */
+  collapsed?: boolean;
 }
 
 const NavItem = memo(function NavItem({
@@ -95,6 +99,7 @@ const NavItem = memo(function NavItem({
   badge,
   external = false,
   linkState,
+  collapsed = false,
 }: NavItemProps) {
   const isGold = variant === 'gold';
   const isArena = variant === 'arena';
@@ -103,23 +108,31 @@ const NavItem = memo(function NavItem({
   const baseMotion =
     'motion-reduce:transition-none motion-reduce:duration-0 motion-safe:transition-[gap,padding,background-color,border-color,color,box-shadow,transform,filter] motion-safe:duration-400 ' +
     motionEasing;
-  const activeCls = isGold
-    ? 'text-black bg-intuition-warning border-intuition-warning shadow-[0_0_16px_rgba(250,204,21,0.55)] ring-1 ring-amber-400/50 motion-safe:duration-500 hover:shadow-[0_0_28px_rgba(250,204,21,0.5)] motion-safe:group-hover/item:-translate-y-px'
-    : isArena
-      ? 'text-white bg-gradient-to-br from-[#ff2470] via-intuition-secondary to-[#d4145a] border-intuition-secondary shadow-[0_0_22px_rgba(255,30,109,0.55)] ring-1 ring-fuchsia-400/50 motion-safe:duration-500 hover:shadow-[0_0_32px_rgba(255,30,109,0.52)] hover:brightness-105 motion-safe:group-hover/item:-translate-y-px'
-      : isSuccess
-        ? 'text-black bg-intuition-success border-intuition-success shadow-[0_0_16px_rgba(0,255,157,0.5)] ring-1 ring-intuition-success/45 motion-safe:duration-500 hover:shadow-[0_0_28px_rgba(0,255,157,0.45)] motion-safe:group-hover/item:-translate-y-px'
-        : 'text-black bg-intuition-primary border-intuition-primary shadow-[0_0_14px_rgba(0,243,255,0.45)] ring-1 ring-intuition-primary/45 motion-safe:duration-500 hover:shadow-[0_0_32px_rgba(0,243,255,0.38)] motion-safe:group-hover/item:-translate-y-px';
-  const idleCls = isGold
-    ? 'text-amber-200/95 border border-amber-500/40 bg-gradient-to-br from-amber-950/55 to-black/60 hover:text-amber-50 hover:border-amber-400/85 hover:from-amber-500/15 hover:via-amber-400/8 hover:to-black/50 hover:shadow-[0_0_22px_rgba(250,204,21,0.28),inset_0_1px_0_0_rgba(255,255,255,0.05)] motion-safe:group-hover/item:-translate-y-px'
-    : isArena
-      ? 'text-fuchsia-50/95 border border-intuition-secondary/55 bg-gradient-to-br from-intuition-secondary/22 via-[#2a0818]/85 to-black/70 hover:text-white hover:border-fuchsia-400/90 hover:from-intuition-secondary/32 hover:via-[#401028]/95 hover:to-black/60 hover:shadow-[0_0_24px_rgba(255,30,109,0.35),inset_0_1px_0_0_rgba(255,255,255,0.06)] motion-safe:group-hover/item:-translate-y-px'
-      : isSuccess
-        ? 'text-intuition-success border border-intuition-success/40 bg-gradient-to-br from-intuition-success/8 to-intuition-success/[0.03] hover:text-intuition-success hover:border-intuition-success/80 hover:from-intuition-success/16 hover:via-white/[0.04] hover:to-intuition-success/8 hover:shadow-[0_0_22px_rgba(0,255,157,0.28),inset_0_1px_0_0_rgba(255,255,255,0.04)] motion-safe:group-hover/item:-translate-y-px'
-      : 'text-slate-400/95 border border-white/[0.07] bg-gradient-to-br from-white/[0.07] to-white/[0.02] hover:text-white hover:border-intuition-primary/55 hover:from-intuition-primary/14 hover:via-white/[0.05] hover:to-intuition-primary/10 hover:shadow-[0_0_0_1px_rgba(0,243,255,0.2),0_6px_32px_rgba(0,243,255,0.16),inset_0_1px_0_0_rgba(255,255,255,0.07)] motion-safe:group-hover/item:-translate-y-px';
+  // Active row = the dark content-panel surface flowing back into the nav: it reaches the
+  // panel edge (-mr) and squares its right side so it reads continuous with the page.
+  // Idle rows sit flat on the cinnabar field with a soft hover; the icon keeps a subtle
+  // per-variant accent.
+  const accentIcon = isGold
+    ? 'text-amber-300'
+    : isSuccess
+      ? 'text-emerald-300'
+      : isArena
+        ? 'text-orange-200'
+        : 'text-white/70';
+  const activeIcon = isGold
+    ? 'text-amber-300'
+    : isSuccess
+      ? 'text-emerald-300'
+      : 'text-intuition-primary';
 
-  const cls = `group/item relative z-0 flex items-center overflow-hidden gap-0 group-hover/sidebar:gap-2.5 group-focus-within/sidebar:gap-2.5 justify-center group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start px-2 group-hover/sidebar:px-4 group-focus-within/sidebar:px-4 sm:group-hover/sidebar:px-5 sm:group-focus-within/sidebar:px-5 py-2.5 min-h-[44px] text-[11px] font-semibold tracking-wide font-sans normal-case rounded-xl sm:rounded-full border min-w-0 will-change-transform active:scale-[0.99] ${baseMotion} ${
-    active ? activeCls : idleCls
+  const cls = `group/item relative z-0 flex items-center min-w-0 min-h-[44px] text-[13px] font-medium tracking-normal font-sans normal-case will-change-transform active:scale-[0.99] ${baseMotion} ${
+    collapsed
+      ? active
+        ? '-mr-2 justify-center rounded-l-[1.1rem] rounded-r-none bg-intuition-dark text-white py-2 pl-1 pr-2'
+        : 'justify-center rounded-full text-white/80 hover:bg-white/[0.10] py-2 px-1'
+      : active
+        ? '-mr-3 justify-start rounded-l-[1.4rem] rounded-r-none bg-intuition-dark text-white py-2.5 pl-3 pr-4 shadow-[-10px_0_26px_-14px_rgba(0,0,0,0.75)]'
+        : 'justify-start rounded-full text-white/85 hover:text-white hover:bg-white/[0.08] py-2.5 px-3'
   }`;
 
   const handleActivate = () => {
@@ -127,56 +140,50 @@ const NavItem = memo(function NavItem({
     onClick();
   };
 
-  const sheenVia =
-    isGold
-      ? 'from-transparent via-amber-200/25 to-transparent'
-      : isArena
-        ? 'from-transparent via-fuchsia-200/30 to-transparent'
-        : isSuccess
-          ? 'from-transparent via-emerald-200/22 to-transparent'
-          : 'from-transparent via-white/20 to-transparent';
-
-  const iconT =
-    'transition-[transform,filter] duration-400 motion-reduce:transition-none motion-reduce:duration-0 ' + motionEasing;
-
-  const iconHoverIdle = isGold
-    ? 'text-amber-200/95 group-hover/item:scale-110 group-hover/item:text-amber-50'
-    : isArena
-      ? 'text-fuchsia-200 group-hover/item:scale-110 group-hover/item:text-white group-hover/item:drop-shadow-[0_0_12px_rgba(255,30,109,0.55)]'
-      : isSuccess
-        ? 'text-intuition-success group-hover/item:scale-110 group-hover/item:drop-shadow-[0_0_10px_rgba(0,255,157,0.4)]'
-        : 'text-slate-400 group-hover/item:scale-110 group-hover/item:text-intuition-primary group-hover/item:drop-shadow-[0_0_10px_rgba(0,243,255,0.45)]';
-
-  const iconActive = isArena
-    ? 'text-white drop-shadow-[0_0_8px_rgba(0,0,0,0.35)] group-hover/item:scale-105'
-    : 'text-black group-hover/item:scale-105 group-hover/item:drop-shadow-sm';
+  // Soft rounded icon chip (matches the inspo's badged icons).
+  const iconChipSize = collapsed ? 'h-10 w-10' : 'h-8 w-8';
+  const iconWrapCls = active ? 'bg-white/[0.08]' : 'bg-white/[0.06] group-hover/item:bg-white/[0.11]';
+  const iconColorCls = active ? activeIcon : `${accentIcon} group-hover/item:text-white`;
 
   const inner = (
     <>
-      {!active && (
-        <span className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-[inherit]" aria-hidden>
+      {active && !collapsed ? (
+        <>
+          {/* Concave fillets — the cinnabar field curves smoothly into the panel above
+              and below the active tab. The transparent arc reveals the real bg gradient. */}
           <span
-            className={`absolute -left-1/3 top-0 h-full w-2/3 -skew-x-12 -translate-x-full bg-gradient-to-r ${sheenVia} opacity-0 transition-[transform,opacity] duration-[650ms] ease-out group-hover/item:translate-x-[220%] group-hover/item:opacity-100 motion-reduce:translate-x-[-100%] motion-reduce:opacity-0 motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-[-100%] motion-reduce:group-hover/item:opacity-0 ${motionEasing}`}
+            aria-hidden
+            className="pointer-events-none absolute right-0 top-0 z-[1] h-5 w-5 -translate-y-full bg-intuition-dark [-webkit-mask-image:radial-gradient(circle_at_top_left,transparent_19px,#000_20px)] [mask-image:radial-gradient(circle_at_top_left,transparent_19px,#000_20px)]"
           />
-        </span>
-      )}
-      <span className="relative shrink-0 flex items-center justify-center w-5 z-[2]">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-0 bottom-0 z-[1] h-5 w-5 translate-y-full bg-intuition-dark [-webkit-mask-image:radial-gradient(circle_at_bottom_left,transparent_19px,#000_20px)] [mask-image:radial-gradient(circle_at_bottom_left,transparent_19px,#000_20px)]"
+          />
+        </>
+      ) : null}
+      <span
+        className={`relative shrink-0 flex items-center justify-center rounded-full motion-safe:transition-[width,height,background-color,color] motion-safe:duration-300 motion-reduce:transition-none ${iconChipSize} ${iconWrapCls} ${iconColorCls}`}
+      >
         {badge === 'hot' ? (
           <span
-            className="pointer-events-none absolute -top-2 -right-2 z-[4] rounded px-1 py-0.5 bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_10px_rgba(255,30,109,0.55)] motion-reduce:hidden"
+            className="pointer-events-none absolute -top-1.5 -right-1.5 z-[4] rounded-full px-1 py-0.5 bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_10px_rgba(239,68,68,0.55)] motion-reduce:hidden"
             aria-hidden
           >
             HOT
           </span>
         ) : null}
-        <span className={`flex items-center justify-center [&>svg]:shrink-0 ${iconT} ${active ? iconActive : iconHoverIdle}`}>
-          {icon}
-        </span>
+        <span className="flex items-center justify-center [&>svg]:shrink-0">{icon}</span>
       </span>
-      <span className="whitespace-nowrap overflow-hidden text-left max-w-0 opacity-0 motion-reduce:transition-none transition-[max-width,opacity] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] group-hover/sidebar:max-w-[13rem] xl:group-hover/sidebar:max-w-[15rem] group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-[13rem] xl:group-focus-within/sidebar:max-w-[15rem] group-focus-within/sidebar:opacity-100 flex-1 min-w-0 relative z-[2] flex flex-wrap items-center gap-1.5">
-        <span>{label}</span>
+      {/* Label stays mounted and collapses (max-width + opacity) so it slides away with the rail. */}
+      <span
+        className={`overflow-hidden text-left relative z-[2] flex items-center gap-1.5 whitespace-nowrap motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+          collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[180px] opacity-100 ml-3 min-w-0'
+        }`}
+        aria-hidden={collapsed}
+      >
+        <span className="truncate">{label}</span>
         {badge === 'hot' ? (
-          <span className="inline-flex shrink-0 items-center rounded border border-white/35 bg-black/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-fuchsia-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+          <span className="inline-flex shrink-0 items-center rounded-full border border-white/35 bg-black/30 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-orange-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
             Hot
           </span>
         ) : null}
@@ -211,6 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => getSidebarCollapsed());
 
   const { openConnectModal } = useConnectModal();
   const wagmiConfig = useConfig();
@@ -339,55 +347,80 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setIsIntelOpen(false);
   }, []);
 
+  const toggleCollapsed = useCallback(() => {
+    playClick();
+    setCollapsed((prev) => {
+      const next = !prev;
+      setSidebarCollapsed(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <div className="min-h-screen bg-intuition-dark text-slate-300 flex font-sans selection:bg-intuition-primary selection:text-black">
-      {/* Desktop side nav: full-height dock; icon rail expands on hover */}
+    <div className="min-h-screen bg-intuition-dark lg:bg-[radial-gradient(125%_125%_at_12%_-5%,#5a2118_0%,#2f1411_45%,#160b0a_100%)] text-slate-300 flex font-sans selection:bg-intuition-primary selection:text-black">
+      {/* Desktop side nav — sits on the brand-cinnabar field; the active row merges into the floating content panel. Collapsible, persisted. No hover-to-expand. */}
       <aside
         ref={sidebarAsideRef}
-        className="group/sidebar hidden lg:flex fixed inset-y-0 left-0 z-[105] flex-col rounded-none rounded-r-2xl xl:rounded-r-3xl bg-[#020308] border-y-0 border-l-0 border-r border-slate-800/80 shadow-[2px_0_16px_rgba(0,0,0,0.35)] overflow-hidden contain-[layout] transform-gpu motion-reduce:transition-none motion-reduce:duration-0 transition-[width,box-shadow] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] w-[4.5rem] hover:w-72 xl:hover:w-80 focus-within:w-72 xl:focus-within:w-80 hover:shadow-[4px_0_28px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.04)] focus-within:shadow-[4px_0_28px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.04)]"
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-[105] flex-col overflow-visible motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${
+          collapsed ? 'w-[84px]' : 'w-[248px]'
+        }`}
       >
-        <Link
-          to="/"
-          onClick={() => {
-            playClick();
-          }}
-          onMouseEnter={playHover}
-          aria-label="IntuRank home"
-          className="flex h-16 shrink-0 items-center gap-3 px-2.5 group-hover/sidebar:px-4 group-focus-within/sidebar:px-4 border-b border-slate-800/50 justify-center group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start min-w-0 overflow-visible relative z-10 no-underline outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020308] motion-reduce:transition-none transition-[gap,padding] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)]"
-        >
-          <div className="shrink-0 flex items-center justify-center">
-            <div
-              className="rounded-xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/70 flex items-center justify-center text-intuition-primary shadow-[0_0_14px_rgba(0,243,255,0.3)] overflow-hidden p-2 box-border"
-              style={{ width: 52, height: 52 }}
-            >
-              <Logo className="h-8 w-8 max-h-[85%] max-w-[85%] object-contain object-center" />
-            </div>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col max-w-0 opacity-0 overflow-visible motion-reduce:transition-none motion-reduce:duration-0 transition-opacity duration-200 ease-out group-hover/sidebar:max-w-full group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-full group-focus-within/sidebar:opacity-100">
-            <span className="text-xl font-black tracking-[0.18em] font-display whitespace-nowrap min-w-0">
-              <span className="text-[#f8fafc]" style={{ textShadow: '0 0 12px rgba(0,243,255,0.35)' }}>
-                INTU
-              </span>
-              <span className="text-[#00f3ff]" style={{ textShadow: '0 0 14px rgba(0,243,255,0.55)' }}>
-                RANK
-              </span>
-            </span>
-            <span className="text-[9px] text-slate-500 font-mono tracking-[0.25em] uppercase font-black whitespace-nowrap">
-              {APP_VERSION_DISPLAY}
-            </span>
-          </div>
-        </Link>
-
-        <div className="flex-1 flex flex-col px-3 py-3 gap-4 overflow-y-auto overflow-x-clip min-h-0 overscroll-contain">
-          <nav
-            className="rounded-2xl border border-intuition-primary/30 bg-gradient-to-b from-intuition-primary/[0.08] to-transparent p-2.5 space-y-2 shadow-[inset_0_1px_0_0_rgba(0,243,255,0.15)] transition-[box-shadow,background-color,border-color] duration-500 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] group-hover/sidebar:shadow-[inset_0_1px_0_0_rgba(0,243,255,0.22),0_0_32px_rgba(0,243,255,0.08)]"
-            aria-label="Primary navigation"
+        <div className={`relative z-10 flex h-16 shrink-0 items-center min-w-0 overflow-visible ${collapsed ? 'px-2' : 'px-4'}`}>
+          <Link
+            to="/"
+            onClick={playClick}
+            aria-label="IntuRank home"
+            className={`flex h-full items-center min-w-0 overflow-visible no-underline outline-none rounded-full focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#2f1411] ${
+              collapsed ? 'w-full justify-center' : 'flex-1'
+            }`}
           >
-            <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-2 pb-2 border-b border-white/5">
-              <p className="text-[10px] font-mono text-intuition-primary normal-case tracking-wide font-semibold">
-                Main
-              </p>
+            <div className="shrink-0 flex items-center justify-center">
+              <div
+                className="rounded-full bg-gradient-to-br from-black/80 via-black to-black/90 border border-white/20 flex items-center justify-center text-intuition-primary shadow-[0_4px_16px_rgba(0,0,0,0.45)] overflow-hidden p-2 box-border"
+                style={{ width: 42, height: 42 }}
+              >
+                <Logo className="h-7 w-7 max-h-[85%] max-w-[85%] object-contain object-center" />
+              </div>
             </div>
+            <div
+              className={`flex flex-col overflow-hidden motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+                collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[180px] opacity-100 ml-3 min-w-0'
+              }`}
+              aria-hidden={collapsed}
+            >
+              <span className="text-lg font-black tracking-[0.16em] font-display whitespace-nowrap min-w-0">
+                <span className="text-white">INTU</span>
+                <span className="text-white" style={{ textShadow: '0 0 16px rgba(255,255,255,0.35)' }}>RANK</span>
+              </span>
+              <span className="text-[9px] text-white/45 font-mono tracking-[0.25em] uppercase font-black whitespace-nowrap">
+                {APP_VERSION_DISPLAY}
+              </span>
+            </div>
+          </Link>
+        </div>
+        {/* Collapse toggle pinned to the nav↔panel seam (like the inspo). */}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          onMouseEnter={playHover}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="absolute right-0 top-6 z-[106] flex h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-white/15 bg-intuition-dark text-slate-300 shadow-[0_4px_14px_rgba(0,0,0,0.55)] hover:text-white hover:border-intuition-primary/60 transition-colors active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#2f1411]"
+        >
+          {collapsed ? <ChevronRight size={15} strokeWidth={2.5} /> : <ChevronLeft size={15} strokeWidth={2.5} />}
+        </button>
+
+        <div data-lenis-prevent className={`flex-1 flex flex-col py-4 gap-4 overflow-y-auto overflow-x-clip min-h-0 overscroll-contain ${collapsed ? 'px-2' : 'px-3'}`}>
+          <nav className="space-y-1" aria-label="Primary navigation">
+            <p
+              className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/70 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+              }`}
+              aria-hidden={collapsed}
+            >
+              Main
+            </p>
             {MAIN_NAV_ITEMS.map((item) => (
               <NavItem
                 key={`${item.label}-${item.path}`}
@@ -401,15 +434,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 variant={item.variant ?? 'default'}
                 badge={item.badge}
                 linkState={item.linkState}
+                collapsed={collapsed}
               />
             ))}
           </nav>
 
-          <div ref={intelRef} className="space-y-4 flex flex-col min-h-0">
-            <nav className="space-y-2" aria-label="Explore">
-              <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-3 pb-1">
-                <p className="text-[10px] font-mono text-slate-400 normal-case tracking-wide font-semibold">Explore</p>
-              </div>
+          <div ref={intelRef} className="flex flex-col gap-4 min-h-0">
+            <nav className="space-y-1" aria-label="Explore">
+              <p
+                className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/45 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                  collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+                }`}
+                aria-hidden={collapsed}
+              >
+                Explore
+              </p>
               {EXPLORE_NAV_ITEMS.map((item) => (
                 <NavItem
                   key={item.external ? `explore-ext-${item.label}` : item.path}
@@ -420,14 +459,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClick={closeSidebarNav}
                   external={item.external}
                   variant={item.external ? 'success' : 'default'}
+                  collapsed={collapsed}
                 />
               ))}
             </nav>
 
-            <nav className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-2" aria-label="Monitor">
-              <div className="hidden group-hover/sidebar:block group-focus-within/sidebar:block px-2 pb-1">
-                <p className="text-[10px] font-mono text-slate-500 normal-case tracking-wide font-semibold">Monitor</p>
-              </div>
+            <nav className="space-y-1" aria-label="Monitor">
+              <p
+                className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/45 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                  collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+                }`}
+                aria-hidden={collapsed}
+              >
+                Monitor
+              </p>
               {MONITOR_NAV_ITEMS.map((item) => (
                 <NavItem
                   key={item.path}
@@ -436,22 +481,33 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   icon={item.icon}
                   active={isActive(item.path)}
                   onClick={closeSidebarNav}
+                  collapsed={collapsed}
                 />
               ))}
             </nav>
           </div>
         </div>
 
-        <div className="px-2 group-hover/sidebar:px-4 group-focus-within/sidebar:px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 border-t border-slate-800/50 shrink-0 flex h-14 items-center justify-center group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start gap-2 motion-reduce:transition-none motion-reduce:duration-0 transition-[gap,padding] duration-200 ease-out">
-          <Wallet size={16} className={`shrink-0 ${walletAddress ? 'text-intuition-primary' : 'text-slate-600'}`} aria-hidden />
-          <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap truncate text-[9px] font-mono text-slate-500 uppercase tracking-[0.25em] motion-reduce:transition-none motion-reduce:duration-0 transition-opacity duration-200 ease-out group-hover/sidebar:max-w-[14rem] group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-[14rem] group-focus-within/sidebar:opacity-100">
+        <div
+          className={`pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 mt-1 border-t border-white/10 shrink-0 flex h-14 items-center ${
+            collapsed ? 'justify-center px-0' : 'px-5'
+          }`}
+          title={collapsed ? (walletAddress ? 'Connected' : 'No session') : undefined}
+        >
+          <Wallet size={16} className={`shrink-0 ${walletAddress ? 'text-white' : 'text-white/35'}`} aria-hidden />
+          <span
+            className={`overflow-hidden whitespace-nowrap text-[9px] font-mono text-white/50 uppercase tracking-[0.25em] motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+              collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[160px] opacity-100 ml-2'
+            }`}
+            aria-hidden={collapsed}
+          >
             {walletAddress ? 'Connected' : 'No session'}
           </span>
         </div>
       </aside>
 
-      {/* Main column: offset = collapsed rail width; sidebar expands over content */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 w-full lg:ml-[4.5rem]">
+      {/* Main column: offset = sidebar width (the content panel sits flush against the nav at lg+). */}
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 w-full motion-safe:transition-[margin] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${collapsed ? 'lg:ml-[84px]' : 'lg:ml-[248px]'}`}>
         <nav className="lg:hidden fixed top-0 w-full z-50 bg-black/95 border-b border-slate-900/70 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
           <div className="w-full px-3 sm:px-6 max-w-[100vw] min-w-0">
             <div className="flex items-center justify-between h-16 min-w-0">
@@ -463,15 +519,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="flex items-center flex-shrink-0 gap-3 min-w-0 no-underline outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/80 rounded-xl"
               >
                 <div className="group-hover:scale-105 transition-transform duration-150 shrink-0">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/70 flex items-center justify-center text-intuition-primary shadow-[0_0_14px_rgba(0,243,255,0.3)] overflow-hidden p-2 box-border">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/70 flex items-center justify-center text-intuition-primary shadow-[0_0_14px_rgba(255,80,57,0.3)] overflow-hidden p-2 box-border">
                     <Logo className="h-7 w-7 sm:h-8 sm:w-8 max-h-[85%] max-w-[85%] object-contain object-center" />
                   </div>
                 </div>
                 <span className="text-lg font-black tracking-[0.18em] font-display whitespace-nowrap min-w-0">
-                  <span className="text-[#f8fafc]" style={{ textShadow: '0 0 12px rgba(0,243,255,0.35)' }}>
+                  <span className="text-[#f8fafc]" style={{ textShadow: '0 0 12px rgba(255,80,57,0.35)' }}>
                     INTU
                   </span>
-                  <span className="text-[#00f3ff]" style={{ textShadow: '0 0 14px rgba(0,243,255,0.55)' }}>
+                  <span className="text-intuition-primary" style={{ textShadow: '0 0 14px rgba(255,80,57,0.55)' }}>
                     RANK
                   </span>
                 </span>
@@ -492,14 +548,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
+          {/*
+            Hamburger drawer (shown <lg). Was CSS animate-in classes;
+            now framer-motion for buttery enter/exit with ease-out-quint,
+            scaled backdrop blur, staggered item fade-in.
+          */}
+          <AnimatePresence>
           {isMenuOpen && (
-            <>
-              <div
-                className="lg:hidden fixed inset-0 top-[4rem] z-[99] bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+            <React.Fragment key="layout-hamburger-drawer">
+              <motion.div
+                className="lg:hidden fixed inset-0 top-[4rem] z-[99] bg-black/80 backdrop-blur-lg"
                 aria-hidden
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
               />
-              <div className="lg:hidden absolute w-full left-0 top-full z-[100] bg-black border-b-2 border-intuition-primary/20 max-h-[85vh] overflow-y-auto overflow-x-clip shadow-[0_25px_80px_rgba(0,0,0,1)] animate-in slide-in-from-top-2 fade-in duration-500">
-                <div className="px-4 pl-5 pt-4 pb-10 space-y-2 max-w-[100vw] bg-black">
+              <motion.div
+                className="lg:hidden absolute w-full left-0 top-full z-[100] bg-gradient-to-b from-[#1e1218] via-[#16101a] to-[#0e0a14] border-b-2 border-intuition-primary/25 max-h-[85vh] overflow-y-auto overflow-x-clip shadow-[0_30px_90px_rgba(0,0,0,0.9),0_-1px_0_rgba(255,80,57,0.30)]"
+                initial={{ opacity: 0, y: -12, scale: 0.985 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+                style={{ willChange: 'transform, opacity', transformOrigin: '50% 0%' }}
+              >
+                <div className="px-4 pl-5 pt-4 pb-10 space-y-2 max-w-[100vw]">
                   {ALL_MOBILE_NAV_ITEMS.map((item, index) => {
                     const ext = 'external' in item && item.external;
                     const ap = 'activePaths' in item ? item.activePaths : undefined;
@@ -513,12 +586,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           ? variant === 'gold'
                             ? 'text-black bg-intuition-warning border-intuition-warning shadow-[0_0_20px_rgba(250,204,21,0.35)]'
                             : variant === 'arena'
-                              ? 'text-white bg-gradient-to-r from-[#ff2470] via-intuition-secondary to-[#d4145a] border-intuition-secondary shadow-[0_0_24px_rgba(255,30,109,0.45)]'
+                              ? 'text-white bg-gradient-to-r from-[#ff7038] via-intuition-primary to-[#e63c1f] border-intuition-primary shadow-[0_0_24px_rgba(255,80,57,0.45)]'
                               : 'text-black bg-intuition-primary border-intuition-primary'
                           : variant === 'gold'
                             ? 'text-amber-200 border-amber-500/45 bg-amber-950/35 hover:text-amber-50 hover:border-amber-400 hover:bg-amber-500/10'
                             : variant === 'arena'
-                              ? 'text-fuchsia-100 border-intuition-secondary/55 bg-gradient-to-r from-intuition-secondary/20 to-black/50 hover:border-fuchsia-400/80 hover:from-intuition-secondary/30'
+                              ? 'text-orange-100 border-intuition-primary/55 bg-gradient-to-r from-intuition-primary/20 to-black/50 hover:border-intuition-primary/80 hover:from-intuition-primary/30'
                             : 'text-slate-400 border-slate-900 hover:text-white bg-white/5'
                     }`;
                     const delay = { animationDelay: `${index * 45}ms` };
@@ -633,13 +706,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </button>
                   )}
                 </div>
-              </div>
-            </>
+              </motion.div>
+            </React.Fragment>
           )}
+          </AnimatePresence>
         </nav>
 
-        {/* Desktop top bar pill cluster (cyan rim + pink CTA) */}
-        <div className="hidden lg:flex h-14 shrink-0 items-center w-full border-b border-intuition-primary/10 bg-[#020308]/90 backdrop-blur-md supports-[backdrop-filter]:bg-[#020308]/82 relative z-[100] overflow-visible">
+        {/* Floating content panel — the page surface the active nav row merges into (lg+). */}
+        <div className="flex flex-1 flex-col min-w-0 lg:my-3 lg:mr-3 lg:min-h-[calc(100vh-1.5rem)] lg:rounded-[1.75rem] lg:bg-intuition-dark lg:shadow-[0_30px_80px_-24px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] lg:ring-1 lg:ring-black/40">
+        {/* Desktop top bar pill cluster (cinnabar rim + CTA) */}
+        <div className="hidden lg:flex h-14 shrink-0 items-center w-full border-b border-intuition-primary/10 bg-intuition-dark/90 backdrop-blur-md supports-[backdrop-filter]:bg-intuition-dark/82 relative z-[100] overflow-visible lg:rounded-t-[1.75rem]">
           <div className="flex w-full min-w-0 items-center justify-end gap-3 pl-4 pr-[max(1rem,env(safe-area-inset-right))] lg:pr-8">
             {walletAddress && chainId !== CHAIN_ID && (
               <button
@@ -655,13 +731,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     toast.error(msg.length > 160 ? `${msg.slice(0, 157)}…` : msg);
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-intuition-danger text-white text-[11px] font-semibold font-sans rounded-full shrink-0 shadow-[0_0_18px_rgba(255,30,109,0.35)] ring-1 ring-white/10 transition-transform active:scale-[0.98]"
+                className="flex items-center gap-2 px-4 py-2 bg-intuition-danger text-white text-[11px] font-semibold font-sans rounded-full shrink-0 shadow-[0_0_18px_rgba(239,68,68,0.35)] ring-1 ring-white/10 transition-transform active:scale-[0.98]"
               >
                 <AlertTriangle size={14} strokeWidth={2} /> Wrong network
               </button>
             )}
 
-            <div className="flex items-center gap-2 rounded-full border border-intuition-primary/30 bg-gradient-to-b from-intuition-primary/[0.09] to-black/50 pl-2 pr-2 py-1.5 shadow-[inset_0_1px_0_0_rgba(0,243,255,0.18)] overflow-visible ring-1 ring-intuition-primary/15">
+            <div className="flex items-center gap-2 rounded-full border border-intuition-primary/30 bg-gradient-to-b from-intuition-primary/[0.09] to-black/50 pl-2 pr-2 py-1.5 shadow-[inset_0_1px_0_0_rgba(255,80,57,0.18)] overflow-visible ring-1 ring-intuition-primary/15">
             <NotificationBar walletAddress={walletAddress ?? null} />
 
             <button
@@ -670,7 +746,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               onMouseEnter={playHover}
               aria-label="Create a new identity or claim"
               title="Create identity or claim"
-              className="hidden lg:inline-flex items-center gap-2 px-4 sm:px-5 py-2 min-h-0 text-xs font-semibold font-sans text-white rounded-full bg-intuition-secondary hover:brightness-110 active:scale-[0.98] border border-white/15 shadow-[0_0_22px_rgba(255,30,109,0.45)] hover:shadow-[0_0_32px_rgba(255,30,109,0.55)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-secondary/50"
+              className="hidden lg:inline-flex items-center gap-2 px-4 sm:px-5 py-2 min-h-0 text-xs font-semibold font-sans text-white rounded-full bg-intuition-secondary hover:brightness-110 active:scale-[0.98] border border-white/15 shadow-[0_0_22px_rgba(239,68,68,0.45)] hover:shadow-[0_0_32px_rgba(239,68,68,0.55)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-secondary/50"
             >
               <Plus size={16} strokeWidth={2.5} className="shrink-0" aria-hidden />
               <span className="hidden xl:inline whitespace-nowrap">Create identity or claim</span>
@@ -685,8 +761,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onToggleDropdown={toggleDropdown}
                   dropdownRef={dropdownRef}
                 >
-                  <div className="absolute right-0 mt-3 w-72 z-[110] rounded-3xl animate-dropdown-panel-in border border-intuition-primary/35 bg-[#020308] shadow-[0_24px_60px_rgba(0,0,0,0.92),0_0_28px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-black/50">
-                      <div className="space-y-0.5 rounded-[1.35rem] bg-[#020308] p-1.5">
+                  <div className="absolute right-0 mt-3 w-72 z-[110] rounded-3xl animate-dropdown-panel-in border border-intuition-primary/35 bg-intuition-dark shadow-[0_24px_60px_rgba(0,0,0,0.92),0_0_28px_rgba(255,80,57,0.12),inset_0_1px_0_rgba(255,255,255,0.06)] ring-1 ring-black/50">
+                      <div className="space-y-0.5 rounded-[1.35rem] bg-intuition-dark p-1.5">
                         <div className="px-4 py-3 border-b border-white/5 text-[11px] font-semibold font-sans text-slate-500 tracking-wide mb-1">
                           Wallet
                         </div>
@@ -725,7 +801,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <button
                   onClick={openModal}
                   onMouseEnter={playHover}
-                  className="flex items-center gap-2 px-4 py-2 font-sans text-xs font-semibold rounded-full border border-intuition-primary/40 bg-intuition-primary/10 text-intuition-primary hover:bg-intuition-primary/20 hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] transition-all"
+                  className="flex items-center gap-2 px-4 py-2 font-sans text-xs font-semibold rounded-full border border-intuition-primary/40 bg-intuition-primary/10 text-intuition-primary hover:bg-intuition-primary/20 hover:shadow-[0_0_20px_rgba(255,80,57,0.2)] transition-all"
                 >
                   <Wallet size={16} className="shrink-0" strokeWidth={2} />
                   Connect wallet
@@ -753,6 +829,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {ARENA_BATCH_MODE && !pathname.startsWith('/climb') && <ArenaBatchFab />}
 
         <SiteFooter />
+        </div>
       </div>
     </div>
   );

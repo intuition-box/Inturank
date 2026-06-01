@@ -79,7 +79,7 @@ const TxTerminal = ({ status, txHash, termId, error, onRetry, onClose }: {
                             <a 
                                 href={`/markets/${termId}`}
                                 onClick={() => { playClick(); onClose(); }}
-                                className="w-full py-4 bg-intuition-primary text-black font-black uppercase text-xs tracking-widest clip-path-slant flex items-center justify-center gap-2 hover:bg-white transition-all shadow-[0_0_20px_rgba(0,243,255,0.3)]"
+                                className="w-full py-4 bg-intuition-primary text-black font-black uppercase text-xs tracking-widest clip-path-slant flex items-center justify-center gap-2 hover:bg-white transition-all shadow-[0_0_20px_rgba(255,80,57,0.3)]"
                             >
                                 <ExternalLink size={14} /> Open market page
                             </a>
@@ -384,7 +384,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                     {view === 'IDENTITY_CREATOR' && 'New atom'}
                 </h2>
                 <div className="text-xs text-slate-500">
-                    {view === 'IDLE' && 'Atoms are atoms Â· Claims are claims'}
+                    {view === 'IDLE' && 'Atoms are atoms Â/ Claims are claims'}
                     {view === 'CLAIM_OVERVIEW' && 'Subject + predicate + object, then deposit'}
                     {view === 'SELECTOR' && 'Search or create a new atom'}
                     {view === 'IDENTITY_CREATOR' && 'A person, org, thing, or account on the graph'}
@@ -396,14 +396,14 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {view === 'IDLE' && (
             <div className="p-4 sm:p-6 md:p-8 lg:p-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 animate-in fade-in zoom-in-95 duration-500">
-                <button onClick={() => { playClick(); setReturnTo('IDLE'); setView('IDENTITY_CREATOR'); }} onMouseEnter={playHover} className="group relative p-6 md:p-8 lg:p-10 bg-[#080a12] border border-white/10 hover:border-intuition-primary rounded-[32px] text-left transition-all overflow-hidden shadow-2xl">
+                <button onClick={() => { playClick(); setReturnTo('IDLE'); setView('IDENTITY_CREATOR'); }} onMouseEnter={playHover} className="group relative p-6 md:p-8 lg:p-10 bg-intuition-card border border-white/10 hover:border-intuition-primary rounded-[32px] text-left transition-all overflow-hidden shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-intuition-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="w-16 h-16 bg-black border-2 border-intuition-primary rounded-2xl flex items-center justify-center mb-8 group-hover:bg-intuition-primary group-hover:text-black transition-all shadow-lg"><Database size={32} /></div>
                     <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Create an atom</h3>
                     <p className="text-sm text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors">Mint a single node â€” a person, a project, a token, anything you want to trade or point at.</p>
                     <div className="mt-8 flex items-center gap-2 text-xs font-bold text-intuition-primary group-hover:translate-x-2 transition-transform">Continue <ArrowRight size={14} /></div>
                 </button>
-                <button onClick={() => { playClick(); setView('CLAIM_OVERVIEW'); }} onMouseEnter={playHover} className="group relative p-6 md:p-8 lg:p-10 bg-[#080a12] border border-white/10 hover:border-intuition-secondary rounded-[32px] text-left transition-all overflow-hidden shadow-2xl">
+                <button onClick={() => { playClick(); setView('CLAIM_OVERVIEW'); }} onMouseEnter={playHover} className="group relative p-6 md:p-8 lg:p-10 bg-intuition-card border border-white/10 hover:border-intuition-secondary rounded-[32px] text-left transition-all overflow-hidden shadow-2xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-intuition-secondary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="w-16 h-16 bg-black border-2 border-intuition-secondary rounded-2xl flex items-center justify-center mb-8 group-hover:bg-intuition-secondary group-hover:text-black transition-all shadow-lg"><Network size={32} /></div>
                     <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Create a claim</h3>
@@ -447,7 +447,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                           <button 
                               key={a.id} 
                               onClick={() => { setSelectedInSearch(a); handleConfirmSelection(); }}
-                              className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left ${selectedInSearch?.id === a.id ? 'bg-intuition-primary/10 border-intuition-primary shadow-[0_0_20px_rgba(0,243,255,0.1)]' : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'}`}
+                              className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left ${selectedInSearch?.id === a.id ? 'bg-intuition-primary/10 border-intuition-primary shadow-[0_0_20px_rgba(255,80,57,0.1)]' : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'}`}
                           >
                               <div className="w-12 h-12 bg-black border border-white/10 rounded-xl overflow-hidden shrink-0">
                                 {a.image ? <img src={a.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900">{target === 'predicate' ? <Zap size={20}/> : <User size={20}/>}</div>}
@@ -590,7 +590,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
              <div className="w-1.5 h-1.5 rounded-full bg-intuition-success animate-pulse shadow-[0_0_8px_#00ff9d]" />
              <span className="text-xs text-slate-500">Ready to create on IntuRank</span>
            </div>
-           <span className="text-[11px] text-slate-600 hidden sm:inline">Â·</span>
+           <span className="text-[11px] text-slate-600 hidden sm:inline">Â/</span>
            <span className="text-[11px] text-slate-600">Your wallet signs each transaction</span>
         </div>
       </div>

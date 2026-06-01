@@ -1,0 +1,565 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   Lenis smooth scroll — desktop only (mobile uses native scroll).
+   Wire the runtime via hooks/useLenis.ts. Use `data-lenis-prevent` on any
+   scrollable child container you want to opt OUT of momentum (modals,
+   gesture surfaces, etc.) so Lenis doesn't intercept its wheel/touch.
+   ============================================================================ */
+html.lenis { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: clip; }
+
+/* ============================================================================
+   Design tokens — CSS variables
+   Format: `r g b` triplet (no commas) so Tailwind's `<alpha-value>` works.
+   Dark only.
+   ============================================================================ */
+
+:root {
+  /* INTURANK CINNABAR — warm charcoal canvas, cinnabar brand, cobalt accent.
+     Light pockets (marketing bands on Home) opt in via `data-theme="light"`. */
+  --bg:         28 22 32;     /* #1c1620 warm charcoal (NOT pure black) */
+  --surface:    37 29 39;     /* #251d27 raised card                    */
+  --surface-2:  47 37 48;     /* #2f2530 hover                          */
+  --border:     58 46 60;     /* #3a2e3c warm hairline                  */
+  --hairline:   255 255 255;
+  --ink:        255 255 255;
+  --ink-muted:  140 135 128;  /* #8c8780 warm gray secondary     */
+  --ink-dim:    90 85 74;     /* #5a554a deep muted              */
+
+  --primary:    255 80 57;    /* #ff5039 CINNABAR — brand        */
+  --accent:     59 90 254;    /* #3b5afe cobalt                  */
+  --cta:        255 80 57;    /* shares primary (cinnabar)       */
+  --success:    34 197 94;    /* #22c55e lime                    */
+  --warning:    251 191 36;   /* #fbbf24 marigold                */
+  --rare:       251 191 36;   /* top-rank = marigold             */
+  --danger:     220 38 38;    /* #dc2626 crimson                 */
+
+  /* Motion */
+  --anim-ease:        cubic-bezier(0.25, 0.1, 0.25, 1);
+  --anim-ease-out:    cubic-bezier(0.2, 0.85, 0.25, 1);
+  --anim-ease-in-out: cubic-bezier(0.45, 0, 0.25, 1);
+  --anim-duration-fast:   0.18s;
+  --anim-duration-normal: 0.24s;
+  --anim-duration-slow:   0.32s;
+}
+
+/* ============================================================================
+   Section themes — opt-in alternating dark/light sections.
+   Wrap a <section data-theme="light"> (or "dark") and CSS variables flip
+   locally for everything inside. Use for marketing pages (Home, DailyTrustHub)
+   to get the Arcium-style dark→light→dark rhythm. App pages stay dark.
+   ============================================================================ */
+
+[data-theme='light'] {
+  --bg:         250 246 238;  /* #faf6ee cream                   */
+  --surface:    255 255 255;
+  --surface-2:  244 238 225;  /* #f4eee1 raised cream            */
+  --border:     226 217 198;  /* #e2d9c6 warm hairline           */
+  --hairline:   10 10 10;
+  --ink:        10 10 10;
+  --ink-muted:  90 85 74;     /* #5a554a warm muted              */
+  --ink-dim:    140 135 128;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+}
+
+[data-theme='dark'] {
+  --bg:         28 22 32;
+  --surface:    37 29 39;
+  --surface-2:  47 37 48;
+  --border:     58 46 60;
+  --hairline:   255 255 255;
+  --ink:        255 255 255;
+  --ink-muted:  140 135 128;
+  --ink-dim:    90 85 74;
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+}
+
+/* ============================================================================
+   Scroll-reveal — opacity + translateY only (per project motion rules).
+   Apply `.reveal-on-scroll` to opt in. JS toggles `.is-in-view` via
+   useInView hook (hooks/useInView.ts).
+   ============================================================================ */
+
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.is-in-view {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  will-change: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --anim-duration-fast:   0.2s;
+    --anim-duration-normal: 0.28s;
+    --anim-duration-slow:   0.36s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --anim-duration-fast:   0.01ms;
+    --anim-duration-normal: 0.01ms;
+    --anim-duration-slow:   0.01ms;
+  }
+}
+
+/* ============================================================================
+   Base — body / html
+   ============================================================================ */
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-family: 'Inter', sans-serif;
+  overflow-x: clip;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: prevent horizontal overflow and clip-off text */
+@media (max-width: 768px) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .mobile-contain { min-width: 0; overflow-x: clip; }
+  .mobile-break { word-break: break-word; overflow-wrap: break-word; }
+}
+
+/* ============================================================================
+   Scroll reveal — Apple/Samsung-style fluid reveal
+   ============================================================================ */
+
+@keyframes scroll-reveal-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scroll-reveal-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scroll-reveal-up    { animation: scroll-reveal-up 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.animate-scroll-reveal-scale { animation: scroll-reveal-scale 1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* Legacy fade/scale */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-fade-in-up { animation: fade-in-up var(--anim-duration-slow) var(--anim-ease-out) forwards; }
+.animate-fade-in    { animation: fade-in var(--anim-duration-normal) var(--anim-ease-out) forwards; }
+.animate-scale-in   { animation: scale-in var(--anim-duration-fast) var(--anim-ease-out) forwards; }
+
+/* Notification panel + items */
+@keyframes notification-panel-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-notification-panel-in { animation: notification-panel-in var(--anim-duration-fast) var(--anim-ease-out) forwards; }
+@keyframes notification-item-in {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-notification-item-in { animation: notification-item-in var(--anim-duration-fast) var(--anim-ease-out) forwards; }
+
+/* Motion helpers — hover lift, hover scale, smooth */
+.motion-hover-lift {
+  transition: transform var(--anim-duration-normal) var(--anim-ease-out),
+              box-shadow var(--anim-duration-normal) var(--anim-ease-out);
+}
+.motion-hover-lift:hover { transform: translateY(-3px); }
+.motion-hover-scale {
+  transition: transform var(--anim-duration-normal) var(--anim-ease-out);
+}
+.motion-hover-scale:hover { transform: scale(1.02); }
+.motion-smooth {
+  transition: transform var(--anim-duration-normal) var(--anim-ease-out),
+              opacity var(--anim-duration-normal) var(--anim-ease-out);
+}
+
+/* Dropdown panels: liquid slide + fade (INTEL + wallet) */
+@keyframes dropdown-panel-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-dropdown-panel-in { animation: dropdown-panel-in var(--anim-duration-normal) var(--anim-ease-out) both; }
+@keyframes dropdown-item-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-dropdown-item-in { animation: dropdown-item-in var(--anim-duration-normal) var(--anim-ease-out) both; }
+
+/* Toast: slide from right */
+@keyframes slide-in-from-right-full {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-from-right-full { animation: slide-in-from-right-full var(--anim-duration-normal) var(--anim-ease-out) both; }
+
+/* Success modal: pop with subtle overshoot */
+@keyframes modal-pop-fluid {
+  0%   { opacity: 0; transform: scale(0.88) translateY(24px); }
+  70%  { opacity: 1; transform: scale(1.02) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-modal-pop-fluid { animation: modal-pop-fluid 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Transaction modal — staggered content reveal */
+@keyframes tx-modal-item-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-tx-modal-item-in { animation: tx-modal-item-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes tx-modal-log-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-tx-modal-log-in { animation: tx-modal-log-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes tx-modal-success-pop {
+  0%   { opacity: 0; transform: scale(0.5); }
+  70%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-tx-modal-success-pop { animation: tx-modal-success-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Backdrop fade */
+@keyframes backdrop-fade-fluid {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-backdrop-fade-fluid { animation: backdrop-fade-fluid 0.45s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Toast slide with overshoot */
+@keyframes toast-slide-fluid {
+  0%   { opacity: 0; transform: translateX(120%); }
+  70%  { opacity: 1; transform: translateX(-8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.animate-toast-slide-fluid { animation: toast-slide-fluid 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+
+/* Skill chat: rolling strip + pending glow */
+@keyframes skill-tx-roll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes skill-tx-pending-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35), inset 0 0 20px rgba(245, 158, 11, 0.06); }
+  50%      { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.75), 0 0 28px rgba(245, 158, 11, 0.25), inset 0 0 24px rgba(245, 158, 11, 0.1); }
+}
+.skill-tx-roll-strip   { animation: skill-tx-roll 1.4s linear infinite; }
+.skill-tx-pending-glow { animation: skill-tx-pending-glow 1.25s ease-in-out infinite; }
+
+/* Create Signal / step transitions */
+@keyframes slide-in-from-right-4 {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-from-left-4 {
+  from { opacity: 0; transform: translateX(-1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-in            { animation-fill-mode: both; }
+.slide-in-from-right-4 { animation: slide-in-from-right-4 var(--anim-duration-fast) var(--anim-ease-out) both; }
+.slide-in-from-left-4  { animation: slide-in-from-left-4 var(--anim-duration-fast) var(--anim-ease-out) both; }
+.duration-300          { animation-duration: var(--anim-duration-fast); }
+
+/* Email notify modal */
+@keyframes email-modal-in {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes email-success-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-email-modal-in   { animation: email-modal-in var(--anim-duration-fast) var(--anim-ease-out) both; }
+.animate-email-success-in { animation: email-success-in var(--anim-duration-normal) var(--anim-ease-out) both; }
+
+/* Gamified arena: pulse, bounce, shimmer, flicker */
+@keyframes arena-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+@keyframes slot-shimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-arena-pulse  { animation: arena-pulse 3s ease-in-out infinite; }
+.animate-slot-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: slot-shimmer 4s linear infinite;
+}
+/* (Removed badge-bounce + neon-flicker keyframes/utilities — zero uses.) */
+
+/* Home hero — cheap translateY cue (GPU-friendly) */
+@keyframes hero-scroll-nudge {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.78; }
+  50%      { transform: translate3d(0, 7px, 0); opacity: 1; }
+}
+.hero-scroll-nudge {
+  animation: hero-scroll-nudge 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-nudge { animation: none !important; will-change: auto; opacity: 1 !important; }
+}
+
+/* (Removed 2026-05-28: ~245 lines of dead atom-card / execution-deck CSS +
+   8 unused @keyframes. Zero component references — confirmed via grep.) */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-email-modal-in, .animate-email-success-in,
+  .animate-modal-pop-fluid, .animate-backdrop-fade-fluid, .animate-toast-slide-fluid,
+  .animate-tx-modal-item-in, .animate-tx-modal-log-in, .animate-tx-modal-success-pop {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   Page enter
+   ============================================================================ */
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes page-enter-scale {
+  from { opacity: 0; transform: translateY(4px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes page-enter-slide-x {
+  from { opacity: 0; transform: translateX(22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-page-enter       { animation: page-enter var(--anim-duration-normal) var(--anim-ease-out) forwards; }
+.animate-page-enter-scale { animation: page-enter-scale var(--anim-duration-fast) var(--anim-ease-out) forwards; }
+
+@media (max-width: 768px) {
+  .mobile-app-shell .animate-page-enter { animation-name: page-enter-slide-x; }
+  .mobile-app-shell main a:active,
+  .mobile-app-shell main button:active {
+    transition: transform var(--anim-duration-fast) var(--anim-ease-out),
+                opacity var(--anim-duration-fast) var(--anim-ease-out);
+  }
+  [class*="duration-200"]  { animation-duration: 0.24s !important; }
+  [class*="duration-300"]  { animation-duration: var(--anim-duration-fast) !important; }
+  [class*="duration-500"]  { animation-duration: 0.35s !important; }
+  [class*="duration-700"]  { animation-duration: 0.45s !important; }
+  [class*="duration-1000"] { animation-duration: 0.5s !important; }
+  .animate-marquee         { animation-duration: 50s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-reveal-up, .animate-scroll-reveal-scale { animation-duration: 0.01ms !important; }
+  .animate-fade-in-up, .animate-fade-in, .animate-scale-in,
+  .animate-notification-panel-in, .animate-notification-item-in,
+  .animate-dropdown-panel-in, .animate-dropdown-item-in,
+  .animate-page-enter, .animate-page-enter-scale,
+  .animate-modal-pop-fluid, .animate-backdrop-fade-fluid, .animate-toast-slide-fluid {
+    animation-duration: 0.01ms !important;
+    animation-timing-function: step-end !important;
+  }
+  .motion-hover-lift:hover, .motion-hover-scale:hover { transform: none; }
+  .motion-hover-lift, .motion-hover-scale, .motion-smooth {
+    transition-duration: 0.01ms !important;
+  }
+  [class*="duration-"], [class*="animate-in"] {
+    animation-duration: 0.01ms !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+  .animate-marquee, .animate-pulse-fast, .animate-spin-slow,
+  .animate-spin-reverse-slow, .animate-spin-fast, .animate-spin-reverse-fast,
+  .animate-scanline, .animate-glitch,
+  .animate-arena-pulse, .animate-slot-shimmer, .hero-scroll-nudge {
+    animation: none !important;
+  }
+}
+
+/* ============================================================================
+   Typography — Orbitron for headings
+   ============================================================================ */
+
+/* Headings: use Inter by default (Arcium-style — modern sans, tight tracking).
+   Components that explicitly want the gamy display feel can still opt in via
+   the `font-display` Tailwind utility (Orbitron). */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+/* ============================================================================
+   Scrollbar
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--bg));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border: 2px solid rgb(var(--bg));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--primary));
+  box-shadow: 0 0 15px rgb(var(--primary) / 0.6);
+}
+
+/* ============================================================================
+   Decorative overlays — scanlines + retro grid
+   ============================================================================ */
+
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(255,30,109,0.01) 50%,
+    rgba(255,30,109,0.01)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+}
+
+.scanline-moving {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(0deg, rgba(255,30,109,0) 0%, rgba(255,30,109,0.01) 50%, rgba(255,30,109,0) 100%);
+  pointer-events: none;
+  z-index: 9998;
+  animation: scanline 18s linear infinite;
+}
+@media (max-width: 768px) {
+  .scanline-moving { animation-duration: 24s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scanline-moving { animation: none; opacity: 0; }
+}
+
+.retro-grid {
+  background-size: 60px 60px;
+  background-image:
+    linear-gradient(to right, rgb(var(--primary) / 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--accent)  / 0.02)  1px, transparent 1px);
+}
+
+/* ============================================================================
+   Text glows + neon utilities — used widely across components
+   ============================================================================ */
+
+/* Bold Violet — neon glow is gone. Text-glow utilities are now NO-OP for
+   text and box-shadow utilities are flattened to a single subtle ring +
+   small drop. Old utility class names kept so 200+ components don't break. */
+.text-glow-blue,
+.text-glow-red,
+.text-glow-gold,
+.text-glow-purple,
+.text-glow-white,
+.text-glow-success { text-shadow: none; }
+
+.text-gradient-gamify     { background: linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.text-gradient-cyan-gold  { background: linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--warning)) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* Card "lift" — a single tight ring + soft drop. No neon halo. */
+.shadow-glow-blue    { box-shadow: 0 0 0 1px rgb(var(--primary) / 0.30), 0 8px 24px rgb(0 0 0 / 0.35); }
+.shadow-glow-red     { box-shadow: 0 0 0 1px rgb(var(--danger)  / 0.30), 0 8px 24px rgb(0 0 0 / 0.35); }
+.shadow-glow-success { box-shadow: 0 0 0 1px rgb(var(--success) / 0.30), 0 8px 24px rgb(0 0 0 / 0.35); }
+.shadow-glow-gold    { box-shadow: 0 0 0 1px rgb(var(--warning) / 0.30), 0 8px 24px rgb(0 0 0 / 0.35); }
+.shadow-glow-purple  { box-shadow: 0 0 0 1px rgb(var(--rare)    / 0.30), 0 8px 24px rgb(0 0 0 / 0.35); }
+.shadow-neon-blue    { box-shadow: 0 0 0 1px rgb(var(--primary) / 0.40), 0 12px 32px rgb(0 0 0 / 0.45); }
+.shadow-neon-success { box-shadow: 0 0 0 1px rgb(var(--success) / 0.40), 0 12px 32px rgb(0 0 0 / 0.45); }
+.shadow-neon-purple  { box-shadow: 0 0 0 1px rgb(var(--rare)    / 0.40), 0 12px 32px rgb(0 0 0 / 0.45); }
+.shadow-neon-gold    { box-shadow: 0 0 0 1px rgb(var(--warning) / 0.40), 0 12px 32px rgb(0 0 0 / 0.45); }
+.shadow-neon-red     { box-shadow: 0 0 0 1px rgb(var(--danger)  / 0.40), 0 12px 32px rgb(0 0 0 / 0.45); }
+.border-glow-multi   { box-shadow: 0 0 0 1px rgb(var(--primary) / 0.25), 0 12px 32px rgb(0 0 0 / 0.5); }
+
+/* Rounded fluid aesthetic */
+.clip-path-slant   { border-radius: 1.5rem; }
+.rounded-fluidy    { border-radius: 2rem; }
+.rounded-fluidy-lg { border-radius: 2.5rem; }
+.rounded-fluidy-xl { border-radius: 3rem; }
+
+/* ============================================================================
+   Cyber button — Orbitron, uppercase, GPU-friendly transform-only hover
+   ============================================================================ */
+
+.btn-cyber {
+  position: relative;
+  text-transform: uppercase;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  border: none;
+  cursor: pointer;
+  border-radius: 1.5rem;
+  transition: transform var(--anim-duration-fast) var(--anim-ease-out),
+              box-shadow var(--anim-duration-fast) var(--anim-ease-out);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-cyber:hover  { transform: translateY(-2px); }
+.btn-cyber:active { transform: translateY(0) scale(0.98); }
+@media (prefers-reduced-motion: reduce) {
+  .btn-cyber       { transition: none; }
+  .btn-cyber:hover { transform: none; }
+}

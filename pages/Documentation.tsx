@@ -140,10 +140,10 @@ function MobileDocSectionJump({
 
   return (
     <div ref={rootRef} className="lg:hidden mb-8 relative z-30">
-      <div className="rounded-2xl border border-intuition-primary/35 bg-gradient-to-br from-[#0a1018]/98 via-[#06080f]/95 to-black/90 p-[1px] shadow-[0_0_0_1px_rgba(0,243,255,0.08),0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <div className="rounded-2xl border border-intuition-primary/35 bg-gradient-to-br from-[#0a1018]/98 via-[#06080f]/95 to-black/90 p-[1px] shadow-[0_0_0_1px_rgba(255,80,57,0.08),0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
         <div className="rounded-[0.9rem] bg-[#05070c]/90 backdrop-blur-md p-4">
           <p className="text-[11px] font-semibold text-intuition-primary/90 uppercase tracking-[0.22em] mb-3 flex items-center gap-2">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-intuition-primary shadow-[0_0_10px_rgba(0,243,255,0.9)]" />
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-intuition-primary shadow-[0_0_10px_rgba(255,80,57,0.9)]" />
             Jump to section
           </p>
           <button
@@ -157,11 +157,11 @@ function MobileDocSectionJump({
               setOpen((o) => !o);
             }}
             onMouseEnter={playHover}
-            className="w-full flex items-center gap-3 rounded-xl border border-intuition-primary/55 bg-black/65 px-4 py-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_24px_rgba(0,243,255,0.08)] motion-safe:transition-[border-color,box-shadow,transform] motion-safe:duration-200 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c]"
+            className="w-full flex items-center gap-3 rounded-xl border border-intuition-primary/55 bg-black/65 px-4 py-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_24px_rgba(255,80,57,0.08)] motion-safe:transition-[border-color,box-shadow,transform] motion-safe:duration-200 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c]"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-intuition-primary/25 bg-intuition-primary/10">
               <ActiveIcon
-                className="w-4 h-4 text-intuition-primary drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]"
+                className="w-4 h-4 text-intuition-primary drop-shadow-[0_0_10px_rgba(255,80,57,0.5)]"
                 aria-hidden
               />
             </span>
@@ -204,7 +204,7 @@ function MobileDocSectionJump({
                       }}
                       className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm motion-safe:transition-[background,box-shadow,transform,color] motion-safe:duration-200 ${
                         selected
-                          ? 'bg-gradient-to-r from-intuition-primary/22 via-intuition-primary/10 to-transparent text-white shadow-[inset_0_0_0_1px_rgba(0,243,255,0.35),0_0_24px_rgba(0,243,255,0.12)]'
+                          ? 'bg-gradient-to-r from-intuition-primary/22 via-intuition-primary/10 to-transparent text-white shadow-[inset_0_0_0_1px_rgba(255,80,57,0.35),0_0_24px_rgba(255,80,57,0.12)]'
                           : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.06] active:scale-[0.99]'
                       }`}
                     >
@@ -397,11 +397,11 @@ const Documentation: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#020308] selection:bg-intuition-primary selection:text-black lg:min-h-0 lg:h-[calc(100dvh-7rem)] lg:max-h-[calc(100dvh-7rem)] lg:overflow-hidden lg:flex lg:flex-col">
+    <div className="w-full min-h-screen bg-intuition-dark selection:bg-intuition-primary selection:text-black lg:min-h-0 lg:h-[calc(100dvh-7rem)] lg:max-h-[calc(100dvh-7rem)] lg:overflow-hidden lg:flex lg:flex-col">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12 w-full lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between shrink-0 mb-8 sm:mb-9 lg:mb-8 w-full">
           <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-black border-2 border-intuition-primary/80 flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-[0_0_32px_rgba(0,243,255,0.25),inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 bg-black border-2 border-intuition-primary/80 flex items-center justify-center rounded-2xl sm:rounded-3xl shadow-[0_0_32px_rgba(255,80,57,0.25),inset_0_1px_0_rgba(255,255,255,0.08)]">
               <FileText size={26} className="text-intuition-primary" aria-hidden />
             </div>
             <div className="min-w-0">
@@ -432,7 +432,7 @@ const Documentation: React.FC = () => {
               to="/markets"
               onClick={playClick}
               onMouseEnter={playHover}
-              className="px-4 sm:px-5 py-2.5 bg-white/5 border-2 border-intuition-primary/40 hover:border-intuition-primary hover:bg-intuition-primary/10 text-intuition-primary hover:text-white text-sm font-medium transition-all rounded-2xl inline-flex items-center gap-2 shadow-[0_0_20px_rgba(0,243,255,0.12)]"
+              className="px-4 sm:px-5 py-2.5 bg-white/5 border-2 border-intuition-primary/40 hover:border-intuition-primary hover:bg-intuition-primary/10 text-intuition-primary hover:text-white text-sm font-medium transition-all rounded-2xl inline-flex items-center gap-2 shadow-[0_0_20px_rgba(255,80,57,0.12)]"
             >
               Markets <ArrowRight className="w-4 h-4" />
             </Link>
@@ -442,7 +442,7 @@ const Documentation: React.FC = () => {
               rel="noopener noreferrer"
               onClick={playClick}
               onMouseEnter={playHover}
-              className="px-4 sm:px-5 py-2.5 bg-intuition-primary text-black text-sm font-semibold rounded-2xl shadow-[0_0_28px_rgba(0,243,255,0.35)] inline-flex items-center gap-2"
+              className="px-4 sm:px-5 py-2.5 bg-intuition-primary text-black text-sm font-semibold rounded-2xl shadow-[0_0_28px_rgba(255,80,57,0.35)] inline-flex items-center gap-2"
             >
               <BookOpen size={14} /> Intuition Docs <ExternalLink size={10} className="opacity-80" />
             </a>
@@ -467,7 +467,7 @@ const Documentation: React.FC = () => {
                   aria-hidden
                 >
                   <div
-                    className="absolute left-0 right-0 top-0 min-h-[2.25rem] rounded-lg border-l-[3px] border-intuition-primary bg-gradient-to-r from-intuition-primary/[0.2] via-intuition-primary/[0.08] to-white/[0.04] ring-1 ring-inset ring-white/[0.07] shadow-[0_0_0_1px_rgba(0,243,255,0.1),0_6px_28px_rgba(0,243,255,0.12)] will-change-[transform,height] motion-safe:transition-[transform,height,opacity] motion-safe:duration-500 motion-reduce:transition-none motion-safe:[transition-timing-function:cubic-bezier(0.33,1,0.68,1)]"
+                    className="absolute left-0 right-0 top-0 min-h-[2.25rem] rounded-lg border-l-[3px] border-intuition-primary bg-gradient-to-r from-intuition-primary/[0.2] via-intuition-primary/[0.08] to-white/[0.04] ring-1 ring-inset ring-white/[0.07] shadow-[0_0_0_1px_rgba(255,80,57,0.1),0_6px_28px_rgba(255,80,57,0.12)] will-change-[transform,height] motion-safe:transition-[transform,height,opacity] motion-safe:duration-500 motion-reduce:transition-none motion-safe:[transition-timing-function:cubic-bezier(0.33,1,0.68,1)]"
                     style={{
                       transform: `translateY(${tocHighlight.top}px) scaleY(1)`,
                       height: Math.max(0, tocHighlight.height),
@@ -501,7 +501,7 @@ const Documentation: React.FC = () => {
                           <Icon
                             className={`w-4 h-4 mt-0.5 shrink-0 transition-all duration-300 ${
                               active
-                                ? 'text-intuition-primary opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(0,243,255,0.45)]'
+                                ? 'text-intuition-primary opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,80,57,0.45)]'
                                 : 'opacity-60'
                             }`}
                             aria-hidden
@@ -523,7 +523,7 @@ const Documentation: React.FC = () => {
           >
             <div className="mb-10 md:mb-14 max-w-[52rem]">
               <p className="text-[11px] font-mono text-slate-500 uppercase tracking-[0.2em] mb-3">
-                {APP_VERSION_DISPLAY} · {NETWORK_NAME} · chain {CHAIN_ID}
+                {APP_VERSION_DISPLAY} �/ {NETWORK_NAME} �/ chain {CHAIN_ID}
               </p>
               <p className="text-base sm:text-lg text-slate-400 leading-relaxed">
                 A full-stack guide to IntuRank {APP_VERSION_DISPLAY}: the trust graph, how markets price conviction with
@@ -726,7 +726,7 @@ const Documentation: React.FC = () => {
                 <ProseLink href={EXPLORER_URL}>explorer</ProseLink>.
               </p>
               <p className="text-xs font-mono text-slate-500 bg-black/40 border border-white/5 rounded-lg px-3 py-2">
-                App release {APP_VERSION} · curve IDs {LINEAR_CURVE_ID} (linear) and {OFFSET_PROGRESSIVE_CURVE_ID}{' '}
+                App release {APP_VERSION} �/ curve IDs {LINEAR_CURVE_ID} (linear) and {OFFSET_PROGRESSIVE_CURVE_ID}{' '}
                 (offset progressive) match protocol constants in this build
               </p>
 
@@ -888,7 +888,7 @@ const Documentation: React.FC = () => {
 
               <div className="not-prose space-y-4 mt-4 text-[13px]">
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">French · create atom</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">French �/ create atom</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Crée un atome nommé « Réseau Nova » avec un dépôt de 0,5 TRUST. Description : communauté open-source autour de la réputation on-chain.`}
                   </pre>
@@ -899,7 +899,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">Spanish · triple / claim</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">Spanish �/ triple / claim</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Quiero registrar la afirmación: el sujeto es "DAO Alpha", el predicado es "colabora_con", el objeto es "Estudio Beta". Depósito de bóveda 0.5 TRUST.`}
                   </pre>
@@ -913,7 +913,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">German · question only (no tx)</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">German �/ question only (no tx)</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Was ist der Unterschied zwischen einem Atom und einem Triple im Intuition-Protokoll? Antworte kurz auf Deutsch.`}
                   </pre>
@@ -923,7 +923,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">Japanese · explain + create</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">Japanese �/ explain + create</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`TRUSTのデポジット最小値を日本語で一言で教えて。そのあと「オープン研究ラボ」という名前の原子を0.5 TRUSTで作るための手順を出して。`}
                   </pre>
@@ -934,7 +934,7 @@ const Documentation: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#080a10] p-4">
-                  <p className="text-xs font-semibold text-intuition-primary mb-2">English · explicit triple (labels)</p>
+                  <p className="text-xs font-semibold text-intuition-primary mb-2">English �/ explicit triple (labels)</p>
                   <pre className="text-slate-300 font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere] leading-relaxed">
                     {`Create a triple: subject "Alice", predicate "endorses", object "Bob", depositTrust 0.5, chain 1155. One-line description: social trust edge.`}
                   </pre>
@@ -1166,7 +1166,7 @@ const Documentation: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Arena · stance batch (vault deposit)</td>
+                      <td className="px-4 py-3 text-slate-200">Arena �/ stance batch (vault deposit)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_ADD_TO_LIST}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
                         Same <strong className="text-slate-400 font-semibold">add-to-list</strong> category when you submit ranked picks: deposit-scaled, then the gross is multiplied by{' '}
@@ -1174,7 +1174,7 @@ const Documentation: React.FC = () => {
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-slate-200">Signal · Vouch batch (FeeProxy createTriples)</td>
+                      <td className="px-4 py-3 text-slate-200">Signal �/ Vouch batch (FeeProxy createTriples)</td>
                       <td className="px-4 py-3 font-mono tabular-nums text-amber-200/95">+{PROTOCOL_XP_CREATE_CLAIM}</td>
                       <td className="px-4 py-3 text-slate-500 text-[13px] leading-snug">
                         Activity XP — treated like <strong className="text-slate-400 font-semibold">created a claim</strong>. One transaction can mint several “vouches for” triples; the deposit basis is the{' '}
@@ -1213,7 +1213,7 @@ const Documentation: React.FC = () => {
                 </table>
               </div>
 
-              <div className="not-prose rounded-xl border border-white/[0.06] bg-[#080a12]/90 p-4 sm:p-5 text-[13px] leading-relaxed text-slate-400 space-y-2">
+              <div className="not-prose rounded-xl border border-white/[0.06] bg-intuition-card/90 p-4 sm:p-5 text-[13px] leading-relaxed text-slate-400 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Keeping it honest</p>
                 <p>
                   Activity XP is meant to reward real use, not scripted spam. In the app we combine three simple rules: you need a{' '}
@@ -1794,7 +1794,7 @@ const Documentation: React.FC = () => {
             </div>
 
             <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-              <span>© 2026 IntuRank · {APP_VERSION_DISPLAY}</span>
+              <span>© 2026 IntuRank �/ {APP_VERSION_DISPLAY}</span>
               <span className="font-mono text-[10px] uppercase tracking-wider">{NETWORK_NAME}</span>
             </footer>
           </div>

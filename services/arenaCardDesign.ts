@@ -38,60 +38,60 @@ export type DeckPaletteEntry = {
  */
 export const DECK_PALETTE: Record<ArenaCategoryId | 'default', DeckPaletteEntry> = {
   daily: {
-    hex: '#00f3ff',
-    soft: 'rgba(0,243,255,0.12)',
-    line: 'rgba(0,243,255,0.45)',
-    contrastText: '#04070d',
+    hex: '#ff5039',                       // cinnabar (brand primary)
+    soft: 'rgba(255,80,57,0.12)',
+    line: 'rgba(255,80,57,0.45)',
+    contrastText: '#1a0a08',
     label: 'Daily',
-    textClass: 'text-cyan-300',
+    textClass: 'text-intuition-primary',
   },
   ecosystem: {
-    hex: '#2dd4bf',
-    soft: 'rgba(45,212,191,0.14)',
-    line: 'rgba(45,212,191,0.48)',
-    contrastText: '#04140f',
+    hex: '#3b5afe',                       // cobalt (brand accent)
+    soft: 'rgba(59,90,254,0.14)',
+    line: 'rgba(59,90,254,0.48)',
+    contrastText: '#0a0e1a',
     label: 'Ecosystem',
-    textClass: 'text-teal-300',
+    textClass: 'text-intuition-purple',
   },
   identities: {
-    hex: '#ec4899',
-    soft: 'rgba(236,72,153,0.14)',
-    line: 'rgba(236,72,153,0.48)',
-    contrastText: '#1a040d',
+    hex: '#ff8775',                       // cinnabar light
+    soft: 'rgba(255,135,117,0.14)',
+    line: 'rgba(255,135,117,0.48)',
+    contrastText: '#1a0a08',
     label: 'Identities',
-    textClass: 'text-pink-300',
+    textClass: 'text-intuition-primary',
   },
   graph: {
-    hex: '#38bdf8',
-    soft: 'rgba(56,189,248,0.12)',
-    line: 'rgba(56,189,248,0.45)',
-    contrastText: '#04101a',
+    hex: '#2a44d8',                       // cobalt deep
+    soft: 'rgba(42,68,216,0.14)',
+    line: 'rgba(42,68,216,0.48)',
+    contrastText: '#08081a',
     label: 'Graph',
-    textClass: 'text-sky-300',
+    textClass: 'text-intuition-purple',
   },
   macro: {
-    hex: '#f59e0b',
-    soft: 'rgba(245,158,11,0.14)',
-    line: 'rgba(245,158,11,0.48)',
+    hex: '#fbbf24',                       // marigold (brand warning/rare)
+    soft: 'rgba(251,191,36,0.14)',
+    line: 'rgba(251,191,36,0.48)',
     contrastText: '#1a120a',
     label: 'Macro',
-    textClass: 'text-amber-300',
+    textClass: 'text-intuition-warning',
   },
   network: {
-    hex: '#fb7185',
-    soft: 'rgba(251,113,133,0.14)',
-    line: 'rgba(251,113,133,0.48)',
+    hex: '#dc2626',                       // crimson (brand secondary/danger)
+    soft: 'rgba(220,38,38,0.14)',
+    line: 'rgba(220,38,38,0.48)',
     contrastText: '#1a050a',
     label: 'Network',
-    textClass: 'text-rose-300',
+    textClass: 'text-intuition-secondary',
   },
   default: {
-    hex: '#00f3ff',
-    soft: 'rgba(0,243,255,0.12)',
-    line: 'rgba(0,243,255,0.45)',
-    contrastText: '#04070d',
+    hex: '#ff5039',                       // cinnabar fallback
+    soft: 'rgba(255,80,57,0.12)',
+    line: 'rgba(255,80,57,0.45)',
+    contrastText: '#1a0a08',
     label: 'Community',
-    textClass: 'text-cyan-300',
+    textClass: 'text-intuition-primary',
   },
 };
 
@@ -102,26 +102,28 @@ export function deckPalette(category?: string | null): DeckPaletteEntry {
   return DECK_PALETTE[key] ?? DECK_PALETTE.default;
 }
 
-/** Surface tokens for cards (same across decks). */
+/** Surface tokens for cards (same across decks). Warm dark, sits slightly
+ *  deeper than the global --bg (#1c1620) so cards feel inset, not raised. */
 export const ARENA_CARD_SURFACE = {
   /** Active card body — single solid panel, no gradients. */
-  bodyBg: '#0b0f17',
-  /** Back-of-deck cards. */
-  deckBg: '#0a0e15',
+  bodyBg: '#14101a',
+  /** Back-of-deck cards (deepest). */
+  deckBg: '#0e0a14',
   /** Nameplate / stat-row inset. */
   inset: 'rgba(255,255,255,0.025)',
   /** Generic muted border. */
   edgeMuted: 'rgba(255,255,255,0.06)',
 } as const;
 
-/** Universal swipe semantic colors — same across all decks. */
+/** Universal swipe semantic colors — agree green, pass crimson. Aligned to
+ *  brand palette (intuition.success / intuition.secondary). */
 export const SWIPE_COLORS = {
-  yes: '#10b981',
-  yesSoft: 'rgba(16,185,129,0.14)',
-  yesLine: 'rgba(16,185,129,0.5)',
-  no: '#ff4d7a',
-  noSoft: 'rgba(255,77,122,0.14)',
-  noLine: 'rgba(255,77,122,0.5)',
+  yes: '#22c55e',
+  yesSoft: 'rgba(34,197,94,0.14)',
+  yesLine: 'rgba(34,197,94,0.5)',
+  no: '#dc2626',
+  noSoft: 'rgba(220,38,38,0.14)',
+  noLine: 'rgba(220,38,38,0.5)',
 } as const;
 
 /** Refined springs — short, snappy, predictable. */

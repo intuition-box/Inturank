@@ -40,6 +40,22 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       target: 'esnext',
+      // Bigger initial chunk is the perf bottleneck — split heavy deps so they
+      // download in parallel and only when the first page that needs them mounts.
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            recharts:   ['recharts'],
+            framer:     ['framer-motion'],
+            rainbow:    ['@rainbow-me/rainbowkit'],
+            wagmi:      ['wagmi', 'viem'],
+            mui:        ['@mui/material', '@mui/icons-material'],
+            genai:      ['@google/genai'],
+            tanstack:   ['@tanstack/react-query'],
+            intuition:  ['@0xintuition/sdk', '@0xintuition/graphql'],
+          },
+        },
+      },
     },
     define: {
       'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),

@@ -15,7 +15,7 @@ export const HomeArenaEntryEffects: React.FC = () => {
 
     if (st.showArenaCreateGameToast) {
       toast.info(
-        'Ranking games live on the contest floor below — tap any tile to play. Use “Create” in the nav to add new items to the graph.',
+        'To publish a new ranking list: play any contest, curate your picks, then use Publish on-chain at Compare. Use Create in the nav to mint new identities first.',
       );
     }
     if (st.scrollArenaContests) {

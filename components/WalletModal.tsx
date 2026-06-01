@@ -108,7 +108,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose, onConnect })
           </button>
         </div>
 
-        <div className="p-8 space-y-4 relative bg-[#080a12]/50">
+        <div className="p-8 space-y-4 relative bg-intuition-card/50">
             <div className="text-[10px] font-semibold font-sans text-slate-500 tracking-wide mb-6 flex items-center gap-3">
                 <Fingerprint size={14} className="text-intuition-primary" /> Connect a wallet
             </div>

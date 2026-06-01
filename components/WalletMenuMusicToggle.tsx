@@ -12,7 +12,7 @@ export interface WalletMenuMusicToggleProps {
 }
 
 /**
- * Persisted Arcade BGM for `/climb` — lives in wallet menus alongside copy / disconnect.
+ * Persisted Arcade BGM for `/climb` ,  lives in wallet menus alongside copy / disconnect.
  */
 export function WalletMenuMusicToggle({ variant, onAfterToggle }: WalletMenuMusicToggleProps): React.ReactElement {
   const { musicOn, toggleMusic } = useArenaMusicPreference();

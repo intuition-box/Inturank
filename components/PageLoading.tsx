@@ -67,7 +67,7 @@ export function PageLoading({
 
   const base =
     variant === 'fullscreen'
-      ? `min-h-screen flex flex-col items-center justify-center gap-6 bg-[#020308] px-6 ${className}`
+      ? `min-h-screen flex flex-col items-center justify-center gap-6 bg-intuition-dark px-6 ${className}`
       : `flex flex-col items-center justify-center gap-6 px-6 ${className}`;
 
   return (

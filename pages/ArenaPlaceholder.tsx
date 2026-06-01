@@ -17,8 +17,8 @@ const ArenaPlaceholder: React.FC = () => {
         className="pointer-events-none absolute inset-0 z-0 opacity-[0.06]"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(0,243,255,0.4) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,243,255,0.35) 1px, transparent 1px)
+            linear-gradient(rgba(255,80,57,0.4) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,80,57,0.35) 1px, transparent 1px)
           `,
           backgroundSize: '48px 48px',
           maskImage: 'radial-gradient(ellipse at center, black 0%, transparent 75%)',
@@ -45,7 +45,7 @@ const ArenaPlaceholder: React.FC = () => {
           </p>
           <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600 mb-10 flex items-center justify-center gap-2">
             <Swords size={12} className="text-fuchsia-400/80" />
-            Masked for this build Â· route preserved
+            Masked for this build Â/ route preserved
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

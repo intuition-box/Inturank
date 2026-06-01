@@ -2,7 +2,7 @@ import React from "react";
 import logo from "../logo.png";
 
 /**
- * Brand mark from logo.png — the artwork sits slightly high-left inside the square canvas,
+ * Brand mark from logo.png ,  the artwork sits slightly high-left inside the square canvas,
  * so a small translate optically centers the glyph in UI boxes (plain flex center looks off).
  */
 const Logo: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => {

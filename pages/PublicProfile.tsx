@@ -63,8 +63,8 @@ const GLASS_SHEET =
 
 const MESH_ACCENT = {
   background:
-    'radial-gradient(ellipse 80% 55% at 0% 0%, rgba(0,243,255,0.14), transparent 52%), ' +
-    'radial-gradient(ellipse 60% 45% at 100% 100%, rgba(255,30,109,0.1), transparent 48%)',
+    'radial-gradient(ellipse 80% 55% at 0% 0%, rgba(255,80,57,0.14), transparent 52%), ' +
+    'radial-gradient(ellipse 60% 45% at 100% 100%, rgba(239,68,68,0.1), transparent 48%)',
 } as const;
 
 /** Card / table labels: crisp sans, no faux-wide tracking */
@@ -624,14 +624,14 @@ const PublicProfile: React.FC = () => {
   );
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#020308] font-mono selection:bg-intuition-primary selection:text-black">
+    <div className="relative min-h-screen overflow-x-hidden bg-intuition-dark font-mono selection:bg-intuition-primary selection:text-black">
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.035]"
         aria-hidden
       />
       <div className="pointer-events-none absolute inset-0 z-0 opacity-[0.04] retro-grid" aria-hidden />
       <div className="pointer-events-none absolute top-0 right-0 z-0 h-[min(70vw,560px)] w-[min(70vw,560px)] rounded-full bg-intuition-primary/6 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-1/4 left-0 z-0 h-[min(55vw,480px)] w-[min(55vw,480px)] rounded-full bg-[#ff1e6d]/5 blur-[100px]" />
+      <div className="pointer-events-none absolute bottom-1/4 left-0 z-0 h-[min(55vw,480px)] w-[min(55vw,480px)] rounded-full bg-intuition-danger/5 blur-[100px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-3 pb-28 pt-5 sm:px-5 sm:pb-20 sm:pt-8 lg:px-8">
       <header className="mb-5 space-y-1.5 font-sans sm:mb-8 sm:space-y-2">
@@ -645,7 +645,7 @@ const PublicProfile: React.FC = () => {
       </header>
 
       <div className="relative z-20 mb-6 flex w-full justify-stretch sm:mb-8 sm:justify-end">
-          <div className="flex w-full min-w-0 items-center gap-0 rounded-2xl border border-white/[0.1] bg-[#0a0c14]/80 py-1.5 pl-3 pr-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all focus-within:border-intuition-primary/45 focus-within:shadow-[0_0_0_1px_rgba(0,243,255,0.12),0_12px_40px_rgba(0,0,0,0.45)] sm:w-auto sm:pl-4 sm:pr-1.5">
+          <div className="flex w-full min-w-0 items-center gap-0 rounded-2xl border border-white/[0.1] bg-[#0a0c14]/80 py-1.5 pl-3 pr-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all focus-within:border-intuition-primary/45 focus-within:shadow-[0_0_0_1px_rgba(255,80,57,0.12),0_12px_40px_rgba(0,0,0,0.45)] sm:w-auto sm:pl-4 sm:pr-1.5">
               <input
                   type="text"
                   placeholder="Address, name.trust, or name.eth"
@@ -685,14 +685,14 @@ const PublicProfile: React.FC = () => {
         </div>
       )}
 
-      <div className="mb-8 rounded-[1.5rem] bg-gradient-to-r from-intuition-primary/45 via-cyan-200/15 to-intuition-primary/40 p-[1px] shadow-[0_0_50px_rgba(0,243,255,0.14)] sm:mb-12 sm:rounded-[2rem]">
+      <div className="mb-8 rounded-[1.5rem] bg-gradient-to-r from-intuition-primary/45 via-cyan-200/15 to-intuition-primary/40 p-[1px] shadow-[0_0_50px_rgba(255,80,57,0.14)] sm:mb-12 sm:rounded-[2rem]">
         <div className="relative flex flex-col items-center gap-5 overflow-hidden rounded-[1.45rem] bg-gradient-to-b from-[#0c101c]/[0.97] to-[#05070d]/[0.98] px-5 pt-6 pb-5 sm:gap-8 sm:rounded-[1.95rem] sm:px-10 sm:pt-9 sm:pb-7 md:flex-row md:items-start md:gap-8 lg:gap-10 md:pb-6">
           <div className="pointer-events-none absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04]" />
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.55]"
             style={{ background: MESH_ACCENT.background }}
           />
-          <div className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/10 bg-black/40 shadow-[0_0_40px_rgba(0,243,255,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/5 sm:h-28 sm:w-28 sm:rounded-3xl">
+          <div className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/10 bg-black/40 shadow-[0_0_40px_rgba(255,80,57,0.12),inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-inset ring-white/5 sm:h-28 sm:w-28 sm:rounded-3xl">
             <div className="absolute inset-0 rounded-3xl bg-intuition-primary/5 transition-colors group-hover:bg-intuition-primary/10" />
             <img
               src={DEFAULT_PROFILE_AVATAR_URL}
@@ -715,8 +715,8 @@ const PublicProfile: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start sm:gap-3">
                   {/* {address && <BadgesSection address={address} compact />} */}
-                  <span className="rounded-full border border-intuition-primary/40 bg-gradient-to-r from-intuition-primary/25 to-intuition-primary/10 px-3.5 py-2 font-sans text-xs font-semibold text-intuition-primary shadow-[0_0_24px_rgba(0,243,255,0.12)] [text-rendering:geometricPrecision]">
-                    {activeHoldingsCount > 50 ? 'Level Â· Elite' : activeHoldingsCount > 10 ? 'Level Â· Pro' : 'Level Â· Explorer'}
+                  <span className="rounded-full border border-intuition-primary/40 bg-gradient-to-r from-intuition-primary/25 to-intuition-primary/10 px-3.5 py-2 font-sans text-xs font-semibold text-intuition-primary shadow-[0_0_24px_rgba(255,80,57,0.12)] [text-rendering:geometricPrecision]">
+                    {activeHoldingsCount > 50 ? 'Level Â/ Elite' : activeHoldingsCount > 10 ? 'Level Â/ Pro' : 'Level Â/ Explorer'}
                   </span>
                   <span className="rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-2 font-sans text-xs font-medium text-slate-200 backdrop-blur-sm [text-rendering:geometricPrecision]">
                     {activeHoldingsCount >= 100 ? `${activeHoldingsCount}+` : activeHoldingsCount} open positions
@@ -797,7 +797,7 @@ const PublicProfile: React.FC = () => {
                       >
                         <UserPlus size={16} strokeWidth={2} className="shrink-0" />
                         <span className="text-sm font-semibold tracking-normal antialiased" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                          Follow Â· Email when they buy
+                          Follow Â/ Email when they buy
                         </span>
                       </button>
                     )}
@@ -827,7 +827,7 @@ const PublicProfile: React.FC = () => {
                   activityXp={protocolXpTotal}
                   size="lg"
                   loading={!arenaGraphReady}
-                  className="w-full shadow-[0_0_32px_rgba(0,243,255,0.08)] max-md:scale-[0.92] max-md:origin-top"
+                  className="w-full shadow-[0_0_32px_rgba(255,80,57,0.08)] max-md:scale-[0.92] max-md:origin-top"
                 />
               </div>
             ) : null}
@@ -840,13 +840,13 @@ const PublicProfile: React.FC = () => {
             <BadgesSection address={address} />
           )} */}
           <div
-            className={`${GLASS_SHEET} group motion-hover-lift min-w-0 p-4 sm:p-6 lg:p-8 hover:border-intuition-primary/35 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(0,243,255,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
+            className={`${GLASS_SHEET} group motion-hover-lift min-w-0 p-4 sm:p-6 lg:p-8 hover:border-intuition-primary/35 hover:shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(255,80,57,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]`}
           >
               <div
                 className="pointer-events-none absolute inset-0 opacity-40"
                 style={{
                   background:
-                    'radial-gradient(ellipse 100% 80% at 100% 0%, rgba(0,243,255,0.1), transparent 55%)',
+                    'radial-gradient(ellipse 100% 80% at 100% 0%, rgba(255,80,57,0.1), transparent 55%)',
                 }}
               />
               <div className="pointer-events-none absolute right-0 top-0 p-4 opacity-[0.07] transition-transform group-hover:scale-110">
@@ -946,7 +946,7 @@ const PublicProfile: React.FC = () => {
               <div className="mb-2 flex min-w-0 items-center gap-2 sm:mb-3">
                 <Wallet size={14} className="shrink-0 text-intuition-primary" />
                 <span className="min-w-0 truncate font-sans text-[10px] font-semibold text-slate-300 sm:text-xs [text-rendering:geometricPrecision]">
-                  Wallet Â· TNS / ENS / address
+                  Wallet Â/ TNS / ENS / address
                 </span>
               </div>
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4">
@@ -1023,7 +1023,7 @@ const PublicProfile: React.FC = () => {
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                   <p className="text-[10px] text-slate-500 font-mono sm:text-xs">No email linked</p>
-                    <button onClick={() => { playClick(); openEmailNotify(); }} onMouseEnter={playHover} className="flex w-full items-center justify-center gap-2 rounded-xl border border-intuition-primary bg-intuition-primary px-3 py-2 font-mono text-[9px] font-black uppercase text-black shadow-[0_0_24px_rgba(0,243,255,0.25)] transition-colors hover:bg-white sm:w-auto sm:px-4 sm:py-2.5 sm:text-[10px]"><Mail size={12} /> Add email</button>
+                    <button onClick={() => { playClick(); openEmailNotify(); }} onMouseEnter={playHover} className="flex w-full items-center justify-center gap-2 rounded-xl border border-intuition-primary bg-intuition-primary px-3 py-2 font-mono text-[9px] font-black uppercase text-black shadow-[0_0_24px_rgba(255,80,57,0.25)] transition-colors hover:bg-white sm:w-auto sm:px-4 sm:py-2.5 sm:text-[10px]"><Mail size={12} /> Add email</button>
                 </div>
               )}
             </div>
@@ -1036,7 +1036,7 @@ const PublicProfile: React.FC = () => {
       )}
       
       {/*
-        5-column row at lg: mix 40% Â· activity 60%. From sm: two columns so charts sit side-by-side on phones/tablets.
+        5-column row at lg: mix 40% Â/ activity 60%. From sm: two columns so charts sit side-by-side on phones/tablets.
       */}
       <div className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5 lg:gap-6">
           <div className={`${GLASS_SHEET} group flex min-h-[300px] flex-col p-4 sm:min-h-[320px] sm:p-6 lg:col-span-2 lg:min-h-[360px] lg:p-8 motion-hover-lift`}>
@@ -1123,7 +1123,7 @@ const PublicProfile: React.FC = () => {
               )}
           </div>
           <div className={`${GLASS_SHEET} group relative flex h-[300px] min-h-[260px] flex-col overflow-hidden p-4 sm:h-[340px] sm:min-h-[300px] sm:p-6 lg:col-span-3 lg:h-[360px] lg:p-10 motion-hover-lift`}>
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-intuition-primary/8 via-transparent to-[#ff1e6d]/5 opacity-60" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-intuition-primary/8 via-transparent to-intuition-danger/5 opacity-60" />
               <h3 className="relative z-10 mb-4 flex items-center gap-3 font-sans text-sm font-semibold text-slate-100 [text-rendering:geometricPrecision]">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-intuition-primary/20 bg-intuition-primary/10">
                   <Activity size={16} className="animate-pulse text-intuition-primary" />

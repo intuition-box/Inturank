@@ -104,11 +104,11 @@ const ArenaBatchFab: React.FC = () => {
       aria-label={`Review ${count} queued stance${count === 1 ? '' : 's'}`}
     >
       <span
-        className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle,rgba(0,243,255,0.06)_1px,transparent_1px)] bg-[size:14px_14px] opacity-50"
+        className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle,rgba(255,80,57,0.06)_1px,transparent_1px)] bg-[size:14px_14px] opacity-50"
         aria-hidden
       />
       <Layers className="relative w-6 h-6 text-intuition-primary" strokeWidth={2.2} aria-hidden />
-      <span className="absolute -top-1 -right-1 min-w-[1.35rem] h-5 px-1 rounded-lg text-white text-[11px] font-black flex items-center justify-center border border-white/20 bg-rose-600 shadow-md tabular-nums">
+      <span className="absolute -top-1 -right-1 min-w-[1.35rem] h-5 px-1 rounded-lg text-white text-[11px] font-black flex items-center justify-center border border-white/20 bg-intuition-secondary shadow-md tabular-nums">
         {count > 99 ? '99+' : count}
       </span>
     </button>,

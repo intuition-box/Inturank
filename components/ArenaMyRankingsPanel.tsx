@@ -130,7 +130,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
       className="w-full max-w-full mx-auto mb-8 sm:mb-10 scroll-mt-24 font-sans min-w-0"
     >
       <div className="group relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-[#020818] to-black shadow-[0_20px_60px_rgba(0,0,0,0.9)] border border-slate-900/60 px-4 sm:px-6 md:px-8 xl:px-10 py-6 sm:py-8 md:py-10 min-w-0">
-        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_left,rgba(0,243,255,0.12),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.1),transparent_55%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_left,rgba(255,80,57,0.12),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.1),transparent_55%)]" />
 
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4 border-b border-slate-800/80 pb-5 mb-5">
           <div className="min-w-0 flex items-start gap-3">
@@ -138,7 +138,7 @@ const ArenaMyRankingsPanel: React.FC<{ wallet: string | null }> = ({ wallet }) =
               <Layers className="w-5 h-5 text-intuition-primary" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] xl:text-xs font-black text-slate-500 uppercase tracking-[0.28em] mb-1">Arena Â· Portfolio</p>
+              <p className="text-[10px] xl:text-xs font-black text-slate-500 uppercase tracking-[0.28em] mb-1">Arena Â/ Portfolio</p>
               <h2 className="text-xl sm:text-2xl font-black font-display text-white tracking-tight">My ranked lists</h2>
               <p className="text-[13px] text-slate-400 mt-1.5 max-w-2xl leading-relaxed">
                 FeeProxy/MultiVault deposits only â€” your wallet is the{' '}
@@ -271,7 +271,7 @@ function ArenaListOnchainCard({
 
   return (
     <div className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/90 via-black to-black border border-slate-800/80 shadow-[0_14px_40px_rgba(0,0,0,0.65)]">
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-[radial-gradient(circle_at_top_left,rgba(0,243,255,0.14),transparent_55%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 bg-[radial-gradient(circle_at_top_left,rgba(255,80,57,0.14),transparent_55%)]" />
       <button
         type="button"
         onClick={onToggle}
@@ -289,11 +289,11 @@ function ArenaListOnchainCard({
             <p className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
               <span>
                 <span className="text-intuition-success font-semibold tabular-nums">{group.yesCount}</span>
-                {' yes Â· '}
+                {' yes Â/ '}
                 <span className="text-intuition-danger font-semibold tabular-nums">{group.noCount}</span>
                 {' no'}
               </span>
-              <span className="text-slate-600">Â·</span>
+              <span className="text-slate-600">Â/</span>
               <span className="tabular-nums uppercase tracking-wider">Latest block {group.maxBlock || 'â€”'}</span>
             </p>
             {!expanded && preview.length > 0 ? (
@@ -306,8 +306,8 @@ function ArenaListOnchainCard({
                     <span
                       className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md text-[9px] font-black uppercase shrink-0 ${
                         r.support
-                          ? 'border border-emerald-500/40 bg-emerald-500/[0.12] text-emerald-300'
-                          : 'border border-rose-500/40 bg-rose-500/[0.12] text-rose-300'
+                          ? 'border border-intuition-success/40 bg-intuition-success/[0.12] text-intuition-success'
+                          : 'border border-intuition-secondary/40 bg-intuition-secondary/[0.12] text-intuition-secondary'
                       }`}
                     >
                       {r.support ? 'Y' : 'N'}
@@ -319,7 +319,7 @@ function ArenaListOnchainCard({
             ) : null}
             {!expanded && group.rows.length > preview.length ? (
               <p className="mt-2 text-[10px] font-medium text-slate-600">
-                +{group.rows.length - preview.length} more Â· expand for full table
+                +{group.rows.length - preview.length} more Â/ expand for full table
               </p>
             ) : null}
           </div>

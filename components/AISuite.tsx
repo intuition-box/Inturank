@@ -26,12 +26,12 @@ function heuristicBrief(agent: Account, triples: Triple[], history: Transaction[
     canon === 'intuition'
       ? 'Intuition is the open protocol: semantic atoms and triples (claims) with TRUST in vaults on Intuition Mainnet. '
       : canon === 'inturank'
-        ? 'IntuRank is the explorer and rankings app on Intuition — markets, portfolios, and comparisons. '
+        ? 'IntuRank is the explorer and rankings app on Intuition ,  markets, portfolios, and comparisons. '
         : '';
   const body =
     canon === 'intuition' || canon === 'inturank'
-      ? `On this page the vault shows about ${vol} ${CURRENCY_SYMBOL} in assets, ${shares} shares, ${tc} linked ${claimsWord}, and ${hc} recent ${activityWord}. Use alongside price and liquidity—not as financial advice.`
-      : `${label} is a ${kind} with ${tc} linked ${claimsWord} and ${hc} recent ${activityWord} on file. About ${vol} ${CURRENCY_SYMBOL} in assets and ${shares} shares are shown here. Use alongside price and liquidity—not as financial advice.`;
+      ? `On this page the vault shows about ${vol} ${CURRENCY_SYMBOL} in assets, ${shares} shares, ${tc} linked ${claimsWord}, and ${hc} recent ${activityWord}. Use alongside price and liquidity, not as financial advice.`
+      : `${label} is a ${kind} with ${tc} linked ${claimsWord} and ${hc} recent ${activityWord} on file. About ${vol} ${CURRENCY_SYMBOL} in assets and ${shares} shares are shown here. Use alongside price and liquidity, not as financial advice.`;
   return protocolLead + body;
 }
 
@@ -76,7 +76,7 @@ export const AIBriefing: React.FC<{ agent: Account; triples: Triple[]; history: 
       if (!getGroqApiKey() && !getGeminiApiKey() && !getOpenAiApiKey()) {
         if (!alive) return;
         setBrief(
-          'Live summaries are turned off because no AI key is configured for this build. Add VITE_GROQ_API_KEY (preferred) or Gemini/OpenAI keys — see README.',
+          'Live summaries are turned off because no AI key is configured for this build. Add VITE_GROQ_API_KEY (preferred) or Gemini/OpenAI keys ,  see README.',
         );
         setMode('no_key');
         setLoading(false);

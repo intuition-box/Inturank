@@ -388,6 +388,80 @@ export async function bestWalletDisplayLabel(walletAddress: string | null | unde
   return m.primaryLabel;
 }
 
+function isRawHexDisplayLabel(label: string): boolean {
+  const t = label.trim();
+  if (!t) return true;
+  if (/^0x[a-f0-9]{40}$/i.test(t)) return true;
+  if (/^0x[a-f0-9]{4,12}…[a-f0-9]{2,6}$/i.test(t)) return true;
+  return false;
+}
+
+/**
+ * Batch-resolve ranker display names for spotlight / community decks.
+ * Graph `.trust` labels first, then per-wallet TNS/ENS (`bestWalletDisplayLabel`).
+ */
+export async function resolveRankerDisplayLabels(
+  walletAddresses: string[],
+): Promise<Map<string, string>> {
+  const uniq: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of walletAddresses) {
+    if (!raw?.trim()) continue;
+    try {
+      const chk = getAddress(raw.trim() as `0x${string}`);
+      const lc = chk.toLowerCase();
+      if (seen.has(lc)) continue;
+      seen.add(lc);
+      uniq.push(chk);
+    } catch {
+      /* skip invalid */
+    }
+  }
+
+  const out = new Map<string, string>();
+  if (uniq.length < 1) return out;
+
+  const graphMap = await getAccountsByIds(uniq).catch(() => new Map<string, GraphAccountRow>());
+  const needsLive: string[] = [];
+
+  for (const chk of uniq) {
+    const lc = chk.toLowerCase();
+    const hit = resolveIntuitionAccountForWallet(chk, graphMap);
+    const fromGraph = graphPreferredWalletLabel(hit?.label ?? null);
+    if (fromGraph?.toLowerCase().endsWith('.trust')) {
+      out.set(lc, fromGraph);
+      continue;
+    }
+    const hinted = readStoredTrustPrimaryHint(chk);
+    if (hinted?.toLowerCase().endsWith('.trust')) {
+      out.set(lc, canonicalTrustFullName(hinted) ?? hinted);
+      continue;
+    }
+    needsLive.push(chk);
+  }
+
+  const concurrency = 6;
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, needsLive.length) }, async () => {
+      while (cursor < needsLive.length) {
+        const i = cursor++;
+        const chk = needsLive[i]!;
+        const lc = chk.toLowerCase();
+        if (out.has(lc)) continue;
+        try {
+          const label = await bestWalletDisplayLabel(chk);
+          if (label && !isRawHexDisplayLabel(label)) out.set(lc, label);
+        } catch {
+          /* keep hex fallback in UI */
+        }
+      }
+    }),
+  );
+
+  return out;
+}
+
 /**
  * Profile / command search: `0x…`, `name.trust`, bare trust labels (SDK resolves), or `name.eth` via ENS.
  */

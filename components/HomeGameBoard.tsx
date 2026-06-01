@@ -83,7 +83,7 @@ export const HomeGameBoard: React.FC<HomeGameBoardProps> = ({ compact }) => {
     <section
       id="arena-home-contests"
       aria-label="Ranking games"
-      className={`scroll-mt-20 relative mx-auto w-full max-w-[1600px] min-w-0 ${compact ? 'px-3 pb-8' : 'px-4 sm:px-6 lg:px-10 py-16 sm:py-20'}`}
+      className={`scroll-mt-20 relative mx-auto w-full max-w-[1600px] min-w-0 ${compact ? 'px-3 pb-8' : 'px-4 sm:px-6 lg:px-10 pt-10 pb-6 sm:pt-12 sm:pb-8'}`}
     >
       <div
         ref={headRef}
@@ -167,7 +167,7 @@ const GameRow: React.FC<{
           <p className="mt-1 max-w-xl text-[12px] text-slate-500 leading-relaxed">{section.subtitle}</p>
         </div>
         <span className="mx-auto shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-300 sm:mx-0">
-          ~{section.lists.reduce((s, L) => s + getArenaListConstituents(L), 0).toLocaleString()} pick slots Â·{' '}
+          ~{section.lists.reduce((s, L) => s + getArenaListConstituents(L), 0).toLocaleString()} pick slots Â/{' '}
           <span className="text-slate-500">{section.lists.length}</span> contest{section.lists.length === 1 ? '' : 's'}
         </span>
       </div>
@@ -247,10 +247,10 @@ const ContestCard: React.FC<{
     typeof livePickCount === 'number' && livePickCount >= 0 ? livePickCount : getArenaListConstituents(entry);
   const fpTone =
     fp.kind === 'live_indexer'
-      ? 'border-emerald-400/35 text-emerald-100/95 bg-emerald-500/[0.1]'
+      ? 'border-intuition-success/40 text-intuition-success bg-intuition-success/[0.1]'
       : fp.kind === 'portal_chain'
-        ? 'border-violet-400/35 text-violet-100/95 bg-violet-500/[0.1]'
-        : 'border-amber-400/35 text-amber-100/95 bg-amber-500/[0.1]';
+        ? 'border-intuition-warning/40 text-intuition-warning bg-intuition-warning/[0.1]'
+        : 'border-white/15 text-slate-300 bg-white/[0.04]';
 
   return (
     <Link
@@ -264,10 +264,10 @@ const ContestCard: React.FC<{
         }
       }}
       onMouseEnter={() => playHover()}
-      className="group relative flex min-h-[5.5rem] flex-col justify-center overflow-hidden rounded-2xl border border-white/[0.1] bg-[#080a10]/95 p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_36px_rgba(0,0,0,0.45),0_0_0_1px_rgba(0,243,255,0.06)] transition-colors duration-150 motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 motion-safe:ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:border-intuition-primary/35 motion-safe:hover:shadow-[0_16px_44px_-10px_rgba(0,243,255,0.14)] motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] sm:min-h-[6.25rem] sm:p-5"
+      className="group relative flex min-h-[5.5rem] flex-col justify-center overflow-hidden rounded-2xl border border-white/[0.1] bg-[#080a10]/95 p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_36px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,80,57,0.06)] transition-colors duration-150 motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 motion-safe:ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:border-intuition-primary/35 motion-safe:hover:shadow-[0_16px_44px_-10px_rgba(255,80,57,0.14)] motion-safe:active:translate-y-0 motion-safe:active:scale-[0.985] sm:min-h-[6.25rem] sm:p-5"
     >
       <span
-        className="pointer-events-none absolute inset-0 opacity-50 bg-[radial-gradient(120%_90%_at_92%_-8%,rgba(0,243,255,0.11),transparent_52%)] motion-safe:transition-[opacity] motion-safe:duration-300 motion-safe:group-hover:opacity-95"
+        className="pointer-events-none absolute inset-0 opacity-50 bg-[radial-gradient(120%_90%_at_92%_-8%,rgba(255,80,57,0.11),transparent_52%)] motion-safe:transition-[opacity] motion-safe:duration-300 motion-safe:group-hover:opacity-95"
         aria-hidden
       />
       <p className="relative z-[1] font-mono text-[10px] font-bold uppercase tracking-wider text-intuition-primary/80">
@@ -293,7 +293,7 @@ const ContestCard: React.FC<{
       <p className="relative z-[1] mt-2 line-clamp-2 text-[11px] text-slate-500">{entry.description}</p>
       <div className="relative z-[1] mt-3 flex items-center justify-between border-t border-white/[0.08] pt-2.5">
         <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
-          <span className="text-emerald-200/95">{pickTotal}</span> pick
+          <span className="text-intuition-success">{pickTotal}</span> pick
           {pickTotal === 1 ? '' : 's'}
         </span>
         <span className="inline-flex flex-wrap items-center justify-end gap-1">

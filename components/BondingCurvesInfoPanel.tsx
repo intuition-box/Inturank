@@ -60,7 +60,7 @@ const BondingCurvesInfoPanel: React.FC<BondingCurvesInfoPanelProps> = ({ isOpen,
               </div>
             </div>
             <p className="text-xs font-mono text-slate-300 leading-relaxed mb-2">
-              The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+              The Linear curve keeps pricing stable with gradual increases, your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
             </p>
             <p className="text-xs font-mono text-slate-500 leading-relaxed">
               In other words, minus the fees, you will get back your original deposit value, plus your portion of the fees collected.

@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { purgeLegacyArenaXpLocalStorage } from './services/arenaXp';
+import './index.css';
 
 purgeLegacyArenaXpLocalStorage();
 
@@ -82,7 +83,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             style={{ 
               marginTop: '30px', 
               padding: '12px 30px', 
-              background: '#00f3ff', 
+              background: '#ff5039',
               color: '#000', 
               border: 'none', 
               fontWeight: 'bold', 

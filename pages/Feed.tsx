@@ -48,7 +48,7 @@ const PersonalActorLink: React.FC<{
   const linkable = isProfileLinkableSender(senderId, senderLabel);
   const className = `font-black text-intuition-primary rounded-sm transition-[color,transform,filter] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none hover:text-white focus-visible:outline focus-visible:ring-2 focus-visible:ring-intuition-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c] ${
     linkable
-      ? 'underline-offset-2 hover:underline hover:drop-shadow-[0_0_14px_rgba(0,243,255,0.4)] active:scale-[0.99]'
+      ? 'underline-offset-2 hover:underline hover:drop-shadow-[0_0_14px_rgba(255,80,57,0.4)] active:scale-[0.99]'
       : 'cursor-default opacity-90'
   }`;
   if (!linkable) {
@@ -300,14 +300,14 @@ const Feed: React.FC = () => {
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12 border-b border-white/10 pb-10">
                 <div className="relative min-w-0 max-w-3xl space-y-3">
                     <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 shrink-0 rounded-3xl bg-black/80 border border-intuition-primary/35 flex items-center justify-center shadow-[0_0_28px_rgba(0,243,255,0.12)] backdrop-blur-sm">
+                        <div className="w-14 h-14 shrink-0 rounded-3xl bg-black/80 border border-intuition-primary/35 flex items-center justify-center shadow-[0_0_28px_rgba(255,80,57,0.12)] backdrop-blur-sm">
                             <Activity size={28} className="text-intuition-primary" />
                         </div>
                         <div className="min-w-0 space-y-2">
                             <p className={PAGE_HERO_EYEBROW}>Activity</p>
                             <h1 className={PAGE_HERO_TITLE}>Live feed</h1>
                             <p className={`${PAGE_HERO_BODY} max-w-2xl font-sans`}>
-                                Deposits and exits that flowed through IntuRank’s routing contracts—plus{' '}
+                                Deposits and exits that flowed through IntuRank’s routing contracts, plus{' '}
                                 <span className="text-slate-200 font-semibold">your holdings, follows, and wallet moves</span> when they match the same routed pattern. Raw protocol traffic that never touched IntuRank’s router won’t appear here by design.
                             </p>
                         </div>
@@ -321,7 +321,7 @@ const Feed: React.FC = () => {
                 </div>
             </div>
 
-            {/* Summary strip — plain-English AI blurb + refresh */}
+            {/* Summary strip ,  plain-English AI blurb + refresh */}
             <div className="mb-10 rounded-[1.75rem] border border-intuition-primary/20 bg-[#05070c]/90 p-1 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl ring-1 ring-white/[0.04]">
                 <div className="rounded-[1.6rem] bg-[#030508]/95 p-4 sm:p-6 flex flex-col md:flex-row items-stretch md:items-center gap-4 sm:gap-6 md:gap-8 relative overflow-hidden">
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] pointer-events-none rounded-[1.6rem]" />
@@ -398,7 +398,7 @@ const Feed: React.FC = () => {
                                 return (
                                     <div
                                         key={n.id}
-                                        className="group/pitem relative flex items-start gap-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#04060a]/50 px-3 py-2.5 shadow-sm transition-all duration-500 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r before:from-intuition-primary/[0.08] before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-500 hover:border-intuition-primary/45 hover:bg-white/[0.05] hover:shadow-[0_0_28px_rgba(0,243,255,0.1)] motion-safe:md:hover:before:opacity-100"
+                                        className="group/pitem relative flex items-start gap-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#04060a]/50 px-3 py-2.5 shadow-sm transition-all duration-500 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r before:from-intuition-primary/[0.08] before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-500 hover:border-intuition-primary/45 hover:bg-white/[0.05] hover:shadow-[0_0_28px_rgba(255,80,57,0.1)] motion-safe:md:hover:before:opacity-100"
                                     >
                                         <span className={`relative z-[1] flex-shrink-0 mt-0.5 ${n.type === 'liquidated' ? 'text-intuition-danger' : 'text-intuition-success'}`}>
                                             {n.type === 'liquidated' ? <TrendingDown size={16} /> : <TrendingUp size={16} />}
@@ -598,7 +598,7 @@ const Feed: React.FC = () => {
                                 return (
                                     <div
                                         key={tx.id}
-                                        className="group/pitem relative flex items-start gap-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#04060a]/50 px-3 py-2.5 shadow-sm transition-all duration-500 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r before:from-intuition-success/[0.06] before:via-transparent before:to-intuition-primary/[0.05] before:opacity-0 before:transition-opacity before:duration-500 hover:border-intuition-primary/45 hover:bg-white/[0.05] hover:shadow-[0_0_28px_rgba(0,243,255,0.1)] motion-safe:md:hover:before:opacity-100"
+                                        className="group/pitem relative flex items-start gap-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#04060a]/50 px-3 py-2.5 shadow-sm transition-all duration-500 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] motion-reduce:transition-none before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-gradient-to-r before:from-intuition-success/[0.06] before:via-transparent before:to-intuition-primary/[0.05] before:opacity-0 before:transition-opacity before:duration-500 hover:border-intuition-primary/45 hover:bg-white/[0.05] hover:shadow-[0_0_28px_rgba(255,80,57,0.1)] motion-safe:md:hover:before:opacity-100"
                                     >
                                         <span className={`relative z-[1] flex-shrink-0 mt-0.5 ${isRedeem ? 'text-intuition-danger' : 'text-intuition-success'}`}>
                                             {isRedeem ? <TrendingDown size={16} /> : <TrendingUp size={16} />}
@@ -610,7 +610,7 @@ const Feed: React.FC = () => {
                                                     to={`/profile/${encodeURIComponent(walletAddress)}`}
                                                     onClick={playClick}
                                                     onMouseEnter={playHover}
-                                                    className="font-black text-intuition-primary underline-offset-2 transition-[color,transform] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] hover:text-white hover:underline hover:drop-shadow-[0_0_14px_rgba(0,243,255,0.4)] focus-visible:outline focus-visible:ring-2 focus-visible:ring-intuition-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c] active:scale-[0.99]"
+                                                    className="font-black text-intuition-primary underline-offset-2 transition-[color,transform] duration-300 [transition-timing-function:cubic-bezier(0.33,1,0.68,1)] hover:text-white hover:underline hover:drop-shadow-[0_0_14px_rgba(255,80,57,0.4)] focus-visible:outline focus-visible:ring-2 focus-visible:ring-intuition-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05070c] active:scale-[0.99]"
                                                     aria-label="View your public profile"
                                                   >
                                                     You
@@ -680,7 +680,7 @@ const Feed: React.FC = () => {
                         <button 
                             type="button"
                             onClick={() => { playClick(); setIsSortOpen(!isSortOpen); }}
-                            className={`w-full sm:w-auto flex items-center justify-between gap-3 min-h-[48px] px-5 py-3 bg-white/[0.04] border transition-all text-sm font-sans font-medium rounded-2xl min-w-0 sm:min-w-[200px] ${isSortOpen ? 'border-intuition-primary text-white shadow-[0_0_20px_rgba(0,243,255,0.12)]' : 'border-white/10 text-slate-300'}`}
+                            className={`w-full sm:w-auto flex items-center justify-between gap-3 min-h-[48px] px-5 py-3 bg-white/[0.04] border transition-all text-sm font-sans font-medium rounded-2xl min-w-0 sm:min-w-[200px] ${isSortOpen ? 'border-intuition-primary text-white shadow-[0_0_20px_rgba(255,80,57,0.12)]' : 'border-white/10 text-slate-300'}`}
                         >
                             Sort: {activeSort} <ChevronDown size={16} className={`shrink-0 transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
                         </button>
@@ -714,7 +714,7 @@ const Feed: React.FC = () => {
                         message="Loading activity…"
                         subMessage="Connecting to the network…"
                         backLink={null}
-                        className="absolute inset-0 bg-[#020308]/85 backdrop-blur-[2px]"
+                        className="absolute inset-0 bg-intuition-dark/85 backdrop-blur-[2px]"
                     />
                 ) : filteredEvents.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-48 border border-dashed border-white/10 bg-white/[0.02] rounded-3xl relative group backdrop-blur-sm">

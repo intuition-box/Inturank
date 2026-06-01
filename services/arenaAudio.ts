@@ -301,3 +301,89 @@ export function playArenaCelebrateMini(): void {
   });
   });
 }
+
+/** Coin chime — XP claimed / reward collected. Three rising sine pops + a sparkle tail. */
+export function playArenaXpClaim(): void {
+  runArenaAudio((master, ctx) => {
+    const t = ctx.currentTime;
+    const notes = [1046.5, 1318.5, 1568.0]; // C6 · E6 · G6
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      const start = t + i * 0.07;
+      osc.frequency.setValueAtTime(freq * 0.985, start);
+      osc.frequency.exponentialRampToValueAtTime(freq, start + 0.03);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.07, start + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(start);
+      osc.stop(start + 0.26);
+    });
+    const spark = ctx.createOscillator();
+    const sg = ctx.createGain();
+    spark.type = 'triangle';
+    const st = t + 0.22;
+    spark.frequency.setValueAtTime(2093, st);
+    spark.frequency.exponentialRampToValueAtTime(3136, st + 0.12);
+    sg.gain.setValueAtTime(0, st);
+    sg.gain.linearRampToValueAtTime(0.05, st + 0.01);
+    sg.gain.exponentialRampToValueAtTime(0.001, st + 0.2);
+    spark.connect(sg);
+    sg.connect(master);
+    spark.start(st);
+    spark.stop(st + 0.24);
+  });
+}
+
+/** Victory fanfare — rising arpeggio + bell + low body, for on-chain mint success. */
+export function playArenaVictory(): void {
+  runArenaAudio((master, ctx) => {
+    const t = ctx.currentTime;
+    const arp = [392.0, 523.25, 659.25, 783.99]; // G4 · C5 · E5 · G5
+    arp.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 2600;
+      osc.type = 'sawtooth';
+      const start = t + i * 0.06;
+      osc.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.06, start + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+      osc.connect(filt);
+      filt.connect(g);
+      g.connect(master);
+      osc.start(start);
+      osc.stop(start + 0.55);
+    });
+    const bell = ctx.createOscillator();
+    const bg = ctx.createGain();
+    bell.type = 'sine';
+    const bt = t + 0.26;
+    bell.frequency.setValueAtTime(1567.98, bt); // G6
+    bg.gain.setValueAtTime(0, bt);
+    bg.gain.linearRampToValueAtTime(0.08, bt + 0.02);
+    bg.gain.exponentialRampToValueAtTime(0.001, bt + 0.5);
+    bell.connect(bg);
+    bg.connect(master);
+    bell.start(bt);
+    bell.stop(bt + 0.55);
+    const low = ctx.createOscillator();
+    const lg = ctx.createGain();
+    low.type = 'sine';
+    low.frequency.setValueAtTime(130.81, t); // C3
+    low.frequency.exponentialRampToValueAtTime(65.41, t + 0.3);
+    lg.gain.setValueAtTime(0, t);
+    lg.gain.linearRampToValueAtTime(0.1, t + 0.03);
+    lg.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    low.connect(lg);
+    lg.connect(master);
+    low.start(t);
+    low.stop(t + 0.45);
+  });
+}

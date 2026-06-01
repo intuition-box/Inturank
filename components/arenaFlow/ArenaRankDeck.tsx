@@ -192,7 +192,7 @@ const RankRow: React.FC<RowProps> = ({
       <div className="flex items-stretch">
         {/* ── Rank column (podium-tier filled) ────────────────────── */}
         <div
-          className="relative flex w-[100px] shrink-0 flex-col items-center justify-center gap-1.5 px-3 py-5 sm:w-[112px]"
+          className="relative flex w-[64px] shrink-0 flex-col items-center justify-center gap-1.5 px-2 py-5 sm:w-[100px] sm:px-3 md:w-[112px]"
           style={{ background: tier.bg, color: tier.text, boxShadow: tier.glow }}
         >
           {isPodium ? <tier.Icon className="h-4 w-4 opacity-90" strokeWidth={2.5} aria-hidden /> : null}
@@ -235,7 +235,7 @@ const RankRow: React.FC<RowProps> = ({
               className="mt-1.5 font-mono text-[11px] font-bold tabular-nums sm:hidden"
               style={{ color: deck.hex }}
             >
-              {trustAmt} TRUST <span className="text-slate-500">· ×{u}</span>
+              {trustAmt} TRUST <span className="text-slate-500">�/ ×{u}</span>
             </p>
           </div>
         </div>
@@ -322,7 +322,7 @@ const RankRow: React.FC<RowProps> = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-rose-500/35 bg-rose-500/[0.08] text-rose-200/95 transition-colors hover:border-rose-400/55 hover:bg-rose-500/15 hover:text-rose-100"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-intuition-secondary/35 bg-intuition-secondary/[0.08] text-intuition-secondary/95 transition-colors hover:border-intuition-secondary/55 hover:bg-intuition-secondary/15 hover:text-intuition-secondary"
             >
               <Trash2 className="h-4 w-4" strokeWidth={2.3} aria-hidden />
             </button>
@@ -359,7 +359,7 @@ const RankRow: React.FC<RowProps> = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="flex h-10 flex-1 items-center justify-center text-rose-300/95 transition-colors hover:bg-rose-500/10 hover:text-rose-200 active:bg-rose-500/15"
+              className="flex h-10 flex-1 items-center justify-center text-intuition-secondary/95 transition-colors hover:bg-intuition-secondary/10 hover:text-intuition-secondary active:bg-intuition-secondary/15"
             >
               <Trash2 className="h-4 w-4" strokeWidth={2.3} aria-hidden />
             </button>
@@ -426,7 +426,7 @@ const RankRow: React.FC<RowProps> = ({
 /* ============================== Page ============================== */
 
 /**
- * Step 2 · Rank — 2-column composition: vertical leaderboard list on the left,
+ * Step 2 �/ Rank — 2-column composition: vertical leaderboard list on the left,
  * a rich rail (podium summary + stake distribution + action buttons) on the right
  * that fills vertical space regardless of how many cards are in the deck. Drag
  * works on the dedicated grip handle (single Y axis, no grid).
@@ -498,7 +498,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Ranking · ${deck.label}`}
+      chromeTitle={`Ranking �/ ${deck.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -508,7 +508,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
           className="font-mono text-[10px] font-black uppercase tracking-[0.32em]"
           style={{ color: deck.hex }}
         >
-          Step 2 · Rank · {deck.label}
+          Step 2 �/ Rank �/ {deck.label}
         </p>
         <h2 className="font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl md:text-[2rem]">
           Order & weight your deck
@@ -531,7 +531,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
               {typeof poolParticipantCount === 'number' ? (
                 <span className="inline-flex items-center gap-1.5 tabular-nums">
                   <Users className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-                  Pool · {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
+                  Pool �/ {poolParticipantCount} pick{poolParticipantCount === 1 ? '' : 's'}
                 </span>
               ) : null}
               {(listStakersLoading || listStakersCount != null) && (
@@ -543,7 +543,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 </span>
               )}
               {deckEngagementTuneCount > 0 ? (
-                <span className="inline-flex items-center gap-1 text-emerald-200/85">
+                <span className="inline-flex items-center gap-1 text-intuition-success/85">
                   <Zap className="h-3.5 w-3.5" aria-hidden />+{deckEngagementTuneCount} deck refinement
                   {deckEngagementTuneCount === 1 ? '' : 's'}
                 </span>
@@ -620,7 +620,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 <Plus className="h-5 w-5" strokeWidth={2.6} />
               </span>
               <span className="text-[11px] font-bold uppercase tracking-wider">Create a new card</span>
-              <span className="text-[10px] text-slate-500">· add an item to the list</span>
+              <span className="text-[10px] text-slate-500">�/ add an item to the list</span>
             </button>
           ) : null}
         </div>
@@ -677,7 +677,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                 Stake distribution
               </p>
               <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-slate-600">
-                {totalUnits} units · strongest first
+                {totalUnits} units �/ strongest first
               </span>
             </div>
             {stakePerItemSorted.length === 0 ? (
@@ -694,7 +694,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
                         <span className="truncate text-[11px] font-semibold text-slate-200">{r.label}</span>
                         <span className="font-mono text-[10px] font-bold tabular-nums text-slate-500">
                           {formatTrust(base, r.units)}{' '}
-                          <span className="text-slate-600">· ×{r.units}</span>{' '}
+                          <span className="text-slate-600">�/ ×{r.units}</span>{' '}
                           <span className="text-slate-700">({pct}%)</span>
                         </span>
                       </div>
@@ -759,7 +759,7 @@ export const ArenaRankDeck: React.FC<Props> = ({
               <ArrowRight size={14} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </button>
             <p className="mt-1 text-center font-mono text-[9px] uppercase tracking-wider text-slate-600">
-              Preset · {stakeBaseLabel} TRUST per unit
+              Preset �/ {stakeBaseLabel} TRUST per unit
             </p>
           </div>
         </aside>

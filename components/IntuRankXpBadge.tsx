@@ -52,7 +52,7 @@ export interface IntuRankXpBadgeProps {
   size?: IntuRankXpBadgeSize;
   /** Optional rank number from the leaderboard — rendered as a small chip. */
   rank?: number | null;
-  /** When true, hides the breakdown line (Arena · Activity). Useful in tight spaces. */
+  /** When true, hides the breakdown line (Arena �/ Activity). Useful in tight spaces. */
   compact?: boolean;
   className?: string;
   /** Shown when the connected wallet hasn't loaded yet — keeps layout stable. */
@@ -94,14 +94,14 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
   const baseDarkStyle: CSSProperties = hud
     ? {
         background:
-          'linear-gradient(128deg, rgba(0,243,255,0.13) 0%, rgba(10,14,26,0.9) 45%, rgba(4,7,13,0.96) 100%)',
+          'linear-gradient(128deg, rgba(255,80,57,0.13) 0%, rgba(10,14,26,0.9) 45%, rgba(4,7,13,0.96) 100%)',
         boxShadow:
           'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(236,72,153,0.09), 0 0 44px rgba(34,211,238,0.22)',
       }
     : {
         background:
-          'linear-gradient(135deg, rgba(0,243,255,0.08) 0%, rgba(8,15,28,0.85) 55%, rgba(2,6,12,0.95) 100%)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 28px rgba(0,243,255,0.12)',
+          'linear-gradient(135deg, rgba(255,80,57,0.08) 0%, rgba(8,15,28,0.85) 55%, rgba(2,6,12,0.95) 100%)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 28px rgba(255,80,57,0.12)',
       };
 
   const mergedSurfaceStyle: CSSProperties = light
@@ -184,7 +184,7 @@ export const IntuRankXpBadge: React.FC<IntuRankXpBadgeProps> = ({
             <span className={light ? 'text-sky-700' : 'text-intuition-primary/85'}>
               Arena {arenaXp.toLocaleString()}
             </span>
-            <span className="text-slate-600 mx-1.5">·</span>
+            <span className="text-slate-600 mx-1.5">�/</span>
             <span className={light ? 'text-amber-700' : 'text-amber-300/85'}>
               Activity {activityXp.toLocaleString()}
             </span>
