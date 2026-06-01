@@ -61,6 +61,7 @@ export async function fetchPortalListCommunityRankings(opts: {
       label: short,
       arenaXp: 0,
       activityXp: 0,
+      giftXp: 0,
       duels: 0,
       atomsRanked: 0,
       listsPlayed: 0,

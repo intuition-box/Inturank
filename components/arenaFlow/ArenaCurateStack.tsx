@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
 import {
   ArrowRight,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
 import {
+  playArenaCelebrateMini,
   playArenaSwipeAgree,
   playArenaSwipePass,
   playArenaUiClick,
@@ -53,7 +54,7 @@ const FLY_X = 520;
 const RANK_READY_MIN = 3;
 
 /**
- * Step 1 Â/ Curate â€” focused swipe lane: headline + stacked card + deck rail.
+ * Step 1 ï¿½/ Curate â€” focused swipe lane: headline + stacked card + deck rail.
  *
  * Architecture notes:
  *  - Each visible card is rendered by `<SwipeCard>` which owns its OWN motion
@@ -92,6 +93,21 @@ export const ArenaCurateStack: React.FC<Props> = ({
   const readyPct = Math.min(100, Math.round((agreedYesCount / RANK_READY_MIN) * 100));
   const seenCount = useMemo(() => pool.length - queue.length, [pool.length, queue.length]);
 
+  /** One-shot celebration when the deck first becomes rank-ready (crosses the minimum). */
+  const prevReadyRef = useRef(false);
+  const [justReady, setJustReady] = useState(false);
+  useEffect(() => {
+    const isReady = agreedYesCount >= RANK_READY_MIN;
+    const wasReady = prevReadyRef.current;
+    prevReadyRef.current = isReady;
+    if (isReady && !wasReady) {
+      if (!reduceMotion) playArenaCelebrateMini();
+      setJustReady(true);
+      const t = window.setTimeout(() => setJustReady(false), 900);
+      return () => window.clearTimeout(t);
+    }
+  }, [agreedYesCount, reduceMotion]);
+
   /** Commit a decision. Resets the lock when the next card mounts. */
   const commit = useCallback(
     (dir: 'left' | 'right') => {
@@ -119,24 +135,24 @@ export const ArenaCurateStack: React.FC<Props> = ({
     <header className="flex flex-col gap-4 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
       <div className="min-w-0">
         <p className="font-mono text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: deck.hex }}>
-          Curate Â/ {deck.label}
+          Curate ï¿½/ {deck.label}
         </p>
         <h1 className="mt-2 font-display text-[1.6rem] font-black leading-[1.1] tracking-tight text-white sm:text-[clamp(1.5rem,4vw,2rem)]">
           {listTitle}
         </h1>
         <p className="mt-2 max-w-xl font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-slate-600">
-          Pass â† swipe / tap Â/ agree â†’ swipe / tap
+          Pass â† swipe / tap ï¿½/ agree â†’ swipe / tap
         </p>
       </div>
       <p className="shrink-0 text-right font-mono text-[11px] leading-relaxed text-slate-500 sm:max-w-[200px] sm:leading-snug">
         <span className="tabular-nums text-slate-300">
           {seenCount + 1}/{pool.length}
         </span>
-        <span className="mx-2 text-slate-700">Â/</span>
+        <span className="mx-2 text-slate-700">ï¿½/</span>
         {playerCountLoading ? 'â€¦' : playerCount} playing
         <br className="hidden sm:inline" />
         <span className="sm:ml-0">
-          <span className="mx-2 hidden text-slate-700 sm:inline">Â/</span>
+          <span className="mx-2 hidden text-slate-700 sm:inline">ï¿½/</span>
           <span className="text-intuition-success/85">{agreedYesCount}</span> in deck
         </span>
       </p>
@@ -147,7 +163,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
   if (!top) {
     return (
       <ArenaContestStepShell
-        chromeTitle={`Curate Â/ ${deck.label}`}
+        chromeTitle={`Curate ï¿½/ ${deck.label}`}
         maxWidthClass="max-w-none"
         innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
       >
@@ -184,7 +200,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
             deck={deck}
             className="mt-8 w-full"
           >
-            Next Â/ rank your deck
+            Next ï¿½/ rank your deck
             <ArrowRight size={16} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
           </SolidButton>
         </div>
@@ -194,7 +210,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
 
   return (
     <ArenaContestStepShell
-      chromeTitle={`Curate Â/ ${deck.label}`}
+      chromeTitle={`Curate ï¿½/ ${deck.label}`}
       maxWidthClass="max-w-none"
       innerPaddingClassName="px-3 py-5 sm:px-4 sm:py-6 md:px-5 md:py-7 lg:px-6 xl:px-8"
     >
@@ -297,7 +313,7 @@ export const ArenaCurateStack: React.FC<Props> = ({
               </CircleAction>
             </div>
             <p className="text-center font-mono text-[9px] uppercase tracking-[0.14em] text-slate-700">
-              Drag card Â/ â† pass Â/ agree â†’
+              Drag card ï¿½/ â† pass ï¿½/ agree â†’
             </p>
           </div>
         </div>
@@ -350,18 +366,24 @@ export const ArenaCurateStack: React.FC<Props> = ({
                 />
               </div>
             </div>
-            <SolidButton
-              disabled={agreedYesCount < 1}
-              onClick={() => {
-                playArenaUiClick();
-                onNextToRank();
-              }}
-              deck={deck}
-              className="mt-8 w-full"
+            <motion.div
+              className="mt-8"
+              animate={justReady && !reduceMotion ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             >
-              Next Â/ rank deck
+              <SolidButton
+                disabled={agreedYesCount < 1}
+                onClick={() => {
+                  playArenaUiClick();
+                  onNextToRank();
+                }}
+                deck={deck}
+                className="w-full"
+              >
+              Next ï¿½/ rank deck
               <ArrowRight size={15} strokeWidth={2.6} className="transition-transform group-hover:translate-x-0.5" />
             </SolidButton>
+            </motion.div>
           </div>
 
           {peek.length > 0 ? (
@@ -425,12 +447,12 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-280, 280], [-21, 21]);
-  const yesStampOpacity = useTransform(x, [36, 110], [0, 1]);
-  const yesStampScale = useTransform(x, [36, 120], [0.94, 1.03]);
-  const noStampOpacity = useTransform(x, [-110, -36], [1, 0]);
-  const noStampScale = useTransform(x, [-120, -36], [1.03, 0.94]);
-  const leftGlowOpacity = useTransform(x, [-160, -48, 0], [0.55, 0.1, 0]);
-  const rightGlowOpacity = useTransform(x, [0, 48, 160], [0, 0.1, 0.55]);
+  const yesStampOpacity = useTransform(x, [28, 96], [0, 1]);
+  const yesStampScale = useTransform(x, [28, 120], [0.72, 1.14]);
+  const noStampOpacity = useTransform(x, [-96, -28], [1, 0]);
+  const noStampScale = useTransform(x, [-120, -28], [1.14, 0.72]);
+  const leftGlowOpacity = useTransform(x, [-160, -48, 0], [0.78, 0.14, 0]);
+  const rightGlowOpacity = useTransform(x, [0, 48, 160], [0, 0.14, 0.78]);
 
   const endSwipe = (_: unknown, info: PanInfo) => {
     const dx = info.offset.x + info.velocity.x * 0.22;

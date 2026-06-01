@@ -72,7 +72,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       );
     };
 
-    const myTotal = inturankLeaderboardTotalXp({ arenaXp: myArenaXp, activityXp: myActivityXp });
+    const myTotal = inturankLeaderboardTotalXp({ arenaXp: myArenaXp, activityXp: myActivityXp, giftXp: 0 });
     if (!myAddrLc) return players;
 
     const exists = players.some((p) => p.address === myAddrLc);
@@ -86,6 +86,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       label: 'You',
       arenaXp: myArenaXp,
       activityXp: myActivityXp,
+      giftXp: 0,
       duels: 0,
       atomsRanked: 0,
       listsPlayed: 0,
@@ -157,7 +158,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
                   isLight ? 'text-intuition-primary/90' : 'text-intuition-warning/90'
                 }`}
               >
-                IntuRank Â/ Rankers
+                IntuRank ï¿½/ Rankers
               </p>
               <p
                 className={`text-[11px] font-bold leading-tight mt-0.5 ${isLight ? 'text-slate-900' : 'text-white'}`}
@@ -319,7 +320,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
                     >
                       #{myRow.rank}
                     </span>
-                    <span className={`font-normal text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'}`}> Â/ {augmentedPlayers.length}</span>
+                    <span className={`font-normal text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-500'}`}> ï¿½/ {augmentedPlayers.length}</span>
                   </p>
               ) : (
                 <p className={`text-[11px] leading-tight mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
@@ -355,7 +356,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
       >
         <span className={`text-[10px] font-bold inline-flex items-center gap-1.5 ${isLight ? 'text-intuition-primary' : 'text-intuition-primary'}`}>
           <Award size={11} />
-          Full board Â/ stats Â/ streaks
+          Full board ï¿½/ stats ï¿½/ streaks
         </span>
         <span
           className={`text-[10px] font-black uppercase tracking-widest transition-colors inline-flex items-center gap-1 ${

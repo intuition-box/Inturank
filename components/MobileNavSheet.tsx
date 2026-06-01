@@ -210,7 +210,7 @@ const MobileNavSheet: React.FC<Props> = ({ open, onClose, onCreate, onConnect, o
             transition={{ duration: 0.52, ease: SMOOTH_EASE }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 px-5 pt-3 pb-3 bg-gradient-to-b from-[#0a0e1a] via-[#0a0e1a]/95 to-[#0a0e1a]/0 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 px-5 pt-3 pb-3 bg-gradient-to-b from-[#1e1218] via-[#1e1218]/95 to-[#1e1218]/0 backdrop-blur-sm">
               <div className="mx-auto h-1.5 w-12 rounded-full bg-white/15 mb-4" />
               <div className="flex items-center justify-between">
                 <div>
@@ -342,7 +342,7 @@ const MobileNavSheet: React.FC<Props> = ({ open, onClose, onCreate, onConnect, o
                       onClose();
                       onConnect();
                     }}
-                    className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-2xl bg-gradient-to-r from-intuition-primary to-cyan-300 text-black font-sans font-semibold text-sm shadow-[0_12px_36px_rgba(255,80,57,0.3)] active:scale-[0.99] transition-transform"
+                    className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-2xl bg-gradient-to-r from-intuition-primary to-intuition-secondary text-white font-sans font-semibold text-sm shadow-[0_12px_36px_rgba(255,80,57,0.3)] active:scale-[0.99] transition-transform"
                   >
                     <Wallet size={16} /> Connect wallet
                   </button>

@@ -21,21 +21,26 @@ export interface ArenaPlayerRow {
   arenaXp: number;
   /** IntuRank activity XP (markets, creates, sends, …) from mirror and/or this browser. */
   activityXp: number;
+  /** Team-granted gift XP (server mirror — authoritative bucket, distinct from earned). */
+  giftXp: number;
   duels: number;
   atomsRanked: number;
   listsPlayed: number;
   updatedAt: number;
 }
 
-/** Total XP used for ranking and podium — Arena + Activity. */
-export function inturankLeaderboardTotalXp(p: Pick<ArenaPlayerRow, 'arenaXp' | 'activityXp'>): number {
-  return Math.max(0, Math.floor((p.arenaXp || 0) + (p.activityXp || 0)));
+/** Total XP used for ranking and podium — Arena + Activity + Gifts. */
+export function inturankLeaderboardTotalXp(
+  p: Pick<ArenaPlayerRow, 'arenaXp' | 'activityXp' | 'giftXp'>,
+): number {
+  return Math.max(0, Math.floor((p.arenaXp || 0) + (p.activityXp || 0) + (p.giftXp || 0)));
 }
 
 type RawLb = {
   address: string;
   arenaXp: number;
   activityXp: number;
+  giftXp: number;
   duels: number;
   atomsRanked: number;
   listsPlayed: number;
@@ -80,13 +85,14 @@ async function fetchArenaLeaderboardMirrorRows(): Promise<RawLb[] | null> {
       let activityXp = Math.floor(
         Number(row.protocolXp ?? row.protocolXpTotal ?? row.activityXp ?? 0) || 0,
       );
+      const giftXp = Math.max(0, Math.floor(Number(row.giftXp ?? 0) || 0));
 
       if (!hasArenaField && !hasProtField && xpCombined > 0) {
         arenaXp = xpCombined;
         activityXp = 0;
       }
 
-      const total = arenaXp + activityXp;
+      const total = arenaXp + activityXp + giftXp;
       if (total <= 0) continue;
 
       const duels = typeof row.duels === 'number' ? row.duels : Number(row.duels ?? 0);
@@ -100,6 +106,7 @@ async function fetchArenaLeaderboardMirrorRows(): Promise<RawLb[] | null> {
         address: addr,
         arenaXp,
         activityXp,
+        giftXp,
         duels: Number.isFinite(duels) ? Math.max(0, Math.floor(duels)) : 0,
         atomsRanked: Number.isFinite(atomsRanked) ? Math.max(0, Math.floor(atomsRanked)) : 0,
         listsPlayed: Number.isFinite(listsPlayed) ? Math.max(0, Math.floor(listsPlayed)) : 0,
@@ -123,6 +130,7 @@ async function leaderboardSourceRows(): Promise<RawLb[]> {
     address: r.address.toLowerCase(),
     arenaXp: r.xp,
     activityXp: 0,
+    giftXp: 0,
     duels: r.duels,
     atomsRanked: r.atomsRanked,
     listsPlayed: r.listsPlayed,
@@ -149,7 +157,8 @@ export async function fetchArenaPlayerLeaderboard(viewerAddress?: string | null)
     if (!row) continue;
     let arenaXp = row.arenaXp ?? 0;
     let activityXp = row.activityXp ?? 0;
-    if (inturankLeaderboardTotalXp({ arenaXp, activityXp }) <= 0) continue;
+    const giftXp = row.giftXp ?? 0;
+    if (inturankLeaderboardTotalXp({ arenaXp, activityXp, giftXp }) <= 0) continue;
 
     const atomsRanked = row.atomsRanked ?? row.duels;
     const listsPlayed = row.listsPlayed ?? 0;
@@ -162,6 +171,7 @@ export async function fetchArenaPlayerLeaderboard(viewerAddress?: string | null)
         image: DEFAULT_PROFILE_AVATAR_URL,
         arenaXp,
         activityXp,
+        giftXp,
         duels: row.duels,
         atomsRanked,
         listsPlayed,
@@ -176,6 +186,7 @@ export async function fetchArenaPlayerLeaderboard(viewerAddress?: string | null)
       image: id.image || DEFAULT_PROFILE_AVATAR_URL,
       arenaXp,
       activityXp,
+      giftXp,
       duels: row.duels,
       atomsRanked,
       listsPlayed,

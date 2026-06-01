@@ -2,7 +2,7 @@
  * MobileLayout: top bar + floating bottom nav (five primary tabs).
  * Used in place of the desktop `Layout` chrome whenever `useIsMobile()` is true.
  *
- * Dock: Home Â/ Markets Â/ Skill Â/ Leaderboard Â/ Portfolio (all in-app routes).
+ * Dock: Home ï¿½/ Markets ï¿½/ Skill ï¿½/ Leaderboard ï¿½/ Portfolio (all in-app routes).
  * Header â€œMenuâ€ opens a sheet with Activity, Arena, Trust tools, docs, Create, etc.
  */
 import React, { memo, useEffect, useState } from 'react';
@@ -69,7 +69,9 @@ const BottomNavTab = memo(function BottomNavTab({
   onNavigate: () => void;
 }) {
   const chipClass = `flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.35rem] px-1.5 py-2 transition-[background-color,color,transform] duration-200 ease-out ${
-    active ? 'bg-white/[0.14] text-white' : 'text-zinc-400 active:bg-white/[0.06]'
+    active
+      ? 'bg-intuition-primary/[0.16] text-white ring-1 ring-inset ring-intuition-primary/30 shadow-[0_0_18px_-6px_rgba(255,80,57,0.65)]'
+      : 'text-zinc-400 active:bg-white/[0.06]'
   }`;
 
   const label = (
@@ -312,7 +314,7 @@ const MobileLayout: React.FC<Props> = ({ children }) => {
               <button
                 type="button"
                 onClick={handleConnect}
-                className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-intuition-primary to-cyan-300 text-black text-[11px] font-mono font-black tracking-[0.16em] uppercase shadow-[0_8px_22px_rgba(255,80,57,0.3)] transition-transform duration-200 ease-out active:scale-95"
+                className="h-10 px-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-intuition-primary to-intuition-secondary text-white text-[11px] font-mono font-black tracking-[0.16em] uppercase shadow-[0_8px_22px_rgba(255,80,57,0.3)] transition-transform duration-200 ease-out active:scale-95"
               >
                 <Wallet size={14} /> Connect
               </button>

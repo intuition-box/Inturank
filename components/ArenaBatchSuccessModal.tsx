@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, Layers, Sparkles, Terminal, X, Zap } from 'lucide-react';
-import { playArenaUiClick } from '../services/audio';
+import { playArenaUiClick, playArenaVictory } from '../services/audio';
 
 export type ArenaBatchSuccessPayload = {
   itemCount: number;
@@ -66,6 +66,11 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
     return () => window.removeEventListener('mousedown', onPointerDown);
   }, [open, requestClose]);
 
+  // Victory fanfare on the mint-success payoff (gated by the user's arena sound pref inside the SFX).
+  useEffect(() => {
+    if (open && payload) playArenaVictory();
+  }, [open, payload]);
+
   const springPop = { type: 'spring' as const, stiffness: 400, damping: 34, mass: 0.82 };
   const burstSpring = { type: 'spring' as const, stiffness: 520, damping: 28, mass: 0.65 };
 
@@ -74,7 +79,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
   const xpdn = p?.activityXpEarned ?? 0;
   const totalXp = arena + xpdn;
   const xpdnLine =
-    p?.xpdnByTx && p.xpdnByTx.length > 0 ? p.xpdnByTx.map((n) => `+${n}`).join(' Â/ ') : null;
+    p?.xpdnByTx && p.xpdnByTx.length > 0 ? p.xpdnByTx.map((n) => `+${n}`).join(' ï¿½/ ') : null;
   const xpSubtitle = (() => {
     if (totalXp <= 0) {
       return 'No XP credited â€” try a larger deposit or check daily cap / duplicate tx.';
@@ -82,7 +87,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
     const parts: string[] = [];
     if (arena > 0) parts.push(`${arena} Arena`);
     if (xpdn > 0) parts.push(xpdnLine ? `activity ${xpdnLine}` : `${xpdn} activity`);
-    return parts.join(' Â/ ');
+    return parts.join(' ï¿½/ ');
   })();
 
   return createPortal(
@@ -119,6 +124,27 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             />
+          ) : null}
+
+          {/* Confetti burst â€” fires once as the modal mounts. */}
+          {!reduceMotion ? (
+            <div aria-hidden className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2">
+              {Array.from({ length: 18 }).map((_, i) => {
+                const ang = (i / 18) * Math.PI * 2;
+                const dist = 120 + (i % 4) * 34;
+                const colors = ['#34d399', '#10b981', '#ff5039', '#fbbf24', '#ffffff'];
+                return (
+                  <motion.span
+                    key={i}
+                    className="absolute h-1.5 w-1.5 rounded-[1px]"
+                    style={{ background: colors[i % colors.length] }}
+                    initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                    animate={{ opacity: 0, scale: 0.3, x: Math.cos(ang) * dist, y: Math.sin(ang) * dist - 40 }}
+                    transition={{ duration: 0.9 + (i % 4) * 0.1, ease: [0.2, 0.7, 0.3, 1], delay: (i % 6) * 0.02 }}
+                  />
+                );
+              })}
+            </div>
           ) : null}
 
           <motion.div
@@ -180,7 +206,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
                   <p className="text-[10px] text-slate-500 font-mono mt-1 flex items-center gap-1.5 truncate">
                     <Layers className="w-3 h-3 text-intuition-primary shrink-0" strokeWidth={2.2} aria-hidden />
                     <span className="text-intuition-primary/90">{p.themeShort}</span>
-                    <span className="text-slate-600">Â/</span>
+                    <span className="text-slate-600">ï¿½/</span>
                     <span>{p.contextSuffix}</span>
                   </p>
                 </div>
@@ -265,7 +291,7 @@ const ArenaBatchSuccessModal: React.FC<Props> = ({ open, payload, onClose }) => 
                   <Terminal className="w-4 h-4 text-intuition-primary shrink-0 mt-0.5" strokeWidth={2.2} aria-hidden />
                   <div className="min-w-0">
                     <p className="text-[9px] font-mono font-bold tracking-[0.18em] text-intuition-primary/95 uppercase mb-1">
-                      Personal tags Â/ FYI
+                      Personal tags ï¿½/ FYI
                     </p>
                     <p className="text-[11px] text-slate-300 font-mono leading-snug">{p.footnote}</p>
                   </div>

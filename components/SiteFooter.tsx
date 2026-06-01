@@ -187,12 +187,12 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                     <Link
                       key={to}
                       to={to}
-                      className="group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-colors hover:text-intuition-primary"
+                      className="group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-primary"
                     >
                       {label}
                       <Icon
                         size={14}
-                        className="shrink-0 text-slate-500 transition-colors group-hover:text-intuition-primary"
+                        className="shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-primary"
                         aria-hidden
                       />
                     </Link>
@@ -214,12 +214,12 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                         <Link
                           key={row.to}
                           to={row.to}
-                          className="group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-colors hover:text-intuition-secondary"
+                          className="group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-secondary"
                         >
                           {row.label}
                           <Icon
                             size={14}
-                            className="shrink-0 text-slate-500 transition-colors group-hover:text-intuition-secondary"
+                            className="shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-secondary"
                             aria-hidden
                           />
                         </Link>
@@ -234,8 +234,8 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                         rel="noreferrer"
                         className={
                           row.trust
-                            ? 'group inline-flex items-center gap-1.5 py-1.5 text-intuition-success transition-colors hover:text-white'
-                            : 'group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-colors hover:text-intuition-secondary'
+                            ? 'group inline-flex items-center gap-1.5 py-1.5 text-intuition-success transition-[color,transform] duration-200 hover:translate-x-1 hover:text-white'
+                            : 'group inline-flex items-center gap-1.5 py-1.5 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-secondary'
                         }
                       >
                         {row.label}
@@ -243,8 +243,8 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                           size={14}
                           className={
                             row.trust
-                              ? 'shrink-0 opacity-90 text-intuition-success transition-colors group-hover:text-white'
-                              : 'shrink-0 text-slate-500 transition-colors group-hover:text-intuition-secondary'
+                              ? 'shrink-0 opacity-90 text-intuition-success transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-white'
+                              : 'shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-secondary'
                           }
                           aria-hidden
                         />
@@ -268,12 +268,12 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                     <Link
                       key={to}
                       to={to}
-                      className="group inline-flex items-center gap-2 py-2 text-slate-200 transition-colors hover:text-intuition-primary"
+                      className="group inline-flex items-center gap-2 py-2 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-primary"
                     >
                       {label}
                       <Icon
                         size={16}
-                        className="shrink-0 text-slate-500 transition-colors group-hover:text-intuition-primary"
+                        className="shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-primary"
                         aria-hidden
                       />
                     </Link>
@@ -296,12 +296,12 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                         <Link
                           key={row.to}
                           to={row.to}
-                          className="group inline-flex items-center gap-2 py-2 text-slate-200 transition-colors hover:text-intuition-secondary"
+                          className="group inline-flex items-center gap-2 py-2 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-secondary"
                         >
                           {row.label}
                           <Icon
                             size={16}
-                            className="shrink-0 text-slate-500 transition-colors group-hover:text-intuition-secondary"
+                            className="shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-secondary"
                             aria-hidden
                           />
                         </Link>
@@ -316,8 +316,8 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                         rel="noreferrer"
                         className={
                           row.trust
-                            ? 'group inline-flex items-center gap-2 py-2 text-intuition-success transition-colors hover:text-white'
-                            : 'group inline-flex items-center gap-2 py-2 text-slate-200 transition-colors hover:text-intuition-secondary'
+                            ? 'group inline-flex items-center gap-2 py-2 text-intuition-success transition-[color,transform] duration-200 hover:translate-x-1 hover:text-white'
+                            : 'group inline-flex items-center gap-2 py-2 text-slate-200 transition-[color,transform] duration-200 hover:translate-x-1 hover:text-intuition-secondary'
                         }
                       >
                         {row.label}
@@ -325,8 +325,8 @@ const SiteFooter: React.FC<SiteFooterProps> = ({ compact = false }) => {
                           size={16}
                           className={
                             row.trust
-                              ? 'shrink-0 opacity-90 text-intuition-success transition-colors group-hover:text-white'
-                              : 'shrink-0 text-slate-500 transition-colors group-hover:text-intuition-secondary'
+                              ? 'shrink-0 opacity-90 text-intuition-success transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-white'
+                              : 'shrink-0 text-slate-500 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-intuition-secondary'
                           }
                           aria-hidden
                         />

@@ -165,6 +165,7 @@ function buildPeersFromFeedForList(
         label,
         arenaXp: 0,
         activityXp: 0,
+        giftXp: 0,
         duels: 0,
         atomsRanked: 0,
         listsPlayed: 0,
@@ -320,6 +321,27 @@ export function groupSpotlightByRanker(entries: RankedListSpotlightEntry[]): Spo
   });
 }
 
+/** Bounded-parallel map — keeps result order, caps in-flight work so we don't flood the graph. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const idx = cursor++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/** Lists processed at once. Was effectively 1 (sequential); a handful in parallel is the big win. */
+const LIST_CONCURRENCY = 5;
+
 export async function fetchRankedListsSpotlight(opts: {
   portalLists: SpotlightPortalList[];
   players?: ArenaPlayerRow[];
@@ -334,18 +356,20 @@ export async function fetchRankedListsSpotlight(opts: {
   const portalLists = opts.portalLists.filter((l) => l.listObjectTermId).slice(0, maxLists);
   if (portalLists.length < 1) return [];
 
-  let players = opts.players;
-  if (!players?.length) {
-    players = await fetchArenaPlayerLeaderboard(opts.myAddress);
-  }
+  // Setup fetches are independent — run them together instead of one-after-another.
+  const playersPromise = opts.players?.length
+    ? Promise.resolve(opts.players)
+    : fetchArenaPlayerLeaderboard(opts.myAddress);
+  const [playersResolved, , feed] = await Promise.all([
+    playersPromise,
+    fetchArenaCompareGraphBundle().catch(() => null),
+    fetchRecentArenaPortalRankingFeed(600).catch(() => []),
+  ]);
+  const players: ArenaPlayerRow[] = playersResolved ?? [];
 
-  await fetchArenaCompareGraphBundle().catch(() => null);
-  const feed = await fetchRecentArenaPortalRankingFeed(600).catch(() => []);
-
-  const previewByTerm = new Map<string, RankItem[]>();
-  const flat: RankedListSpotlightEntry[] = [];
-
-  for (const list of portalLists) {
+  // Each list's work is independent — fan out with a concurrency cap (was strictly sequential).
+  const perList = await mapWithConcurrency(portalLists, LIST_CONCURRENCY, async (list) => {
+    const out: RankedListSpotlightEntry[] = [];
     try {
       const seedWallets = await discoverAllRankerWalletsForList(
         list.listObjectTermId,
@@ -354,7 +378,7 @@ export async function fetchRankedListsSpotlight(opts: {
         players,
       );
 
-      const [fromCompareRaw, fromFeedRaw] = await Promise.all([
+      const [fromCompareRaw, fromFeedRaw, previewPool] = await Promise.all([
         fetchPortalListCommunityRankings({
           listObjectTermId: list.listObjectTermId,
           listId: list.id,
@@ -365,23 +389,18 @@ export async function fetchRankedListsSpotlight(opts: {
           includeSelf: true,
         }),
         Promise.resolve(buildPeersFromFeedForList(list, feed, players)),
+        previewPoolForList(list.listObjectTermId),
       ]);
 
       const merged = mergePeersForList(fromCompareRaw, fromFeedRaw);
       const ranked = communityRankingsFromPeers(merged, { minRankingRows: 1 });
-      if (ranked.length < 1) continue;
-
-      let previewPool = previewByTerm.get(list.listObjectTermId);
-      if (!previewPool) {
-        previewPool = await previewPoolForList(list.listObjectTermId);
-        previewByTerm.set(list.listObjectTermId, previewPool);
-      }
+      if (ranked.length < 1) return out;
 
       const enriched = enrichPeersWithPool(ranked, previewPool);
       for (const peer of enriched) {
         const yesRows = peer.listRanking.filter((r) => r.support);
         const stack = yesRows.length > 0 ? yesRows : peer.listRanking;
-        flat.push({
+        out.push({
           listId: list.id,
           listTitle: list.title,
           listObjectTermId: list.listObjectTermId,
@@ -395,7 +414,9 @@ export async function fetchRankedListsSpotlight(opts: {
     } catch (e) {
       console.warn('[fetchRankedListsSpotlight] list failed', list.id, e);
     }
-  }
+    return out;
+  });
+  const flat: RankedListSpotlightEntry[] = perList.flat();
 
   if (flat.length < 1) return [];
 

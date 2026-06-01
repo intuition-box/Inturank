@@ -8,7 +8,7 @@ import {
   getArenaPendingXpTotal,
   subscribeArenaPendingXp,
 } from '../../services/arenaPendingXp';
-import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
+import { playArenaUiClick, playArenaUiHover, playArenaXpClaim } from '../../services/audio';
 import { deckPalette } from '../../services/arenaCardDesign';
 
 type Props = {
@@ -75,6 +75,7 @@ export const ArenaXpGiftBox: React.FC<Props> = ({
           setPendingTotal(getArenaPendingXpTotal(walletAddress));
           setClaiming(false);
           if (before > 0) {
+            playArenaXpClaim();
             setClaimedFlash(true);
             window.setTimeout(() => setClaimedFlash(false), 1400);
           }
@@ -270,21 +271,25 @@ function GiftBoxModalPanel({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.55 }}
             />
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <motion.span
-                key={i}
-                className="absolute h-2 w-2 rounded-full"
-                style={{ background: deck.hex }}
-                initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-                animate={{
-                  opacity: 0,
-                  scale: 0,
-                  x: Math.cos((i / 6) * Math.PI * 2) * 90,
-                  y: Math.sin((i / 6) * Math.PI * 2) * 70,
-                }}
-                transition={{ duration: 0.65, ease: 'easeOut' }}
-              />
-            ))}
+            {Array.from({ length: 14 }).map((_, i) => {
+              const ang = (i / 14) * Math.PI * 2;
+              const dist = 78 + (i % 3) * 26;
+              return (
+                <motion.span
+                  key={i}
+                  className="absolute h-2 w-2 rounded-full"
+                  style={{ background: i % 2 === 0 ? deck.hex : '#ffffff' }}
+                  initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                  animate={{
+                    opacity: 0,
+                    scale: 0.2,
+                    x: Math.cos(ang) * dist,
+                    y: Math.sin(ang) * dist + 28,
+                  }}
+                  transition={{ duration: 0.7 + (i % 3) * 0.08, ease: 'easeOut', delay: (i % 5) * 0.015 }}
+                />
+              );
+            })}
           </motion.div>
         ) : null}
       </AnimatePresence>

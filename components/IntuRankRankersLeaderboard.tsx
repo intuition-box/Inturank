@@ -4,7 +4,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, RefreshCw, Loader2, Sparkles, Zap, HelpCircle } from 'lucide-react';
+import { Trophy, RefreshCw, Loader2, Sparkles, Zap, HelpCircle, Gift } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import {
   fetchArenaPlayerLeaderboard,
@@ -34,7 +34,7 @@ const HINT_LISTS = 'Distinct portal lists represented in your finalized indexed 
 const HINT_IDENTITIES =
   'Count of identities you latest stanced on-chain inside those lists.';
 const HINT_XP =
-  'Ranks by **total IntuRank XP**: Arena (indexed ranks) + Activity (markets, creates, sends). Othersâ€™ activity counts when mirrored from the API; yours includes this browser.';
+  'Ranks by **total IntuRank XP**: Arena (indexed ranks) + Activity (markets, creates, sends) + Gifts (team-granted, server-verified). Othersâ€™ activity counts when mirrored from the API; yours includes this browser.';
 
 
 /** Column grid: rank, player, lists, identities, arena XP */
@@ -249,7 +249,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-end gap-2 col-span-2 lg:col-span-1 justify-start lg:justify-end" title={HINT_XP}>
-                        <div title={`Arena (indexer): ${myXpRec.xp.toLocaleString()} Â/ Activity (this browser): ${activityXp.toLocaleString()}`}>
+                        <div title={`Arena (indexer): ${myXpRec.xp.toLocaleString()} ï¿½/ Activity (this browser): ${activityXp.toLocaleString()}`}>
                           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-400/90 block mb-0.5">
                             Your XP
                           </span>
@@ -427,11 +427,19 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                               <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 min-w-0 tabular-nums">
                                 <span
                                   className="text-lg sm:text-[1.35rem] font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-br from-amber-200 via-amber-300 to-orange-400 leading-none"
-                                  title={`Arena ${p.arenaXp.toLocaleString()} Â/ Activity ${p.activityXp.toLocaleString()}`}
+                                  title={`Arena ${p.arenaXp.toLocaleString()} ï¿½/ Activity ${p.activityXp.toLocaleString()}`}
                                 >
                                   {inturankLeaderboardTotalXp(p).toLocaleString()}
                                 </span>
                                 <ArenaXpToken size={22} className="-mr-1" />
+                                {p.giftXp > 0 ? (
+                                  <span
+                                    className="inline-flex items-center gap-0.5 rounded-full border border-intuition-warning/40 bg-intuition-warning/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-intuition-warning"
+                                    title={`Includes ${p.giftXp.toLocaleString()} gifted XP`}
+                                  >
+                                    <Gift size={10} strokeWidth={2.4} aria-hidden /> +{p.giftXp.toLocaleString()}
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                           </li>

@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount, useDisconnect, useConnect, useConfig } from 'wagmi';
 import { getWalletClient } from '@wagmi/core';
-import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
+import { Wallet, Menu, X, TrendingUp, Users, BarChart2, LogOut, Copy, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Globe, ArrowRightLeft, Activity, Home, UserCircle, Search, Plus, Send, Coins, HeartPulse, FileText, Cpu } from 'lucide-react';
 import { switchNetwork, disconnectWallet, setWagmiConnection, setOpenConnectModalRef } from '../services/web3';
 import { APP_VERSION_DISPLAY, CHAIN_ID } from '../constants';
 import { playHover, playClick } from '../services/audio';
@@ -20,6 +20,7 @@ import { ARENA_BATCH_MODE } from '../constants';
 import { isNavPathActive } from '../services/navActive';
 import { useEffectiveChainId } from '../hooks/useEffectiveChainId';
 import SiteFooter from './SiteFooter';
+import { getSidebarCollapsed, setSidebarCollapsed } from '../services/sidebarState';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -84,6 +85,8 @@ interface NavItemProps {
   /** External tab links (e.g. Get TRUST) use <a>, not router Link */
   external?: boolean;
   linkState?: Record<string, unknown>;
+  /** Icon-rail mode: hide label, center icon, lean on title tooltip */
+  collapsed?: boolean;
 }
 
 const NavItem = memo(function NavItem({
@@ -96,6 +99,7 @@ const NavItem = memo(function NavItem({
   badge,
   external = false,
   linkState,
+  collapsed = false,
 }: NavItemProps) {
   const isGold = variant === 'gold';
   const isArena = variant === 'arena';
@@ -104,23 +108,31 @@ const NavItem = memo(function NavItem({
   const baseMotion =
     'motion-reduce:transition-none motion-reduce:duration-0 motion-safe:transition-[gap,padding,background-color,border-color,color,box-shadow,transform,filter] motion-safe:duration-400 ' +
     motionEasing;
-  const activeCls = isGold
-    ? 'text-black bg-intuition-warning border-intuition-warning/60'
-    : isArena
-      ? 'text-white bg-intuition-primary border-intuition-primary/60'
-      : isSuccess
-        ? 'text-black bg-intuition-success border-intuition-success/60'
-        : 'text-white bg-intuition-primary/15 border-intuition-primary/40';
-  const idleCls = isGold
-    ? 'text-amber-200/85 border-transparent hover:text-amber-50 hover:bg-amber-500/8'
-    : isArena
-      ? 'text-orange-100/90 border-transparent hover:text-white hover:bg-intuition-primary/10'
-      : isSuccess
-        ? 'text-intuition-success/90 border-transparent hover:text-intuition-success hover:bg-intuition-success/8'
-        : 'text-slate-300 border-transparent hover:text-white hover:bg-white/[0.04]';
+  // Active row = the dark content-panel surface flowing back into the nav: it reaches the
+  // panel edge (-mr) and squares its right side so it reads continuous with the page.
+  // Idle rows sit flat on the cinnabar field with a soft hover; the icon keeps a subtle
+  // per-variant accent.
+  const accentIcon = isGold
+    ? 'text-amber-300'
+    : isSuccess
+      ? 'text-emerald-300'
+      : isArena
+        ? 'text-orange-200'
+        : 'text-white/70';
+  const activeIcon = isGold
+    ? 'text-amber-300'
+    : isSuccess
+      ? 'text-emerald-300'
+      : 'text-intuition-primary';
 
-  const cls = `group/item relative z-0 flex items-center overflow-hidden gap-3 justify-start px-3 py-2 min-h-[40px] text-[13px] font-medium tracking-normal font-sans normal-case rounded-lg border min-w-0 will-change-transform active:scale-[0.99] ${baseMotion} ${
-    active ? activeCls : idleCls
+  const cls = `group/item relative z-0 flex items-center min-w-0 min-h-[44px] text-[13px] font-medium tracking-normal font-sans normal-case will-change-transform active:scale-[0.99] ${baseMotion} ${
+    collapsed
+      ? active
+        ? '-mr-2 justify-center rounded-l-[1.1rem] rounded-r-none bg-intuition-dark text-white py-2 pl-1 pr-2'
+        : 'justify-center rounded-full text-white/80 hover:bg-white/[0.10] py-2 px-1'
+      : active
+        ? '-mr-3 justify-start rounded-l-[1.4rem] rounded-r-none bg-intuition-dark text-white py-2.5 pl-3 pr-4 shadow-[-10px_0_26px_-14px_rgba(0,0,0,0.75)]'
+        : 'justify-start rounded-full text-white/85 hover:text-white hover:bg-white/[0.08] py-2.5 px-3'
   }`;
 
   const handleActivate = () => {
@@ -128,35 +140,50 @@ const NavItem = memo(function NavItem({
     onClick();
   };
 
-  const iconHoverIdle = isGold
-    ? 'text-amber-200/85 group-hover/item:text-amber-50'
-    : isArena
-      ? 'text-orange-200/85 group-hover/item:text-white'
-      : isSuccess
-        ? 'text-intuition-success/85 group-hover/item:text-intuition-success'
-        : 'text-slate-400 group-hover/item:text-white';
-
-  const iconActive = isArena ? 'text-white' : 'text-current';
+  // Soft rounded icon chip (matches the inspo's badged icons).
+  const iconChipSize = collapsed ? 'h-10 w-10' : 'h-8 w-8';
+  const iconWrapCls = active ? 'bg-white/[0.08]' : 'bg-white/[0.06] group-hover/item:bg-white/[0.11]';
+  const iconColorCls = active ? activeIcon : `${accentIcon} group-hover/item:text-white`;
 
   const inner = (
     <>
-      <span className="relative shrink-0 flex items-center justify-center w-5 z-[2]">
+      {active && !collapsed ? (
+        <>
+          {/* Concave fillets — the cinnabar field curves smoothly into the panel above
+              and below the active tab. The transparent arc reveals the real bg gradient. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-0 top-0 z-[1] h-5 w-5 -translate-y-full bg-intuition-dark [-webkit-mask-image:radial-gradient(circle_at_top_left,transparent_19px,#000_20px)] [mask-image:radial-gradient(circle_at_top_left,transparent_19px,#000_20px)]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-0 bottom-0 z-[1] h-5 w-5 translate-y-full bg-intuition-dark [-webkit-mask-image:radial-gradient(circle_at_bottom_left,transparent_19px,#000_20px)] [mask-image:radial-gradient(circle_at_bottom_left,transparent_19px,#000_20px)]"
+          />
+        </>
+      ) : null}
+      <span
+        className={`relative shrink-0 flex items-center justify-center rounded-full motion-safe:transition-[width,height,background-color,color] motion-safe:duration-300 motion-reduce:transition-none ${iconChipSize} ${iconWrapCls} ${iconColorCls}`}
+      >
         {badge === 'hot' ? (
           <span
-            className="pointer-events-none absolute -top-2 -right-2 z-[4] rounded px-1 py-0.5 bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_10px_rgba(239,68,68,0.55)] motion-reduce:hidden"
+            className="pointer-events-none absolute -top-1.5 -right-1.5 z-[4] rounded-full px-1 py-0.5 bg-intuition-secondary text-[7px] font-black text-white tracking-wider leading-none shadow-[0_0_10px_rgba(239,68,68,0.55)] motion-reduce:hidden"
             aria-hidden
           >
             HOT
           </span>
         ) : null}
-        <span className={`flex items-center justify-center [&>svg]:shrink-0 transition-colors duration-200 ${active ? iconActive : iconHoverIdle}`}>
-          {icon}
-        </span>
+        <span className="flex items-center justify-center [&>svg]:shrink-0">{icon}</span>
       </span>
-      <span className="whitespace-nowrap overflow-hidden text-left flex-1 min-w-0 relative z-[2] flex items-center gap-1.5">
+      {/* Label stays mounted and collapses (max-width + opacity) so it slides away with the rail. */}
+      <span
+        className={`overflow-hidden text-left relative z-[2] flex items-center gap-1.5 whitespace-nowrap motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+          collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[180px] opacity-100 ml-3 min-w-0'
+        }`}
+        aria-hidden={collapsed}
+      >
         <span className="truncate">{label}</span>
         {badge === 'hot' ? (
-          <span className="inline-flex shrink-0 items-center rounded border border-white/35 bg-black/35 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-orange-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+          <span className="inline-flex shrink-0 items-center rounded-full border border-white/35 bg-black/30 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-orange-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
             Hot
           </span>
         ) : null}
@@ -191,6 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => getSidebarCollapsed());
 
   const { openConnectModal } = useConnectModal();
   const wagmiConfig = useConfig();
@@ -319,41 +347,78 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setIsIntelOpen(false);
   }, []);
 
+  const toggleCollapsed = useCallback(() => {
+    playClick();
+    setCollapsed((prev) => {
+      const next = !prev;
+      setSidebarCollapsed(next);
+      return next;
+    });
+  }, []);
+
   return (
-    <div className="min-h-screen bg-intuition-dark text-slate-300 flex font-sans selection:bg-intuition-primary selection:text-black">
-      {/* Desktop side nav — standard always-expanded sidebar, no hover-to-expand. */}
+    <div className="min-h-screen bg-intuition-dark lg:bg-[radial-gradient(125%_125%_at_12%_-5%,#5a2118_0%,#2f1411_45%,#160b0a_100%)] text-slate-300 flex font-sans selection:bg-intuition-primary selection:text-black">
+      {/* Desktop side nav — sits on the brand-cinnabar field; the active row merges into the floating content panel. Collapsible, persisted. No hover-to-expand. */}
       <aside
         ref={sidebarAsideRef}
-        className="hidden lg:flex fixed inset-y-0 left-0 z-[105] flex-col bg-intuition-dark border-r border-slate-800/80 shadow-[2px_0_16px_rgba(0,0,0,0.3)] overflow-hidden w-64 xl:w-72"
+        className={`hidden lg:flex fixed inset-y-0 left-0 z-[105] flex-col overflow-visible motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${
+          collapsed ? 'w-[84px]' : 'w-[248px]'
+        }`}
       >
-        <Link
-          to="/"
-          onClick={playClick}
-          aria-label="IntuRank home"
-          className="flex h-16 shrink-0 items-center gap-3 px-4 border-b border-slate-800/50 min-w-0 overflow-visible relative z-10 no-underline outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-intuition-dark"
-        >
-          <div className="shrink-0 flex items-center justify-center">
-            <div
-              className="rounded-xl bg-gradient-to-br from-slate-900 via-black to-slate-950 border border-intuition-primary/70 flex items-center justify-center text-intuition-primary shadow-[0_0_14px_rgba(255,80,57,0.3)] overflow-hidden p-2 box-border"
-              style={{ width: 44, height: 44 }}
-            >
-              <Logo className="h-7 w-7 max-h-[85%] max-w-[85%] object-contain object-center" />
+        <div className={`relative z-10 flex h-16 shrink-0 items-center min-w-0 overflow-visible ${collapsed ? 'px-2' : 'px-4'}`}>
+          <Link
+            to="/"
+            onClick={playClick}
+            aria-label="IntuRank home"
+            className={`flex h-full items-center min-w-0 overflow-visible no-underline outline-none rounded-full focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#2f1411] ${
+              collapsed ? 'w-full justify-center' : 'flex-1'
+            }`}
+          >
+            <div className="shrink-0 flex items-center justify-center">
+              <div
+                className="rounded-full bg-gradient-to-br from-black/80 via-black to-black/90 border border-white/20 flex items-center justify-center text-intuition-primary shadow-[0_4px_16px_rgba(0,0,0,0.45)] overflow-hidden p-2 box-border"
+                style={{ width: 42, height: 42 }}
+              >
+                <Logo className="h-7 w-7 max-h-[85%] max-w-[85%] object-contain object-center" />
+              </div>
             </div>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-lg font-black tracking-[0.16em] font-display whitespace-nowrap min-w-0">
-              <span className="text-[#f8fafc]">INTU</span>
-              <span className="text-intuition-primary">RANK</span>
-            </span>
-            <span className="text-[9px] text-slate-500 font-mono tracking-[0.25em] uppercase font-black whitespace-nowrap">
-              {APP_VERSION_DISPLAY}
-            </span>
-          </div>
-        </Link>
+            <div
+              className={`flex flex-col overflow-hidden motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+                collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[180px] opacity-100 ml-3 min-w-0'
+              }`}
+              aria-hidden={collapsed}
+            >
+              <span className="text-lg font-black tracking-[0.16em] font-display whitespace-nowrap min-w-0">
+                <span className="text-white">INTU</span>
+                <span className="text-white" style={{ textShadow: '0 0 16px rgba(255,255,255,0.35)' }}>RANK</span>
+              </span>
+              <span className="text-[9px] text-white/45 font-mono tracking-[0.25em] uppercase font-black whitespace-nowrap">
+                {APP_VERSION_DISPLAY}
+              </span>
+            </div>
+          </Link>
+        </div>
+        {/* Collapse toggle pinned to the nav↔panel seam (like the inspo). */}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          onMouseEnter={playHover}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="absolute right-0 top-6 z-[106] flex h-7 w-7 translate-x-1/2 items-center justify-center rounded-full border border-white/15 bg-intuition-dark text-slate-300 shadow-[0_4px_14px_rgba(0,0,0,0.55)] hover:text-white hover:border-intuition-primary/60 transition-colors active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-intuition-primary/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#2f1411]"
+        >
+          {collapsed ? <ChevronRight size={15} strokeWidth={2.5} /> : <ChevronLeft size={15} strokeWidth={2.5} />}
+        </button>
 
-        <div data-lenis-prevent className="flex-1 flex flex-col px-3 py-4 gap-5 overflow-y-auto overflow-x-clip min-h-0 overscroll-contain">
-          <nav className="space-y-0.5" aria-label="Primary navigation">
-            <p className="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-intuition-primary/80">
+        <div data-lenis-prevent className={`flex-1 flex flex-col py-4 gap-4 overflow-y-auto overflow-x-clip min-h-0 overscroll-contain ${collapsed ? 'px-2' : 'px-3'}`}>
+          <nav className="space-y-1" aria-label="Primary navigation">
+            <p
+              className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/70 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+              }`}
+              aria-hidden={collapsed}
+            >
               Main
             </p>
             {MAIN_NAV_ITEMS.map((item) => (
@@ -369,13 +434,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 variant={item.variant ?? 'default'}
                 badge={item.badge}
                 linkState={item.linkState}
+                collapsed={collapsed}
               />
             ))}
           </nav>
 
-          <div ref={intelRef} className="flex flex-col gap-5 min-h-0">
-            <nav className="space-y-0.5" aria-label="Explore">
-              <p className="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-slate-500">
+          <div ref={intelRef} className="flex flex-col gap-4 min-h-0">
+            <nav className="space-y-1" aria-label="Explore">
+              <p
+                className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/45 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                  collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+                }`}
+                aria-hidden={collapsed}
+              >
                 Explore
               </p>
               {EXPLORE_NAV_ITEMS.map((item) => (
@@ -388,12 +459,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClick={closeSidebarNav}
                   external={item.external}
                   variant={item.external ? 'success' : 'default'}
+                  collapsed={collapsed}
                 />
               ))}
             </nav>
 
-            <nav className="space-y-0.5" aria-label="Monitor">
-              <p className="px-3 pb-2 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-slate-500">
+            <nav className="space-y-1" aria-label="Monitor">
+              <p
+                className={`px-3 text-[10px] font-mono uppercase tracking-[0.25em] font-bold text-white/45 overflow-hidden whitespace-nowrap motion-safe:transition-[max-height,opacity,padding] motion-safe:duration-300 motion-reduce:transition-none ${
+                  collapsed ? 'max-h-0 opacity-0 pb-0' : 'max-h-6 opacity-100 pb-2'
+                }`}
+                aria-hidden={collapsed}
+              >
                 Monitor
               </p>
               {MONITOR_NAV_ITEMS.map((item) => (
@@ -404,22 +481,33 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   icon={item.icon}
                   active={isActive(item.path)}
                   onClick={closeSidebarNav}
+                  collapsed={collapsed}
                 />
               ))}
             </nav>
           </div>
         </div>
 
-        <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 border-t border-slate-800/50 shrink-0 flex h-14 items-center gap-2">
-          <Wallet size={16} className={`shrink-0 ${walletAddress ? 'text-intuition-primary' : 'text-slate-600'}`} aria-hidden />
-          <span className="overflow-hidden whitespace-nowrap truncate text-[9px] font-mono text-slate-500 uppercase tracking-[0.25em]">
+        <div
+          className={`pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 mt-1 border-t border-white/10 shrink-0 flex h-14 items-center ${
+            collapsed ? 'justify-center px-0' : 'px-5'
+          }`}
+          title={collapsed ? (walletAddress ? 'Connected' : 'No session') : undefined}
+        >
+          <Wallet size={16} className={`shrink-0 ${walletAddress ? 'text-white' : 'text-white/35'}`} aria-hidden />
+          <span
+            className={`overflow-hidden whitespace-nowrap text-[9px] font-mono text-white/50 uppercase tracking-[0.25em] motion-safe:transition-[max-width,opacity,margin] motion-safe:duration-300 motion-reduce:transition-none ${
+              collapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[160px] opacity-100 ml-2'
+            }`}
+            aria-hidden={collapsed}
+          >
             {walletAddress ? 'Connected' : 'No session'}
           </span>
         </div>
       </aside>
 
-      {/* Main column: offset = sidebar width (no hover expansion). */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 w-full lg:ml-64 xl:ml-72">
+      {/* Main column: offset = sidebar width (the content panel sits flush against the nav at lg+). */}
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 w-full motion-safe:transition-[margin] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${collapsed ? 'lg:ml-[84px]' : 'lg:ml-[248px]'}`}>
         <nav className="lg:hidden fixed top-0 w-full z-50 bg-black/95 border-b border-slate-900/70 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
           <div className="w-full px-3 sm:px-6 max-w-[100vw] min-w-0">
             <div className="flex items-center justify-between h-16 min-w-0">
@@ -624,8 +712,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </AnimatePresence>
         </nav>
 
-        {/* Desktop top bar pill cluster (cyan rim + pink CTA) */}
-        <div className="hidden lg:flex h-14 shrink-0 items-center w-full border-b border-intuition-primary/10 bg-intuition-dark/90 backdrop-blur-md supports-[backdrop-filter]:bg-intuition-dark/82 relative z-[100] overflow-visible">
+        {/* Floating content panel — the page surface the active nav row merges into (lg+). */}
+        <div className="flex flex-1 flex-col min-w-0 lg:my-3 lg:mr-3 lg:min-h-[calc(100vh-1.5rem)] lg:rounded-[1.75rem] lg:bg-intuition-dark lg:shadow-[0_30px_80px_-24px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.05)] lg:ring-1 lg:ring-black/40">
+        {/* Desktop top bar pill cluster (cinnabar rim + CTA) */}
+        <div className="hidden lg:flex h-14 shrink-0 items-center w-full border-b border-intuition-primary/10 bg-intuition-dark/90 backdrop-blur-md supports-[backdrop-filter]:bg-intuition-dark/82 relative z-[100] overflow-visible lg:rounded-t-[1.75rem]">
           <div className="flex w-full min-w-0 items-center justify-end gap-3 pl-4 pr-[max(1rem,env(safe-area-inset-right))] lg:pr-8">
             {walletAddress && chainId !== CHAIN_ID && (
               <button
@@ -739,6 +829,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {ARENA_BATCH_MODE && !pathname.startsWith('/climb') && <ArenaBatchFab />}
 
         <SiteFooter />
+        </div>
       </div>
     </div>
   );

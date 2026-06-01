@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "sync:intuition-skill": "bash scripts/sync-intuition-skill.sh",
+    "gift:xp": "node scripts/gift-xp.mjs",
     "preview": "vite preview",
     "start": "node server/index.js",
     "email-server": "node server/index.js",

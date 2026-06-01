@@ -17,6 +17,8 @@ export {
   playArenaSwipePass,
   playArenaRankSlide,
   playArenaCelebrateMini,
+  playArenaXpClaim,
+  playArenaVictory,
 } from './arenaAudio';
 
 export {
