@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { Search, ExternalLink, User, Shield } from 'lucide-react';
 import { getAllAgents } from '../services/graphql';
@@ -69,7 +70,7 @@ const Agents: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/10 text-intuition-primary overflow-hidden">
                     {agent.image ? (
-                      <img src={agent.image} alt={agent.label} className="w-full h-full object-cover" />
+                      <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="w-full h-full object-cover" />
                     ) : (
                       <User size={24} />
                     )}

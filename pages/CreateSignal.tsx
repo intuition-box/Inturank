@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { ArrowLeft, Terminal, Zap, Loader2, Database, GitBranch, Search, Camera, CheckCircle, ExternalLink, UserPlus, FileText, Sparkles, Info } from 'lucide-react';
@@ -1205,7 +1206,7 @@ const CreateSignal: React.FC = () => {
                         <button key={a.id} type="button" onClick={() => pickNode(nodeSearchOpen!, a.id, a.label)} className="w-full text-left p-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-intuition-primary/40 flex items-center gap-3 transition-all">
                           <div className="shrink-0 w-10 h-10 rounded-xl bg-white/10 overflow-hidden flex items-center justify-center">
                             {a.image ? (
-                              <img src={a.image} alt="" className="w-full h-full object-cover" />
+                              <img src={normalizeWebMediaUrl(a.image)} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-lg font-black text-intuition-primary/60">{String(a.label || '?')[0]}</span>
                             )}
@@ -1415,7 +1416,7 @@ const CreateSignal: React.FC = () => {
                         <button key={a.id} type="button" onClick={() => pickNode(nodeSearchOpen!, a.id, a.label)} className="w-full text-left p-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-intuition-primary/40 flex items-center gap-3 transition-all">
                           <div className="shrink-0 w-10 h-10 rounded-xl bg-white/10 overflow-hidden flex items-center justify-center">
                             {a.image ? (
-                              <img src={a.image} alt="" className="w-full h-full object-cover" />
+                              <img src={normalizeWebMediaUrl(a.image)} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-lg font-black text-intuition-primary/60">{String(a.label || '?')[0]}</span>
                             )}

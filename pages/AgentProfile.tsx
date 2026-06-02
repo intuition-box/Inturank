@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Shield, Share2, Layers, ArrowUpRight, CheckCircle, User, AlertCircle, RefreshCw } from 'lucide-react';
 import { getAgentById, getAgentTriples } from '../services/graphql';
@@ -160,7 +161,7 @@ const AgentProfile: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
           <div className="w-32 h-32 bg-black border-2 border-intuition-primary flex items-center justify-center text-4xl font-bold text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] overflow-hidden clip-path-slant group">
             {agent.image ? (
-                <img src={agent.image} alt={agent.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
             ) : (
                 <User size={48} className="text-slate-700"/>
             )}

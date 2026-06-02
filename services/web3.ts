@@ -47,10 +47,12 @@ export function setOpenConnectModalRef(fn: (() => void) | null) {
   openConnectModalRef = fn;
 }
 
-// Dedicated client for ENS resolution (Ethereum Mainnet) using a more robust public RPC
+// Dedicated client for ENS resolution (Ethereum Mainnet). Must be a browser-CORS-enabled
+// public RPC — eth.llamarpc.com blocks browser preflights (and was returning 503), which
+// surfaced as "Failed to fetch" CORS noise in the console on every wallet connect.
 const mainnetClient = createPublicClient({
   chain: mainnet,
-  transport: http('https://eth.llamarpc.com'),
+  transport: http('https://ethereum-rpc.publicnode.com'),
 });
 
 type InjectedPreference = 'default' | 'metamask' | 'rabby' | 'brave';

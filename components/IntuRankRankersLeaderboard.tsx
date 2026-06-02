@@ -3,6 +3,7 @@
  * Rounded glass UI, cyan/magenta/gold gradients (IntuRank brand).
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { Trophy, RefreshCw, Loader2, Sparkles, Zap, HelpCircle, Gift } from 'lucide-react';
 import { useAccount } from 'wagmi';
@@ -384,7 +385,7 @@ export const IntuRankRankersLeaderboard: React.FC = () => {
                                   }}
                                 >
                                   {p.image ? (
-                                    <img src={p.image} alt="" className="h-full w-full object-cover" />
+                                    <img src={normalizeWebMediaUrl(p.image)} alt="" className="h-full w-full object-cover" />
                                   ) : (
                                     <div
                                       className="flex h-full w-full items-center justify-center text-[15px] font-black text-white"

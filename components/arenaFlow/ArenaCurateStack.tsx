@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../../services/mediaUrl';
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
 import {
   ArrowRight,
@@ -582,7 +583,7 @@ const SwipeCard = React.memo<SwipeCardProps>(function SwipeCard({
           >
             <CornerTicks color={deck.hex} />
             <ArenaPortraitImg
-              src={item.image}
+              src={normalizeWebMediaUrl(item.image)}
               className="h-full w-full object-cover"
               loading="eager"
               decoding="async"

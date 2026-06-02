@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Search, Activity, Zap, Trophy, Brain, Loader2, Quote, Terminal, Crosshair, Network, Shield, Users, BarChart3, TrendingUp, Swords } from 'lucide-react';
 import { getAllAgents, getRedemptionCountForVault } from '../services/graphql';
 import { Account } from '../types';
@@ -194,7 +195,7 @@ const PokeBallArena: React.FC<{
                         </div>
                         <div className="relative h-28 max-md:max-h-[7.5rem] sm:h-40 flex items-center justify-center p-3 sm:p-4">
                             <div className={`absolute inset-0 opacity-20 ${isRed ? 'bg-red-500' : 'bg-blue-500'}`} />
-                            {agent.image ? <img src={agent.image} alt={agent.label} className="relative z-10 w-full h-full object-cover rounded-lg" /> : (
+                            {agent.image ? <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="relative z-10 w-full h-full object-cover rounded-lg" /> : (
                                 <div className="relative z-10 w-20 h-20 rounded-full bg-black/60 flex items-center justify-center text-2xl font-black text-white/60">{agent.label?.slice(0, 2)}</div>
                             )}
                         </div>
@@ -596,7 +597,7 @@ const Compare: React.FC = () => {
                                 >
                                     <div className="flex items-center gap-5">
                                         <div className="w-12 h-12 bg-black border border-slate-800 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-amber-500/50 transition-all shadow-xl">
-                                            {a.image ? <img src={a.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0"/> : <div className="text-xs font-black text-slate-700">{a.label?.[0]}</div>}
+                                            {a.image ? <img src={normalizeWebMediaUrl(a.image)} className="w-full h-full object-cover grayscale group-hover:grayscale-0"/> : <div className="text-xs font-black text-slate-700">{a.label?.[0]}</div>}
                                         </div>
                                         <div>
                                             <div className="font-black text-sm text-white group-hover:text-amber-400 transition-colors uppercase leading-none mb-1.5 tracking-tight">{a.label}</div>

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Star } from 'lucide-react';
 import { playArenaUiHover } from '../services/audio';
@@ -187,7 +188,7 @@ const ArenaListCard: React.FC<Props> = ({
                 style={{ borderColor: '#0c0e12', background: 'rgba(30,32,38,0.95)', zIndex: 5 - i }}
               >
                 {it.image ? (
-                  <img src={it.image} className="w-full h-full object-cover" alt="" />
+                  <img src={normalizeWebMediaUrl(it.image)} className="w-full h-full object-cover" alt="" />
                 ) : (
                   (it.label || '?').charAt(0).toUpperCase()
                 )}

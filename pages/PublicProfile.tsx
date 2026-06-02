@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -1185,7 +1186,7 @@ const PublicProfile: React.FC = () => {
                               <td className="px-3 sm:px-6 md:px-10 py-4 md:py-6">
                                   <Link to={`/markets/${p.id}`} className="flex items-center gap-3 sm:gap-6 group-hover:text-intuition-primary transition-colors">
                                       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-slate-800 bg-slate-900/80 shadow-lg transition-all group-hover:border-intuition-primary sm:h-12 sm:w-12">
-                                          {p.atom?.image ? <img src={p.atom.image} className="w-full h-full object-cover" /> : <User size={20} className="text-slate-700" />}
+                                          {p.atom?.image ? <img src={normalizeWebMediaUrl(p.atom.image)} className="w-full h-full object-cover" /> : <User size={20} className="text-slate-700" />}
                                       </div>
                                       <div>
                                           <div className={`font-black text-sm group-hover:text-intuition-primary transition-colors uppercase leading-none mb-1.5 tracking-tight ${p.atom?.type === 'CLAIM' ? 'text-intuition-danger' : 'text-white'}`}>{p.atom?.label || p.id.slice(0,8)}</div>

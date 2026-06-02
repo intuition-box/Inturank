@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { Activity, ChevronDown, ChevronRight, Layers, Loader2, RefreshCw } from 'lucide-react';
 import { playArenaUiClick, playArenaUiHover } from '../services/audio';
@@ -355,7 +356,7 @@ function ArenaListOnchainCard({
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 border border-slate-700/90 bg-black/70">
                         {r.subjectImage ? (
-                          <img src={r.subjectImage} alt="" className="w-full h-full object-cover" />
+                          <img src={normalizeWebMediaUrl(r.subjectImage)} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[11px] font-black text-slate-600">
                             {(r.subjectLabel || '?').charAt(0).toUpperCase()}

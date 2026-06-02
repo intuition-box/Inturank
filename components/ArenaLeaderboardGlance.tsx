@@ -5,6 +5,7 @@
  * the ranking flow. Links out to the full leaderboard at /stats?tab=rankers.
  */
 import React, { useMemo } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Trophy, Crown, ArrowUpRight, Award, Sparkles, Loader2 } from 'lucide-react';
@@ -229,7 +230,7 @@ const ArenaLeaderboardGlance: React.FC<Props> = ({
                     >
                       <div className={`${isFirst ? 'w-10 h-10' : 'w-8 h-8'} rounded-full overflow-hidden ${isLight ? 'bg-slate-100' : 'bg-[#040810]'}`}>
                         {p.image ? (
-                          <img src={p.image} alt="" className="w-full h-full object-cover" />
+                          <img src={normalizeWebMediaUrl(p.image)} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div
                             className={`w-full h-full flex items-center justify-center text-xs font-black ${isLight ? 'text-intuition-primary' : 'text-intuition-primary/90'}`}

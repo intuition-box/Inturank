@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { User, ExternalLink, Activity as PulseIcon, Box, Zap, AlertCircle, Fingerprint, Network, Database, TrendingUp, TrendingDown, Crown } from 'lucide-react';
 import { formatEther } from 'viem';
@@ -111,7 +112,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ event }) => {
                         style={{ borderColor: `${colorHex}66` }}
                     >
                         {event.sender?.image ? (
-                            <img src={event.sender.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
+                            <img src={normalizeWebMediaUrl(event.sender.image)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
                         ) : (
                             <User size={18} className="text-slate-800" />
                         )}
@@ -165,7 +166,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ event }) => {
                 <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] px-2 py-1.5 rounded-xl hover:border-white/15 transition-all duration-300 group/target cursor-pointer min-w-0 max-w-full">
                     <div className="w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-md bg-black/50 flex items-center justify-center overflow-hidden border border-white/10 shrink-0 group-hover:scale-105 transition-transform">
                         {event.target?.image ? (
-                            <img src={event.target.image} className="w-full h-full object-cover" alt="" />
+                            <img src={normalizeWebMediaUrl(event.target.image)} className="w-full h-full object-cover" alt="" />
                         ) : (
                             <Box size={10} className="text-slate-700" />
                         )}

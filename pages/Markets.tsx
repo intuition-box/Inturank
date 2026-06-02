@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { Search, TrendingUp, Filter, Tag, Zap, Activity, ShieldCheck, Loader2, Database, ChevronDown, ChevronLeft, ChevronRight, Star, LayoutGrid, Hexagon, Network, Layers, ArrowRight, Shield, User, Globe, Cpu, Component, Boxes, ScanSearch, Hash, Users, BadgeCheck, UserCog, List, Trophy } from 'lucide-react';
@@ -724,7 +725,7 @@ const Markets: React.FC = () => {
                         <td className="px-6 py-2">
                           <div className="flex items-center gap-3 py-4">
                             <div className="w-10 h-10 bg-slate-950 flex items-center justify-center overflow-hidden border border-slate-800 rounded-xl">
-                              {list.image ? <img src={list.image} className="w-full h-full object-cover" alt="" /> : <Component size={18} className="text-slate-600" />}
+                              {list.image ? <img src={normalizeWebMediaUrl(list.image)} className="w-full h-full object-cover" alt="" /> : <Component size={18} className="text-slate-600" />}
                             </div>
                             <span className="font-black text-white text-[11px] uppercase truncate max-w-[200px]">{list.label || 'Untitled list'}</span>
                           </div>
@@ -771,7 +772,7 @@ const Markets: React.FC = () => {
                               <div className="absolute inset-0 bg-intuition-primary blur-[20px] opacity-20 group-hover:opacity-35 transition-all duration-500 rounded-full scale-110" />
                               <div className="relative w-12 h-12 md:w-20 md:h-20 rounded-xl md:rounded-2xl bg-black/80 border-2 border-slate-700 group-hover:border-intuition-primary/60 flex items-center justify-center text-slate-500 group-hover:text-intuition-primary transition-all duration-500 overflow-hidden shadow-[0_0_25px_rgba(255,80,57,0.4)]">
                                   {list.image ? (
-                                      <img src={list.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-500" alt="" />
+                                      <img src={normalizeWebMediaUrl(list.image)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-500" alt="" />
                                   ) : (
                                       <Component size={32} className="max-md:w-5 max-md:h-5 group-hover:scale-110 transition-transform duration-500 opacity-70 group-hover:opacity-100" />
                                   )}
@@ -800,7 +801,7 @@ const Markets: React.FC = () => {
                       <div className="hidden sm:flex items-center justify-center -space-x-2 mt-auto relative z-10 group-hover:translate-y-[-2px] transition-transform duration-300 mb-2 md:mb-4">
                           {(list.items || []).slice(0, 5).map((item: any, i: number) => (
                               <div key={i} className="w-9 h-9 rounded-xl border-2 border-slate-800 hover:border-intuition-primary/60 bg-slate-900 flex items-center justify-center overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-1 hover:z-10">
-                                  {item.image ? <img src={item.image} className="w-full h-full object-cover" alt="" /> : <span className="text-[10px] font-black text-slate-600">{item.label?.[0]}</span>}
+                                  {item.image ? <img src={normalizeWebMediaUrl(item.image)} className="w-full h-full object-cover" alt="" /> : <span className="text-[10px] font-black text-slate-600">{item.label?.[0]}</span>}
                               </div>
                           ))}
                           {(list.totalItems > 5) && (
@@ -871,7 +872,7 @@ const Markets: React.FC = () => {
                     <div className="flex gap-3 min-w-0">
                       <div className="h-11 w-11 shrink-0 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden">
                         {claim.subject?.image ? (
-                          <img src={claim.subject.image} className="h-full w-full object-cover" alt="" />
+                          <img src={normalizeWebMediaUrl(claim.subject.image)} className="h-full w-full object-cover" alt="" />
                         ) : (
                           <User size={18} className="text-slate-600" />
                         )}
@@ -972,7 +973,7 @@ const Markets: React.FC = () => {
                                 <td className="px-4 py-3 align-middle">
                                     <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                         <div className="w-9 h-9 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                                            {claim.subject?.image ? <img src={claim.subject.image} className="w-full h-full object-cover" alt="" /> : <User size={16} className="text-slate-700" />}
+                                            {claim.subject?.image ? <img src={normalizeWebMediaUrl(claim.subject.image)} className="w-full h-full object-cover" alt="" /> : <User size={16} className="text-slate-700" />}
                                         </div>
                                         <span className="font-bold text-white text-sm truncate" title={claim.subject?.label || ''}>{claim.subject?.label || '—'}</span>
                                         <span className="text-slate-500 text-xs shrink-0">{(claim.predicate || 'LINK').replace(/_/g, ' ').toLowerCase()}</span>
@@ -1063,7 +1064,7 @@ const Markets: React.FC = () => {
                         <div className="absolute -inset-1 rounded-2xl bg-black/60" />
                         <div className={`relative h-11 w-11 border border-white/10 bg-black/80 sm:h-16 sm:w-16 sm:rounded-2xl flex items-center justify-center overflow-hidden rounded-xl shadow-[0_12px_30px_rgba(0,0,0,0.9)]`}>
                           {agent.image ? (
-                             <img src={agent.image} alt={agent.label} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                             <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                           ) : (
                              <div className={`text-lg font-black sm:text-3xl ${tierStyle.color}`}>{agent.label?.[0]?.toUpperCase()}</div>
                           )}

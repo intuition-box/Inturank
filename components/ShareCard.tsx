@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Download, Share2, Award, Copy, Twitter, Loader2, CheckCircle, Activity, Zap, Cpu, User } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast } from './Toast';
@@ -95,7 +96,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                       style={{ borderColor: `${themeColor}88`, boxShadow: `0 0 20px ${themeColor}44` }}
                     >
                         {assetImage ? (
-                          <img src={assetImage} className="w-full h-full object-cover" crossOrigin="anonymous" alt="" />
+                          <img src={normalizeWebMediaUrl(assetImage)} className="w-full h-full object-cover" crossOrigin="anonymous" alt="" />
                         ) : (
                           <Logo className="w-10 h-10" style={{ filter: `drop-shadow(0 0 5px ${themeColor})` }} />
                         )}
