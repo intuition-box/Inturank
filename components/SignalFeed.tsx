@@ -2,6 +2,7 @@
  * Signal — Pulse (stance queue + markets) · Vouch (on-chain name claims).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
@@ -1141,7 +1142,7 @@ const PulseYoursSearchModal: React.FC<{
                 >
                   <div className="h-9 w-9 rounded-full overflow-hidden ring-1 ring-white/12 bg-zinc-900 shrink-0">
                     {r.image ? (
-                      <img src={r.image} alt="" className="h-full w-full object-cover" />
+                      <img src={normalizeWebMediaUrl(r.image)} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-[11px] font-black text-cyan-200">
                         {r.label.slice(0, 1).toUpperCase()}
@@ -1416,7 +1417,7 @@ const PulseLane: React.FC<{
               >
                 <div className="shrink-0 h-12 w-12 rounded-full overflow-hidden ring-1 ring-white/15 bg-slate-900">
                   {it.subjectImage ? (
-                    <img src={it.subjectImage} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <img src={normalizeWebMediaUrl(it.subjectImage)} alt="" className="h-full w-full object-cover" loading="lazy" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-[13px] font-black text-cyan-100">
                       {it.subjectLabel.slice(0, 1).toUpperCase()}
@@ -2160,7 +2161,7 @@ const PulseAtomTagCard: React.FC<{
           aria-hidden
         >
           {card.subjectImage ? (
-            <img src={card.subjectImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <img src={normalizeWebMediaUrl(card.subjectImage)} alt="" className="w-full h-full object-cover" loading="lazy" />
           ) : (
             <User size={18} className="text-zinc-500" />
           )}
@@ -2354,7 +2355,7 @@ const VouchLane: React.FC<{
             >
               <div className="shrink-0 h-11 w-11 rounded-full overflow-hidden ring-1 ring-white/15 bg-slate-900">
                 {i.image ? (
-                  <img src={i.image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img src={normalizeWebMediaUrl(i.image)} alt="" className="h-full w-full object-cover" loading="lazy" />
                 ) : (
                   <div
                     className={`h-full w-full flex items-center justify-center text-[12px] font-black ${

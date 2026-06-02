@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useState } from 'react';
+import { normalizeWebMediaUrl } from '../../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { Dices, Plus, Play, Sparkles, Flame, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Reveal } from '../Reveal';
@@ -266,7 +267,7 @@ const PaginatedContestLane = memo(function PaginatedContestLane({
                             className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md border border-[#0a0d15] bg-slate-800 text-[9px] font-bold text-slate-400"
                           >
                             <ArenaPortraitImg
-                              src={p.image}
+                              src={normalizeWebMediaUrl(p.image)}
                               loading="lazy"
                               decoding="async"
                               className="h-full w-full object-cover"

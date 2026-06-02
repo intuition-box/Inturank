@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { Shield, Activity, Users, Zap, Download, RefreshCw, FileText, Globe, Terminal, Award, ArrowUpRight, BarChart3, TrendingUp, Loader2, UserCircle, BadgeCheck, Network, Lock, Coins, Clock, Box, ShieldCheck, ExternalLink } from 'lucide-react';
 import { getNetworkKPIs, getRecentFeeProxyActivity, type FeeProxyActivityLine } from '../services/graphql';
@@ -239,7 +240,7 @@ const KPIDashboard: React.FC = () => {
                                                     <td className="px-3 sm:px-4 py-5 min-w-0">
                                                         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                                                             <div className="w-10 h-10 bg-black border border-slate-800 clip-path-slant flex items-center justify-center overflow-hidden group-hover:border-intuition-secondary transition-all shrink-0">
-                                                                {user.image ? <img src={user.image} className="w-full h-full object-cover" alt="" /> : <UserCircle size={20} className="text-slate-600" />}
+                                                                {user.image ? <img src={normalizeWebMediaUrl(user.image)} className="w-full h-full object-cover" alt="" /> : <UserCircle size={20} className="text-slate-600" />}
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="text-sm font-semibold text-white group-hover:text-intuition-secondary transition-colors truncate">{user.label || user.id.slice(0, 14)}</div>

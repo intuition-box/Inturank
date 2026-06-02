@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Link } from 'react-router-dom';
 import { User, Shield, CheckCircle, AlertTriangle, MessageSquare, Activity, Tag, Binary, Fingerprint, ChevronsRight, Share2, ChevronDown, UserCircle, Globe, Hash, BadgeCheck } from 'lucide-react';
 import { Claim } from '../types';
@@ -62,7 +63,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
         <div className="flex items-center gap-3 w-full md:w-[30%] shrink-0">
           <div className="w-10 h-10 bg-black border border-white/10 flex items-center justify-center overflow-hidden shrink-0 clip-path-slant group-hover:border-intuition-primary/40 transition-colors relative">
               {claim.subject.image ? (
-                  <img src={claim.subject.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
+                  <img src={normalizeWebMediaUrl(claim.subject.image)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
               ) : (
                   <User size={16} className="text-slate-600" />
               )}
@@ -114,7 +115,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
           </div>
           <div className="w-10 h-10 bg-black border border-white/10 flex items-center justify-center overflow-hidden shrink-0 clip-path-slant group-hover:border-intuition-primary/40 transition-colors relative">
                 {claim.object.image ? (
-                    <img src={claim.object.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
+                    <img src={normalizeWebMediaUrl(claim.object.image)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
                 ) : (
                     <Shield size={16} className="text-slate-700" />
                 )}
@@ -152,7 +153,7 @@ const ClaimCard: React.FC<{ claim: Claim }> = ({ claim }) => {
                                 className="flex items-center gap-2 px-3 py-1 bg-intuition-primary/10 border border-intuition-primary/20 hover:border-intuition-primary/60 transition-all clip-path-slant group/creator"
                             >
                                 <div className="w-4 h-4 bg-slate-900 rounded-full border border-white/10 overflow-hidden shrink-0">
-                                    <img src={claim.creator.image || DEFAULT_PROFILE_AVATAR_URL} className="w-full h-full object-cover" alt="" />
+                                    <img src={normalizeWebMediaUrl(claim.creator.image || DEFAULT_PROFILE_AVATAR_URL)} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <span className="text-[9px] font-black text-intuition-primary group-hover/creator:text-white transition-colors uppercase tracking-widest">
                                     {claim.creator.label || claim.creator.id.slice(0, 14) + '...'}

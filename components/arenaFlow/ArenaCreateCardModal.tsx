@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../../services/mediaUrl';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ImageIcon, Plus, ShieldCheck, X } from 'lucide-react';
 import type { RankItem } from '../../pages/RankedList';
@@ -311,7 +312,7 @@ const FormBody: React.FC<FormProps> = ({
             aria-hidden
           >
             {image.trim() && HTTP_URL_RE.test(image.trim()) ? (
-              <img src={image.trim()} alt="" className="h-full w-full object-cover" />
+              <img src={normalizeWebMediaUrl(image.trim())} alt="" className="h-full w-full object-cover" />
             ) : (
               <ImageIcon className="h-5 w-5 text-slate-700" strokeWidth={1.6} />
             )}

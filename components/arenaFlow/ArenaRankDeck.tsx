@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { normalizeWebMediaUrl } from '../../services/mediaUrl';
 import { Reorder, motion, useDragControls } from 'framer-motion';
 import {
   ArrowRight,
@@ -214,7 +215,7 @@ const RankRow: React.FC<RowProps> = ({
           >
             <CornerTicks color={deck.hex} />
             <ArenaPortraitImg
-              src={it.image}
+              src={normalizeWebMediaUrl(it.image)}
               className="h-full w-full object-cover"
               loading="lazy"
               draggable={false}

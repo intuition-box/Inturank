@@ -1,5 +1,6 @@
 /** Arena: local stance grid + arena points. Vaults: /markets/:id */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -818,7 +819,7 @@ function ArenaLaneCard({
               <div className="-space-x-2 flex items-center">
                 <div className="relative z-[2] h-10 w-10 overflow-hidden rounded-lg border border-white/12 bg-black/70 sm:h-11 sm:w-11">
                   <ArenaPortraitImg
-                    src={item.image}
+                    src={normalizeWebMediaUrl(item.image)}
                     className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0"
                     loading="lazy"
                   >
@@ -838,7 +839,7 @@ function ArenaLaneCard({
             ) : (
               <div className="relative h-10 w-10 overflow-hidden rounded-lg border border-white/12 bg-black/70 sm:h-11 sm:w-11">
                 <ArenaPortraitImg
-                  src={item.image}
+                  src={normalizeWebMediaUrl(item.image)}
                   className="h-full w-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
                   loading="lazy"
                 >
@@ -4669,7 +4670,7 @@ const RankedList: React.FC = () => {
                           >
                             <div className="flex items-start gap-2.5">
                               <div className="relative h-10 w-10 shrink-0 rounded-2xl overflow-hidden ring-1 ring-white/15 bg-gradient-to-br from-slate-800 to-slate-950 shadow-inner">
-                                <ArenaPortraitImg src={p.image} className="h-full w-full object-cover">
+                                <ArenaPortraitImg src={normalizeWebMediaUrl(p.image)} className="h-full w-full object-cover">
                                   <div className="h-full w-full flex items-center justify-center text-sm font-black text-intuition-primary/90">
                                     {leaderboardAvatarGlyph(p.label)}
                                   </div>

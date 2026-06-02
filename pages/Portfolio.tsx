@@ -21,6 +21,7 @@ const EquityChartTooltip = ({ active, payload }: any) => {
 import { formatEther, getAddress } from 'viem';
 import { connectWallet, getConnectedAccount, getWalletBalance, getShareBalancesBatch, getLocalTransactions } from '../services/web3';
 import { getUserPositions, getPortfolioPositionsWithValue, getUserHistory, getVaultsByIds, getAccountPnlCurrent, getCurveLabel, getMyCreated, resolveMetadata } from '../services/graphql';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { Wallet, RefreshCw, Zap, User, Loader2, TrendingUp, Coins, Lock, Activity as PulseIcon, Clock, Terminal, Globe, Layers, LogOut, Sparkles, ChevronDown } from 'lucide-react';
 import { Transaction } from '../types';
 import { toast } from '../components/Toast';
@@ -728,7 +729,7 @@ const Portfolio: React.FC = () => {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-12 h-12 rounded-2xl bg-black/80 border border-white/15 flex items-center justify-center overflow-hidden shrink-0">
                     {sharePosition.atom?.image ? (
-                      <img src={sharePosition.atom.image} alt="" className="w-full h-full object-cover" />
+                      <img src={normalizeWebMediaUrl(sharePosition.atom.image)} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-5 h-5 text-slate-500" />
                     )}
@@ -898,7 +899,7 @@ const Portfolio: React.FC = () => {
                         <Link to={`/markets/${pos.id}`} className="flex gap-3 min-w-0">
                           <div className="h-11 w-11 shrink-0 rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
                             {pos.atom?.image ? (
-                              <img src={pos.atom.image} className="h-full w-full object-cover" alt="" />
+                              <img src={normalizeWebMediaUrl(pos.atom.image)} className="h-full w-full object-cover" alt="" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <User className="h-5 w-5 text-slate-600" />
@@ -997,7 +998,7 @@ const Portfolio: React.FC = () => {
                         <td className="px-2 sm:px-3 md:px-4 xl:px-5 py-4 sm:py-5 md:py-6 min-w-0 overflow-hidden align-top">
                           <Link to={`/markets/${pos.id}`} className="flex items-center gap-2 sm:gap-4 min-w-0">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 xl:w-11 xl:h-11 bg-slate-900 border border-slate-800 rounded-xl sm:rounded-2xl flex items-center justify-center overflow-hidden group-hover:border-intuition-primary transition-all shrink-0">
-                              {pos.atom.image ? <img src={pos.atom.image} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />}
+                              {pos.atom.image ? <img src={normalizeWebMediaUrl(pos.atom.image)} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-slate-700" />}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className={`font-black uppercase text-xs sm:text-sm xl:text-base group-hover:text-intuition-primary transition-colors truncate ${isOpposition ? 'text-intuition-danger' : 'text-white'}`} title={pos.atom.label}>{pos.atom.label}</div>
@@ -1307,7 +1308,7 @@ const Portfolio: React.FC = () => {
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center overflow-hidden shrink-0 group-hover:border-intuition-primary transition-all">
-                              {item.image ? <img src={item.image} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 text-slate-700" />}
+                              {item.image ? <img src={normalizeWebMediaUrl(item.image)} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 text-slate-700" />}
                             </div>
                             <div className="min-w-0">
                               <div className="font-black text-white text-xs truncate group-hover:text-intuition-primary transition-colors">{item.label}</div>
@@ -1335,7 +1336,7 @@ const Portfolio: React.FC = () => {
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-8 h-8 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center overflow-hidden shrink-0 group-hover:border-intuition-primary transition-all">
-                              {item.image ? <img src={item.image} className="w-full h-full object-cover" alt="" /> : <Globe className="w-4 h-4 text-slate-700" />}
+                              {item.image ? <img src={normalizeWebMediaUrl(item.image)} className="w-full h-full object-cover" alt="" /> : <Globe className="w-4 h-4 text-slate-700" />}
                             </div>
                             <div className="min-w-0">
                               <div className="font-black text-white text-xs truncate group-hover:text-intuition-primary transition-colors">{item.label}</div>

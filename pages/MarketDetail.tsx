@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
@@ -207,7 +208,7 @@ const AgentShareModal: React.FC<{
                             style={{ borderColor: `${theme.color}66`, boxShadow: `0 0 30px ${theme.bgGlow}` }}
                         >
                             {agent.image ? (
-                              <img src={agent.image} className="w-full h-full object-cover" crossOrigin="anonymous" alt="" />
+                              <img src={normalizeWebMediaUrl(agent.image)} className="w-full h-full object-cover" crossOrigin="anonymous" alt="" />
                             ) : (
                               <Logo className="w-8 h-8 sm:w-10 sm:h-10 transition-colors duration-1000" style={{ filter: `drop-shadow(0 0 8px ${theme.color})` }} />
                             )}
@@ -1152,7 +1153,7 @@ const MarketDetail: React.FC = () => {
                         <div className="mt-1.5 min-w-0">
                             {agent.creator?.id && !isProtocolRouterAddress(agent.creator.id) ? (
                                 <a href={`${EXPLORER_URL}/address/${agent.creator.id}`} target="_blank" rel="noreferrer" onClick={playClick} className="group/creator flex min-w-0 items-center gap-1.5">
-                                    <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full border border-white/20 bg-slate-900"><img src={agent.creator?.image || DEFAULT_PROFILE_AVATAR_URL} className="h-full w-full object-cover" alt="" /></div>
+                                    <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full border border-white/20 bg-slate-900"><img src={normalizeWebMediaUrl(agent.creator?.image || DEFAULT_PROFILE_AVATAR_URL)} className="h-full w-full object-cover" alt="" /></div>
                                     <span className="min-w-0 truncate text-[10px] font-black text-white group-hover/creator:text-intuition-primary">{agent.creator?.label || agent.creator?.id?.slice(0, 10)}</span>
                                     <ExternalLink size={9} className="shrink-0 text-slate-600" />
                                 </a>
@@ -1201,7 +1202,7 @@ const MarketDetail: React.FC = () => {
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Creator</span>
                     {agent.creator?.id && !isProtocolRouterAddress(agent.creator.id) ? (
                         <a href={`${EXPLORER_URL}/address/${agent.creator.id}`} target="_blank" rel="noreferrer" onClick={playClick} onMouseEnter={playHover} className="group/creator flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 transition-all hover:border-intuition-primary/40 cursor-pointer">
-                            <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full border border-white/20 bg-slate-900 shadow-glow-blue"><img src={agent.creator?.image || DEFAULT_PROFILE_AVATAR_URL} className="h-full w-full object-cover" alt="" /></div>
+                            <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full border border-white/20 bg-slate-900 shadow-glow-blue"><img src={normalizeWebMediaUrl(agent.creator?.image || DEFAULT_PROFILE_AVATAR_URL)} className="h-full w-full object-cover" alt="" /></div>
                             <span className="text-[10px] font-black text-white transition-colors group-hover/creator:text-intuition-primary">{agent.creator?.label || agent.creator?.id?.slice(0, 14)}</span>
                             <ExternalLink size={10} className="text-slate-600 group-hover/creator:text-intuition-primary" />
                         </a>
@@ -1230,7 +1231,7 @@ const MarketDetail: React.FC = () => {
                     <div className="relative shrink-0">
                         <div className="absolute -inset-3 blur-2xl opacity-0 transition-opacity duration-1000 group-hover/header:opacity-100" style={{ backgroundColor: `${theme.color}33` }}></div>
                         <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 bg-slate-950 shadow-2xl sm:h-20 sm:w-20 sm:rounded-2xl" style={{ borderColor: `${theme.color}66` }}>
-                            {agent.image ? <img src={agent.image} alt={agent.label} className="h-full w-full object-cover" /> : <User size={32} className="text-slate-800 sm:h-10 sm:w-10" />}
+                            {agent.image ? <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="h-full w-full object-cover" /> : <User size={32} className="text-slate-800 sm:h-10 sm:w-10" />}
                         </div>
                     </div>
                     <div className="min-w-0 flex-1 space-y-2">
@@ -1293,7 +1294,7 @@ const MarketDetail: React.FC = () => {
                     <div className="relative shrink-0">
                         <div className="absolute -inset-6 blur-2xl opacity-0 transition-opacity duration-1000 group-hover/header:opacity-100" style={{ backgroundColor: `${theme.color}33` }}></div>
                         <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl border-2 bg-slate-950 shadow-2xl transition-all duration-500 group-hover/header:scale-105" style={{ borderColor: `${theme.color}66` }}>
-                            {agent.image ? <img src={agent.image} alt={agent.label} className="h-full w-full object-cover transition-transform duration-1000 group-hover/header:scale-110" /> : <User size={52} className="text-slate-800" />}
+                            {agent.image ? <img src={normalizeWebMediaUrl(agent.image)} alt={agent.label} className="h-full w-full object-cover transition-transform duration-1000 group-hover/header:scale-110" /> : <User size={52} className="text-slate-800" />}
                         </div>
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1941,7 +1942,7 @@ const MarketDetail: React.FC = () => {
                                             <td className="px-1.5 py-2.5 sm:px-6 md:px-8 sm:py-6 min-w-0">
                                                 <Link to={`/profile/${h.account.id}`} className="flex items-center gap-1.5 sm:gap-4 group-hover:text-white transition-colors min-w-0">
                                                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden group-hover:border-white transition-all shadow-xl shrink-0">
-                                                        {h.account.image ? <img src={h.account.image} className="w-full h-full object-cover" alt="" /> : <User size={11} className="text-slate-700 sm:w-[14px] sm:h-[14px]" />}
+                                                        {h.account.image ? <img src={normalizeWebMediaUrl(h.account.image)} className="w-full h-full object-cover" alt="" /> : <User size={11} className="text-slate-700 sm:w-[14px] sm:h-[14px]" />}
                                                     </div>
                                                     <span className="font-black text-white group-hover:text-glow-white transition-colors uppercase tracking-tight truncate min-w-0" title={h.account.label || h.account.id}>{h.account.label || `${h.account.id.slice(0, 8)}…`}</span>
                                                 </Link>
@@ -1969,7 +1970,7 @@ const MarketDetail: React.FC = () => {
                 {activeTab === 'IDENTITIES' && (
                     <div>
                         <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.6em] mb-10 flex items-center gap-4"><Fingerprint size={16}/> Neural Identities Engaged</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{engagedIdentities.length > 0 ? engagedIdentities.map((peer, i) => (<Link key={i} to={`/markets/${peer.term_id}`} className="p-6 bg-white/[0.02] border-2 border-slate-900 hover:border-white/40 transition-all rounded-2xl group relative overflow-hidden backdrop-blur-sm"><div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div><div className="flex items-center justify-between gap-6 relative z-10"><div className="flex items-center gap-5"><div className="w-14 h-14 bg-black border-2 border-slate-800 rounded-2xl overflow-hidden group-hover:border-white transition-all shadow-xl group-hover:shadow-glow-white">{peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : <User size={24} className="text-slate-700" />}</div><div className="min-w-0"><div className="text-sm font-black text-white group-hover:text-glow-white transition-colors uppercase truncate max-w-[140px] font-display tracking-tight leading-none mb-1.5">{peer.label}</div><div className="text-[8px] text-slate-600 uppercase font-black tracking-widest">{peer.predicate || 'REPUTATION_LINK'}</div></div></div><div className="flex flex-col items-end"><div className="text-[10px] font-black text-intuition-success animate-pulse text-glow-success">LIVE</div><span className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-1">L3_SYNC</span></div></div></Link>)) : (<div className="col-span-full py-20 text-center text-slate-700 uppercase font-black tracking-widest text-[10px] border border-dashed border-slate-900">NULL_IDENTITIES_SYNCED</div>)}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{engagedIdentities.length > 0 ? engagedIdentities.map((peer, i) => (<Link key={i} to={`/markets/${peer.term_id}`} className="p-6 bg-white/[0.02] border-2 border-slate-900 hover:border-white/40 transition-all rounded-2xl group relative overflow-hidden backdrop-blur-sm"><div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div><div className="flex items-center justify-between gap-6 relative z-10"><div className="flex items-center gap-5"><div className="w-14 h-14 bg-black border-2 border-slate-800 rounded-2xl overflow-hidden group-hover:border-white transition-all shadow-xl group-hover:shadow-glow-white">{peer.image ? <img src={normalizeWebMediaUrl(peer.image)} className="w-full h-full object-cover" /> : <User size={24} className="text-slate-700" />}</div><div className="min-w-0"><div className="text-sm font-black text-white group-hover:text-glow-white transition-colors uppercase truncate max-w-[140px] font-display tracking-tight leading-none mb-1.5">{peer.label}</div><div className="text-[8px] text-slate-600 uppercase font-black tracking-widest">{peer.predicate || 'REPUTATION_LINK'}</div></div></div><div className="flex flex-col items-end"><div className="text-[10px] font-black text-intuition-success animate-pulse text-glow-success">LIVE</div><span className="text-[8px] font-black text-slate-700 uppercase tracking-widest mt-1">L3_SYNC</span></div></div></Link>)) : (<div className="col-span-full py-20 text-center text-slate-700 uppercase font-black tracking-widest text-[10px] border border-dashed border-slate-900">NULL_IDENTITIES_SYNCED</div>)}</div>
                     </div>
                 )}
                 {activeTab === 'CLAIMS' && (
@@ -1998,7 +1999,7 @@ const MarketDetail: React.FC = () => {
                                     >
                                         <div className="flex items-start gap-2 min-w-0">
                                           <div className="w-9 h-9 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0 mt-0.5">
-                                              {c.subject?.image ? <img src={c.subject.image} alt="" className="w-full h-full object-cover" /> : <User size={16} className="text-slate-500" />}
+                                              {c.subject?.image ? <img src={normalizeWebMediaUrl(c.subject.image)} alt="" className="w-full h-full object-cover" /> : <User size={16} className="text-slate-500" />}
                                           </div>
                                           <div className="min-w-0 flex-1 space-y-2">
                                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -2108,7 +2109,7 @@ const MarketDetail: React.FC = () => {
                                             <td className="px-3 sm:px-6 md:px-8 py-4 sm:py-6">
                                                 <Link to={entryUrl} onClick={(e) => e.stopPropagation()} className="flex items-center gap-4 group/entry">
                                                     <div className="w-10 h-10 bg-slate-900 border border-slate-800 flex items-center justify-center rounded-2xl overflow-hidden group-hover/entry:border-white/40 transition-colors shrink-0">
-                                                        {entry.image ? <img src={entry.image} alt="" className="w-full h-full object-cover" /> : <User size={18} className="text-slate-400" />}
+                                                        {entry.image ? <img src={normalizeWebMediaUrl(entry.image)} alt="" className="w-full h-full object-cover" /> : <User size={18} className="text-slate-400" />}
                                                     </div>
                                                     <div>
                                                         <div className="text-sm font-black text-white group-hover/entry:text-glow-white transition-colors uppercase truncate max-w-[200px] font-display tracking-tight">{entry.label || entry.id || 'Unknown'}</div>
@@ -2232,7 +2233,7 @@ const MarketDetail: React.FC = () => {
                             <p className="text-sm text-slate-500 font-medium group-hover:text-slate-400 transition-colors">Other markets linked through this graph.</p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{engagedIdentities.length > 0 ? engagedIdentities.map((peer, i) => (<Link key={i} to={`/markets/${peer.term_id}`} className="group p-8 bg-black border-2 border-slate-900 hover:border-white transition-all rounded-2xl flex items-center gap-8 relative overflow-hidden shadow-2xl"><div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div><div className="w-16 h-16 bg-slate-950 border-2 border-slate-800 flex items-center justify-center rounded-2xl shrink-0 group-hover:border-white transition-all shadow-2xl overflow-hidden">{peer.image ? <img src={peer.image} className="w-full h-full object-cover" /> : <User size={24} className="text-slate-700" />}</div><div className="min-w-0"><div className="text-lg font-black text-white group-hover:text-glow-white transition-colors truncate leading-none mb-2 tracking-tight">{peer.label}</div><div className="text-[8px] font-semibold text-slate-600 tracking-wide">Related market</div></div></Link>)) : (<div className="col-span-full py-32 text-center text-slate-600 font-medium text-sm border-2 border-dashed border-slate-900 rounded-2xl">No related markets yet</div>)}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">{engagedIdentities.length > 0 ? engagedIdentities.map((peer, i) => (<Link key={i} to={`/markets/${peer.term_id}`} className="group p-8 bg-black border-2 border-slate-900 hover:border-white transition-all rounded-2xl flex items-center gap-8 relative overflow-hidden shadow-2xl"><div className="absolute inset-0 bg-gradient-to-tr from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div><div className="w-16 h-16 bg-slate-950 border-2 border-slate-800 flex items-center justify-center rounded-2xl shrink-0 group-hover:border-white transition-all shadow-2xl overflow-hidden">{peer.image ? <img src={normalizeWebMediaUrl(peer.image)} className="w-full h-full object-cover" /> : <User size={24} className="text-slate-700" />}</div><div className="min-w-0"><div className="text-lg font-black text-white group-hover:text-glow-white transition-colors truncate leading-none mb-2 tracking-tight">{peer.label}</div><div className="text-[8px] font-semibold text-slate-600 tracking-wide">Related market</div></div></Link>)) : (<div className="col-span-full py-32 text-center text-slate-600 font-medium text-sm border-2 border-dashed border-slate-900 rounded-2xl">No related markets yet</div>)}</div>
                     </div>
                 )}
               </motion.div>

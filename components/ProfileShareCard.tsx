@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Download, Twitter, Loader2, Copy } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -145,7 +146,7 @@ export default function ProfileShareCard({
                 className="w-14 h-14 shrink-0 bg-black border-2 flex items-center justify-center rounded-[1rem] overflow-hidden shadow-2xl"
                 style={{ borderColor: `${THEME}88`, boxShadow: `0 0 20px ${THEME}44` }}
               >
-                <img src={avatarSrc} alt="" className="w-full h-full object-cover" />
+                <img src={normalizeWebMediaUrl(avatarSrc)} alt="" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0 pt-0.5">
                 <p className="text-white font-bold font-display text-lg sm:text-xl leading-snug tracking-tight break-words">

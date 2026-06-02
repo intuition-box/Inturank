@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { useAccount } from 'wagmi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { connectWallet, getConnectedAccount, getWalletBalance, getLocalTransactions, getShareBalance, getQuoteRedeem } from '../services/web3';
@@ -273,7 +274,7 @@ const Dashboard: React.FC = () => {
                 >
                   <td className="px-6 py-4">
                     <Link to={`/markets/${pos.id}`} className="flex items-center gap-3">
-                      {pos.atom?.image && <img src={pos.atom.image} className="w-8 h-8 rounded-sm object-cover border border-intuition-primary/30" alt="" />}
+                      {pos.atom?.image && <img src={normalizeWebMediaUrl(pos.atom.image)} className="w-8 h-8 rounded-sm object-cover border border-intuition-primary/30" alt="" />}
                       <div className={`font-bold group-hover:text-intuition-primary transition-colors text-glow ${isOpposition ? 'text-intuition-danger' : 'text-white'}`}>{pos.atom?.label}</div>
                     </Link>
                   </td>

@@ -3,6 +3,7 @@
  * Mirrors Intuition Portal "Add to List" / "Locked In" flow.
  */
 import React, { useState, useCallback } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { X, Plus, Loader2, Lock } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
@@ -213,7 +214,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, listId, listLab
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-                        {a.image ? <img src={a.image} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-intuition-primary">{a.label?.slice(0, 2)}</span>}
+                        {a.image ? <img src={normalizeWebMediaUrl(a.image)} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-intuition-primary">{a.label?.slice(0, 2)}</span>}
                       </div>
                       <span className="text-sm font-mono text-white truncate flex-1">{a.label || 'Unnamed'}</span>
                       <Plus size={14} className="text-intuition-primary shrink-0" />
@@ -227,7 +228,7 @@ const AddToListModal: React.FC<AddToListModalProps> = ({ isOpen, listId, listLab
                   {selectedAtoms.map((a) => (
                     <div key={a.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-black/40 border border-slate-700">
                       <div className="w-8 h-8 rounded-lg bg-slate-900 overflow-hidden flex items-center justify-center shrink-0">
-                        {a.image ? <img src={a.image} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-intuition-primary">{a.label?.slice(0, 2)}</span>}
+                        {a.image ? <img src={normalizeWebMediaUrl(a.image)} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-intuition-primary">{a.label?.slice(0, 2)}</span>}
                       </div>
                       <span className="text-sm font-mono text-white truncate flex-1">{a.label || 'Unnamed'}</span>
                       <button onClick={() => removeAtom(a.id)} className="p-1 text-slate-500 hover:text-red-400 transition-colors">

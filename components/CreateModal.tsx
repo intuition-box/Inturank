@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { normalizeWebMediaUrl } from '../services/mediaUrl';
 import { X, User, Database, Network, Info, Loader2, Zap, ArrowRight, ShieldCheck, Cpu, Camera, Search, ChevronRight, HelpCircle, UserPlus, CheckCircle2, Globe, Fingerprint, Trash2, Plus, Terminal as TerminalIcon, ExternalLink, RefreshCw, AlertTriangle, Coins, Sparkles } from 'lucide-react';
 import { playClick, playHover } from '../services/audio';
 import { getConnectedAccount, createIdentityAtom, createSemanticTriple, parseProtocolError, getWalletBalance, publicClient, getAtomCreationCost, estimateAtomGas, getMinClaimDeposit, getTotalTripleCreationCost, getProxyApprovalStatus, grantProxyApproval, markProxyApproved, calculateTripleId } from '../services/web3';
@@ -450,7 +451,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                               className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left ${selectedInSearch?.id === a.id ? 'bg-intuition-primary/10 border-intuition-primary shadow-[0_0_20px_rgba(255,80,57,0.1)]' : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'}`}
                           >
                               <div className="w-12 h-12 bg-black border border-white/10 rounded-xl overflow-hidden shrink-0">
-                                {a.image ? <img src={a.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900">{target === 'predicate' ? <Zap size={20}/> : <User size={20}/>}</div>}
+                                {a.image ? <img src={normalizeWebMediaUrl(a.image)} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900">{target === 'predicate' ? <Zap size={20}/> : <User size={20}/>}</div>}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-bold text-white truncate">{a.label}</div>
@@ -498,7 +499,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                       {tripleForm[key] ? (
                         <>
                           <div className="w-12 h-12 bg-black border border-white/10 rounded-xl overflow-hidden shrink-0">
-                            {tripleForm[key]?.image ? <img src={tripleForm[key]?.image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900">{key === 'predicate' ? <Zap size={20}/> : <User size={20}/>}</div>}
+                            {tripleForm[key]?.image ? <img src={normalizeWebMediaUrl(tripleForm[key]?.image)} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900">{key === 'predicate' ? <Zap size={20}/> : <User size={20}/>}</div>}
                           </div>
                           <div className="text-left min-w-0">
                             <div className="text-sm font-bold text-white truncate">{tripleForm[key]?.label}</div>
@@ -543,7 +544,7 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose }) => {
                      <div className="space-y-3">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Image</label>
                         <div onClick={() => fileInputRef.current?.click()} className="aspect-square bg-black border-2 border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-intuition-primary/40 hover:bg-white/5 transition-all group overflow-hidden shadow-2xl">
-                           {identityForm.image ? <img src={identityForm.image} className="w-full h-full object-cover" /> : <><div className="p-4 bg-white/5 rounded-2xl group-hover:scale-110 transition-transform"><Camera size={32} className="text-slate-600" /></div><div className="text-center"><div className="text-[10px] font-black text-white uppercase tracking-widest">Upload</div></div></>}
+                           {identityForm.image ? <img src={normalizeWebMediaUrl(identityForm.image)} className="w-full h-full object-cover" /> : <><div className="p-4 bg-white/5 rounded-2xl group-hover:scale-110 transition-transform"><Camera size={32} className="text-slate-600" /></div><div className="text-center"><div className="text-[10px] font-black text-white uppercase tracking-widest">Upload</div></div></>}
                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                         </div>
                      </div>
