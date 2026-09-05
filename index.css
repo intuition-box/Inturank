@@ -41,6 +41,21 @@ html.lenis { height: auto; }
   --rare:       255 179 0;
   --danger:     255 80 57;    /* #FF5039 cinnabar — the other side       */
 
+  /* Fill vs ink. On dark these are the same colour; on light they must differ, because
+     #00FAFA is illegible as text on paper. Large areas use *-fill, anything text-sized
+     or hairline-thin uses *-ink. See inturank-design/handoff/HANDOFF.md. */
+  --primary-fill:  0 250 250;
+  --primary-flood: 0 250 250;
+  --primary-ink:   0 250 250;
+  --danger-fill:   255 80 57;
+  --danger-flood:  255 80 57;
+  --danger-ink:    255 80 57;
+  --warning-fill:  255 179 0;
+  --warning-ink:   255 179 0;
+  --hairline-soft: 26 31 38;
+  --card:          242 237 228;  /* Play card face — bone on dark            */
+  --card-edge:     242 237 228;
+
   /* Motion */
   --anim-ease:        cubic-bezier(0.25, 0.1, 0.25, 1);
   --anim-ease-out:    cubic-bezier(0.2, 0.85, 0.25, 1);
@@ -58,23 +73,41 @@ html.lenis { height: auto; }
    ============================================================================ */
 
 [data-theme='light'] {
-  /* Provisional — a real light design is still outstanding in the handoff. Derived from the
-     same hues so nothing clashes if a light band renders before it is designed. */
-  --bg:         242 237 228;  /* #F2EDE4 bone ground             */
-  --surface:    255 255 255;
-  --surface-2:  233 227 216;
-  --border:     214 207 195;
-  --hairline:   7 9 12;
-  --ink:        7 9 12;       /* near-black on bone              */
-  --ink-muted:  90 99 110;
-  --ink-dim:    138 148 160;
-  --primary:    0 176 176;    /* cyan darkened for contrast on bone */
-  --accent:     0 176 176;
-  --cta:        0 176 176;
-  --success:    0 176 176;
-  --warning:    176 122 0;
-  --rare:       176 122 0;
-  --danger:     198 51 32;
+  /* IntuRank Signal — light. From the Claude Design handoff token table (artboards 7a-7h).
+     Contrast is measured: ink-4 is the floor for text, cyan-ink clears 4.5:1 on ground
+     (4.87) and surface (4.90) but only 4.46 on surface-2 — never put cyan-ink on a chip. */
+  --bg:         251 249 244;  /* #FBF9F4 warm paper, so cards can be white   */
+  --surface:    255 255 255;  /* #FFFFFF card / panel                        */
+  --surface-2:  242 238 229;  /* #F2EEE5 wells, chips, monogram tiles        */
+  --border:     228 222 209;  /* #E4DED1 between and around cards            */
+  --hairline-soft: 239 235 224; /* #EFEBE0 inside a card                     */
+  --hairline:   11 14 18;
+
+  --ink:        11 14 18;     /* #0B0E12 primary text, card edges, numerals  */
+  --ink-muted:  107 116 126;  /* #6B747E labels — the floor for text         */
+  --ink-dim:    168 176 186;  /* #A8B0BA marks and rules. NEVER text         */
+
+  --primary:       0 122 122; /* #007A7A cyan-ink — the safe default         */
+  --primary-fill:  0 250 250; /* #00FAFA large fills only                    */
+  --primary-flood: 0 214 214; /* #00D6D6 reveal face, split bars             */
+  --primary-ink:   0 122 122; /* #007A7A all text, borders, small marks      */
+  --accent:        0 122 122;
+  --cta:           0 122 122;
+  --success:       0 122 122;
+
+  --danger:        194 46 27; /* #C22E1B cinnabar-ink                        */
+  --danger-fill:   255 80 57;
+  --danger-flood:  240 68 44; /* #F0442C negative reveal face                */
+  --danger-ink:    194 46 27;
+
+  --warning:       138 90 0;  /* #8A5A00 amber-ink                           */
+  --warning-fill:  255 179 0;
+  --warning-ink:   138 90 0;
+  --rare:          138 90 0;
+
+  --card:          255 255 255; /* white face on warm paper                  */
+  --card-edge:     11 14 18;    /* 2px edge + hard 8px offset = an object    */
+
   background-color: rgb(var(--bg));
   color: rgb(var(--ink));
 }
@@ -95,6 +128,17 @@ html.lenis { height: auto; }
   --warning:    255 179 0;
   --rare:       255 179 0;
   --danger:     255 80 57;
+  --primary-fill:  0 250 250;
+  --primary-flood: 0 250 250;
+  --primary-ink:   0 250 250;
+  --danger-fill:   255 80 57;
+  --danger-flood:  255 80 57;
+  --danger-ink:    255 80 57;
+  --warning-fill:  255 179 0;
+  --warning-ink:   255 179 0;
+  --hairline-soft: 26 31 38;
+  --card:          242 237 228;
+  --card-edge:     242 237 228;
   background-color: rgb(var(--bg));
   color: rgb(var(--ink));
 }
