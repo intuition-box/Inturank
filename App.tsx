@@ -81,9 +81,11 @@ const DailyTrustHub   = lazy(() => import('./pages/DailyTrustHub'));
 const Verdict         = lazy(() => import('./pages/Verdict'));
 const Me              = lazy(() => import('./pages/Me'));
 const Play            = lazy(() => import('./pages/Play'));
+const Ask             = lazy(() => import('./pages/Ask'));
 import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
+import SignalShell, { isSignalRoute } from './components/SignalNav';
 import { PageLoadingSpinner } from './components/PageLoading';
 import ArenaTapOptic from './components/ArenaTapOptic';
 
@@ -146,7 +148,12 @@ const AppRoutes: React.FC = () => {
       window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
   }, [location.pathname]);
-  const Shell = isMobile ? MobileLayout : Layout;
+  /**
+   * New surfaces render inside SignalShell (four-tab nav); everything else keeps the
+   * legacy layout, so the existing app is unaffected while the redesign lands.
+   */
+  const onSignal = isSignalRoute(location.pathname);
+  const Shell = onSignal ? SignalShell : isMobile ? MobileLayout : Layout;
   const Landing = isMobile ? MobileHome : Home;
   /**
    * Only pathname drives the transition. Including `location.search` made every
@@ -187,6 +194,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/me" element={<Me />} />
       <Route path="/me/:address" element={<Me />} />
       <Route path="/play" element={<Play />} />
+      <Route path="/ask" element={<Ask />} />
       <Route
         path="/climb"
         element={
