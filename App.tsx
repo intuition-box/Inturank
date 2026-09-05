@@ -80,6 +80,7 @@ const SkillPlayground = lazy(() => import('./pages/SkillPlayground'));
 const DailyTrustHub   = lazy(() => import('./pages/DailyTrustHub'));
 const Verdict         = lazy(() => import('./pages/Verdict'));
 const Me              = lazy(() => import('./pages/Me'));
+const Play            = lazy(() => import('./pages/Play'));
 import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
@@ -185,6 +186,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/verdict/:id" element={<Verdict />} />
       <Route path="/me" element={<Me />} />
       <Route path="/me/:address" element={<Me />} />
+      <Route path="/play" element={<Play />} />
       <Route
         path="/climb"
         element={

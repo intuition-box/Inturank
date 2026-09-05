@@ -19,6 +19,8 @@ import { depositToVault, redeemFromVault, getConnectedAccount, parseProtocolErro
 import { LINEAR_CURVE_ID } from '../constants';
 import { toast } from '../components/Toast';
 import { normalizeWebMediaUrl } from '../services/mediaUrl';
+import { motion } from 'framer-motion';
+import { fillX } from '../services/motion';
 
 const PRESETS = [10, 25, 100, 500];
 
@@ -403,9 +405,14 @@ const Verdict: React.FC = () => {
                   says yes
                 </span>
               </div>
-              <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-2">
-                <div className="bg-primary-flood" style={{ width: `${model.pctYes}%` }} />
-                <div className="flex-1 bg-danger-flood" />
+              {/* Split bar fills on entry via scaleX — a transform, so it never triggers layout. */}
+              <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-danger-flood">
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={fillX(model.pctYes!)}
+                  className="absolute inset-0 origin-left bg-primary-flood"
+                />
               </div>
               <div className="mt-2 flex justify-between text-[11px] font-bold uppercase tracking-wide">
                 <span className="text-primary">{fmt(model.forTrust)} for</span>
