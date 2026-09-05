@@ -23,6 +23,7 @@ import { fileURLToPath } from 'url';
 import { getWelcomeEmailHtml } from './welcomeEmailHtml.mjs';
 import { verifyAdmin, adminConfigured, ADMIN_SIG_TTL_MS } from './adminAuth.js';
 import * as xpStore from './store.js';
+import { pushConfigured, getPushPublicKey, sendPushToWallet } from './push.js';
 
 // Load .env and .env.local from project root (when run as node server/index.js)
 dotenv.config();
@@ -181,9 +182,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'inturank-api',
-    features: ['email', 'follows', 'arena-leaderboard', 'user-preferences', 'xp-gift'],
+    features: ['email', 'follows', 'arena-leaderboard', 'user-preferences', 'xp-gift', 'push'],
     emailConfigured: !!(secret && sender),
     adminConfigured: adminConfigured(),
+    pushConfigured: pushConfigured(),
     season: xpStore.getActiveSeason(),
   });
 });
@@ -478,6 +480,72 @@ app.get('/api/xp/summary', async (req, res) => {
   } catch (e) {
     console.error('[inturank-api] xp/summary', e);
     return res.status(500).json({ error: 'Failed to load summary' });
+  }
+});
+
+// ── Web push ─────────────────────────────────────────────────────────────────
+
+/** The browser needs this key to create a subscription. Public by design. */
+app.get('/api/push/public-key', (_req, res) => {
+  if (!pushConfigured()) {
+    return res.status(503).json({
+      error: 'Push not configured',
+      message: 'Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY. Generate them with: npx web-push generate-vapid-keys',
+    });
+  }
+  return res.json({ publicKey: getPushPublicKey() });
+});
+
+/** Register a device against a wallet. Idempotent — re-subscribing just refreshes the keys. */
+app.post('/api/push/subscribe', (req, res) => {
+  if (!pushConfigured()) return res.status(503).json({ error: 'Push not configured' });
+  const wallet = normArenaWallet(req.body?.address);
+  const sub = req.body?.subscription;
+  if (!wallet) return res.status(400).json({ error: 'Missing or invalid address' });
+  if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
+    return res.status(400).json({ error: 'Malformed subscription' });
+  }
+  try {
+    xpStore.addPushSub(wallet, sub);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[inturank-api] push/subscribe', e);
+    return res.status(500).json({ error: 'Failed to store subscription' });
+  }
+});
+
+/** Drop one device. Called when the user turns push off, or the browser rotates the endpoint. */
+app.post('/api/push/unsubscribe', (req, res) => {
+  const endpoint = String(req.body?.endpoint || '');
+  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+  try {
+    xpStore.removePushSub(endpoint);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[inturank-api] push/unsubscribe', e);
+    return res.status(500).json({ error: 'Failed to remove subscription' });
+  }
+});
+
+/**
+ * Send a test push to the caller's own devices, so someone can verify the whole chain
+ * (keys, service worker, subscription) without waiting for a position to move.
+ */
+app.post('/api/push/test', async (req, res) => {
+  if (!pushConfigured()) return res.status(503).json({ error: 'Push not configured' });
+  const wallet = normArenaWallet(req.body?.address);
+  if (!wallet) return res.status(400).json({ error: 'Missing or invalid address' });
+  try {
+    const result = await sendPushToWallet(wallet, {
+      title: 'IntuRank',
+      body: 'Push is working. This is what a position moving will look like.',
+      url: '/#/portfolio',
+      tag: 'inturank-test',
+    });
+    return res.json({ ok: true, ...result });
+  } catch (e) {
+    console.error('[inturank-api] push/test', e);
+    return res.status(500).json({ error: 'Failed to send' });
   }
 });
 

@@ -26,6 +26,7 @@ import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getAddress, isAddress } from 'viem';
+import { pushConfigured, sendPushToWallet } from './push.js';
 
 dotenv.config();
 dotenv.config({ path: '.env.local' });
@@ -286,6 +287,21 @@ async function pollWallet(sub) {
         continue;
       }
       await sendEmail({ to, subject: `IntuRank: ${sender.label || sender.id.slice(0, 8)} ${typeLabel} in ${marketLabel}`, message });
+
+      // Same trigger, second channel. Push is the return path the redesign leans on
+      // ("you were right about X"); it is a no-op when VAPID keys are not configured.
+      if (pushConfigured()) {
+        try {
+          await sendPushToWallet(wallet, {
+            title: `${sender.label || sender.id.slice(0, 8)} ${typeLabel}`,
+            body: marketLabel,
+            url: '/#/portfolio',
+            tag: `pos-${wallet}`,
+          });
+        } catch (e) {
+          console.error('[email-worker] push failed', e?.message || e);
+        }
+      }
     }
 
     state.set(wallet, now.toISOString());
