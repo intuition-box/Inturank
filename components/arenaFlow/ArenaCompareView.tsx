@@ -20,7 +20,8 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import type { ArenaComparePeer, RankItem } from '../../pages/RankedList';
+import type { ArenaComparePeer } from '../../services/arenaSimilarity';
+import type { RankItem } from '../../services/arenaTypes';
 import { parseStakeBaseLabel } from '../../services/arenaRankStake';
 import type { PortalListRankRow } from '../../services/arenaSimilarity';
 import { playArenaUiClick, playArenaUiHover } from '../../services/audio';

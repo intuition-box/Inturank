@@ -2,7 +2,7 @@
  * Fetch on-chain rankings for a portal list (community browse / compare).
  */
 import { getAddress } from 'viem';
-import type { ArenaComparePeer } from '../pages/RankedList';
+import type { ArenaComparePeer } from './arenaSimilarity';
 import type { ArenaPlayerRow } from './arenaLeaderboard';
 import {
   buildArenaRankingClaimsForReceivers,
@@ -14,7 +14,7 @@ import {
   buildPortalListRankingByAccumulatedTrust,
   computeArenaListSimilarity,
 } from './arenaSimilarity';
-import type { RankItem } from '../pages/RankedList';
+import type { RankItem } from './arenaTypes';
 
 export async function fetchPortalListCommunityRankings(opts: {
   listObjectTermId: string;

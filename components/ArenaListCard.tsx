@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Star } from 'lucide-react';
 import { playArenaUiHover } from '../services/audio';
 import { pulseArenaTapOptic } from '../services/arenaTapOptic';
-import type { RankItem } from '../pages/RankedList';
+import type { RankItem } from '../services/arenaTypes';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 
 type Props = {

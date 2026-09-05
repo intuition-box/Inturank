@@ -20,24 +20,26 @@ html.lenis { height: auto; }
    ============================================================================ */
 
 :root {
-  /* INTURANK CINNABAR — warm charcoal canvas, cinnabar brand, cobalt accent.
-     Light pockets (marketing bands on Home) opt in via `data-theme="light"`. */
-  --bg:         28 22 32;     /* #1c1620 warm charcoal (NOT pure black) */
-  --surface:    37 29 39;     /* #251d27 raised card                    */
-  --surface-2:  47 37 48;     /* #2f2530 hover                          */
-  --border:     58 46 60;     /* #3a2e3c warm hairline                  */
-  --hairline:   255 255 255;
-  --ink:        255 255 255;
-  --ink-muted:  140 135 128;  /* #8c8780 warm gray secondary     */
-  --ink-dim:    90 85 74;     /* #5a554a deep muted              */
+  /* INTURANK SIGNAL — near-black ground, cyan brand, cinnabar for the other side.
+     Values from the Claude Design handoff (inturank-design/handoff/HANDOFF.md).
+     Light is provisional: the light theme was never designed, so it is derived from the
+     same three hues rather than invented. */
+  --bg:         7 9 12;       /* #07090C ground — near-black            */
+  --surface:    18 22 28;     /* #12161C raised card                    */
+  --surface-2:  26 31 38;     /* #1A1F26 hover / in-card hairline        */
+  --border:     30 36 44;     /* #1E242C hairline                       */
+  --hairline:   242 237 228;
+  --ink:        242 237 228;  /* #F2EDE4 bone — never pure white         */
+  --ink-muted:  151 161 173;  /* #97A1AD                                 */
+  --ink-dim:    108 118 132;  /* #6C7684 floor                           */
 
-  --primary:    255 80 57;    /* #ff5039 CINNABAR — brand        */
-  --accent:     59 90 254;    /* #3b5afe cobalt                  */
-  --cta:        255 80 57;    /* shares primary (cinnabar)       */
-  --success:    34 197 94;    /* #22c55e lime                    */
-  --warning:    251 191 36;   /* #fbbf24 marigold                */
-  --rare:       251 191 36;   /* top-rank = marigold             */
-  --danger:     220 38 38;    /* #dc2626 crimson                 */
+  --primary:    0 250 250;    /* #00FAFA CYAN — the brand, from the logo */
+  --accent:     0 250 250;    /* no third hue; accent shares the brand   */
+  --cta:        0 250 250;
+  --success:    0 250 250;    /* agreement + gains read cyan, not green  */
+  --warning:    255 179 0;    /* #FFB300 amber — streak and reward only  */
+  --rare:       255 179 0;
+  --danger:     255 80 57;    /* #FF5039 cinnabar — the other side       */
 
   /* Motion */
   --anim-ease:        cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -56,27 +58,43 @@ html.lenis { height: auto; }
    ============================================================================ */
 
 [data-theme='light'] {
-  --bg:         250 246 238;  /* #faf6ee cream                   */
+  /* Provisional — a real light design is still outstanding in the handoff. Derived from the
+     same hues so nothing clashes if a light band renders before it is designed. */
+  --bg:         242 237 228;  /* #F2EDE4 bone ground             */
   --surface:    255 255 255;
-  --surface-2:  244 238 225;  /* #f4eee1 raised cream            */
-  --border:     226 217 198;  /* #e2d9c6 warm hairline           */
-  --hairline:   10 10 10;
-  --ink:        10 10 10;
-  --ink-muted:  90 85 74;     /* #5a554a warm muted              */
-  --ink-dim:    140 135 128;
+  --surface-2:  233 227 216;
+  --border:     214 207 195;
+  --hairline:   7 9 12;
+  --ink:        7 9 12;       /* near-black on bone              */
+  --ink-muted:  90 99 110;
+  --ink-dim:    138 148 160;
+  --primary:    0 176 176;    /* cyan darkened for contrast on bone */
+  --accent:     0 176 176;
+  --cta:        0 176 176;
+  --success:    0 176 176;
+  --warning:    176 122 0;
+  --rare:       176 122 0;
+  --danger:     198 51 32;
   background-color: rgb(var(--bg));
   color: rgb(var(--ink));
 }
 
 [data-theme='dark'] {
-  --bg:         28 22 32;
-  --surface:    37 29 39;
-  --surface-2:  47 37 48;
-  --border:     58 46 60;
-  --hairline:   255 255 255;
-  --ink:        255 255 255;
-  --ink-muted:  140 135 128;
-  --ink-dim:    90 85 74;
+  --bg:         7 9 12;
+  --surface:    18 22 28;
+  --surface-2:  26 31 38;
+  --border:     30 36 44;
+  --hairline:   242 237 228;
+  --ink:        242 237 228;
+  --ink-muted:  151 161 173;
+  --ink-dim:    108 118 132;
+  --primary:    0 250 250;
+  --accent:     0 250 250;
+  --cta:        0 250 250;
+  --success:    0 250 250;
+  --warning:    255 179 0;
+  --rare:       255 179 0;
+  --danger:     255 80 57;
   background-color: rgb(var(--bg));
   color: rgb(var(--ink));
 }
@@ -138,7 +156,7 @@ html {
 body {
   background-color: rgb(var(--bg));
   color: rgb(var(--ink));
-  font-family: 'Inter', sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   overflow-x: clip;
   min-width: 0;
   -webkit-overflow-scrolling: touch;
@@ -427,7 +445,7 @@ body {
    Components that explicitly want the gamy display feel can still opt in via
    the `font-display` Tailwind utility (Orbitron). */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   letter-spacing: -0.02em;
   font-weight: 700;
 }
@@ -544,7 +562,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-cyber {
   position: relative;
   text-transform: uppercase;
-  font-family: 'Orbitron', sans-serif;
+  font-family: 'Archivo', system-ui, sans-serif;
   font-weight: 900;
   letter-spacing: 0.15em;
   border: none;
@@ -562,4 +580,13 @@ h1, h2, h3, h4, h5, h6 {
 @media (prefers-reduced-motion: reduce) {
   .btn-cyber       { transition: none; }
   .btn-cyber:hover { transform: none; }
+}
+
+/* ============================================================================
+   The design uses no monospace. `font-mono` (570 call sites, mostly numbers and
+   addresses) now resolves to Archivo; give it tabular figures so columns still line up.
+   ============================================================================ */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }

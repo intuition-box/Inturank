@@ -2,7 +2,8 @@
  * Spotlight catalog — same rankers as Arena Compare + Ranking Pulse feed (graph-backed).
  */
 import { getAddress } from 'viem';
-import type { ArenaComparePeer, RankItem } from '../pages/RankedList';
+import type { ArenaComparePeer } from './arenaSimilarity';
+import type { RankItem } from './arenaTypes';
 import { fetchPortalListCommunityRankings } from './arenaCommunityRankings';
 import { enrichPeersWithPool } from './arenaRankingEnrich';
 import { fetchArenaPlayerLeaderboard, type ArenaPlayerRow } from './arenaLeaderboard';

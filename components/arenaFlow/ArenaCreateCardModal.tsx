@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeWebMediaUrl } from '../../services/mediaUrl';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ImageIcon, Plus, ShieldCheck, X } from 'lucide-react';
-import type { RankItem } from '../../pages/RankedList';
+import type { RankItem } from '../../services/arenaTypes';
 import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,

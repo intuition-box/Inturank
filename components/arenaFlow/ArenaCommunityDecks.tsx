@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Copy, Loader2, Users } from 'lucide-react';
-import type { ArenaComparePeer } from '../../pages/RankedList';
+import type { ArenaComparePeer } from '../../services/arenaSimilarity';
 import { communityRankingsFromPeers, peerDisplayLabel } from '../../services/arenaRankingRemix';
 import { enrichPeersWithPool } from '../../services/arenaRankingEnrich';
-import type { RankItem } from '../../pages/RankedList';
+import type { RankItem } from '../../services/arenaTypes';
 import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import { CURRENCY_SYMBOL } from '../../constants';
 import { deckPalette, type DeckPaletteEntry } from '../../services/arenaCardDesign';

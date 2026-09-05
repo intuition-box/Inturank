@@ -162,7 +162,7 @@ const AgentShareModal: React.FC<{
             });
             const link = document.createElement('a');
             link.href = canvas.toDataURL('image/png');
-            link.download = `inturank-${agent.label.toLowerCase()}-claim.png`;
+            link.download = `inturank-${(agent.label || 'Node').toLowerCase()}-claim.png`;
             link.click();
             toast.success("Image downloaded");
         } catch (e) {

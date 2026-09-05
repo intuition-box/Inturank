@@ -2,7 +2,8 @@
  * Community ranking remix: browse others' stacks, adopt into your session, adoption notifications.
  */
 import { formatEther, parseEther } from 'viem';
-import type { ArenaComparePeer, RankItem } from '../pages/RankedList';
+import type { ArenaComparePeer } from './arenaSimilarity';
+import type { RankItem } from './arenaTypes';
 import type { PortalListRankRow } from './arenaSimilarity';
 import type { ArenaPlayerRow } from './arenaLeaderboard';
 import { autoDistributeStakeUnitsAlongOrder } from './arenaRankStake';

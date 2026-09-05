@@ -181,54 +181,45 @@ import {
 import { FLAGSHIP_ARENA_LIST_ID } from '../services/intuRankProductSpec';
 import { ARENA_THEME } from '../services/arenaUiTheme';
 import { copyTextToClipboard, getArenaListShareUrl } from '../services/arenaShareLink';
-export type ArenaTheme = 'claims' | 'narratives' | 'tokens' | 'passion' | 'atoms' | 'identities';
+// Arena core types now live in services/ so this page is not the root of the dependency graph.
+import type { ArenaTheme, RankItemKind, RankItem, ArenaRound } from '../services/arenaTypes';
+import type { ArenaComparePeer } from '../services/arenaSimilarity';
+// Pure game rules — deck refill, selection, tiers, score cache. Lifted out of this file so a new
+// Arena UI can reuse them without inheriting 5,000 lines of view code.
+import {
+  SCORE_START,
+  ARENA_CARDS_PER_ROUND,
+  ARENA_RATING_DISPLAY_BASE,
+  STORAGE_PREFIX,
+  BATTLE_PRED_EXTRA,
+  arenaVoteLaneGridClasses,
+  pickSingleItem,
+  pickYesNoGridItems,
+  pickNextUniqueFromPool,
+  refillLanesAfterAnswer,
+  isBattleClaimRow,
+  dedupeArenaEntries,
+  fmtArenaScore,
+  getStreakTier,
+  arenaCombatTier,
+  formatRelativeArenaActive,
+  leaderboardAvatarGlyph,
+  loadPersistedForList,
+  savePersistedForList,
+  wipePersistedArenaScoresForList,
+  patchArenaPersistedScore,
+} from '../services/arenaMechanics';
 
 type ClaimsSortTheme = 'claims' | 'narratives' | 'passion';
 
-/**
- * A leaderboard peer's REAL alignment with the player's current deck for
- * this contest. `similarity` carries the agree/disagree breakdown and the
- * concrete shared subjects (so chips show real items, not placeholders).
- */
-export type ArenaComparePeer = {
-  player: ArenaPlayerRow;
-  claims: UserArenaRankingClaim[];
-  similarity: ArenaSimilarityResult;
-  /** Full list order for this peer on this contest (TRUST-weighted). */
-  listRanking: PortalListRankRow[];
-};
-
-export type RankItemKind = 'claim' | 'atom' | 'token';
-
-export interface RankItem {
-  id: string;
-  kind: RankItemKind;
-  label: string;
-  subtitle?: string;
-  image?: string;
-  /** Object / right side of a head-to-head claim (subject image stays in `image`). */
-  imageSecondary?: string;
-  /** Short labels for vs hero when an image is missing. */
-  versusLeftLabel?: string;
-  versusRightLabel?: string;
-  /** Same-kind pairing: e.g. person vs person, claim-vs vs claim-vs */
-  pairKind: string;
-}
 
 const POOL_SIZE = 28;
-const SCORE_START = 0;
+
 /** Single-item yes/no themes: nudge claim score up or down per stance. */
 const YESNO_SCORE_YES = 28;
 const YESNO_SCORE_NO = -18;
 
-export type ArenaRound = {
-  kind: 'yesno';
-  /** Several stance cards at once (prediction-market grid). */
-  items: RankItem[];
-};
 
-/** Arena ranking: three stance cards fill the viewport; answering one removes & shifts lanes, new fills from the right. */
-const ARENA_CARDS_PER_ROUND = 3;
 /** Contest flow: hub → curate stack → rank deck → compare (replaces 3-lane grid in-run). */
 const ARENA_CONTEST_FLOW_V2 = true;
 type ArenaFlowPhase = 'hub' | 'curate' | 'rank' | 'compare';
@@ -297,16 +288,6 @@ function clearPersistedContestFlow(listId: string | null | undefined) {
   }
 }
 
-/** Lane grid: roomier gutters and earlier 3-up on large screens so lanes are not cramped. */
-function arenaVoteLaneGridClasses(lanes: number): string {
-  if (lanes >= 3) {
-    return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-7 lg:gap-8 xl:gap-10';
-  }
-  if (lanes === 2) {
-    return 'grid-cols-1 sm:grid-cols-2 gap-5 md:gap-7 lg:gap-9';
-  }
-  return 'grid-cols-1 gap-5 md:gap-6';
-}
 
 /** Perceived-performance placeholder while pool loads (matches lane skeleton grid). */
 function ArenaPoolSkeleton({ lanes }: { lanes: number }) {
@@ -345,14 +326,6 @@ function ArenaPoolSkeleton({ lanes }: { lanes: number }) {
   );
 }
 
-function pickSingleItem(pool: RankItem[], lastId: string | null): RankItem | null {
-  if (pool.length === 0) return null;
-  const eligible = lastId && pool.length > 1 ? pool.filter((it) => it.id !== lastId) : pool;
-  const src = eligible.length ? eligible : pool;
-  return src[Math.floor(Math.random() * src.length)] ?? null;
-}
-
-const STORAGE_PREFIX = 'inturank-arena-pairwise';
 
 /** Intuition FeeProxy / vault minimum deposit per triple (enforced on-chain; see `CURVE_OFFSET`). */
 const PROTOCOL_MIN_CLAIM_DEPOSIT_LABEL = formatEther(CURVE_OFFSET);
@@ -374,14 +347,7 @@ const ARENA_STAKE_TITLES = ARENA_BATCH_MODE
 const RANK_TRUST_UNITS_MAX = 12;
 
 const NARRATIVE_PRED = /predict|forecast|will\b|should\b|believe|future|outcome|if\s+.+\s+then/i;
-const BATTLE_PRED_EXTRA =
-  /(?:better than|versus|\bvs\b|over\b|compared to|outperforms|beats\b|wins against)/i;
 
-function isBattleClaimRow(row: any): boolean {
-  const p = row?.predicate || '';
-  if (!p || predicateIsSocialTagNoise(p)) return false;
-  return predicateLooksLikeBattlePredicateLoose(p) || BATTLE_PRED_EXTRA.test(p);
-}
 
 function claimToRankItem(row: any, pairKind: string): RankItem | null {
   if (!row?.id) return null;
@@ -577,168 +543,6 @@ function FootprintStripe({ entry }: { entry: ArenaListEntry }) {
   );
 }
 
-function pickYesNoGridItems(pool: RankItem[], n: number): RankItem[] {
-  if (pool.length === 0) return [];
-  const k = Math.min(n, pool.length);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, k);
-}
-
-function pickNextUniqueFromPool(pool: RankItem[], visible: RankItem[]): RankItem | null {
-  const keepIds = new Set(visible.map((it) => it.id));
-  const eligible = pool.filter((it) => !keepIds.has(it.id));
-  if (eligible.length > 0) {
-    return eligible[Math.floor(Math.random() * eligible.length)] ?? null;
-  }
-  const lastId = visible[visible.length - 1]?.id ?? null;
-  return pickSingleItem(pool, lastId);
-}
-
-/**
- * After a Yes/No, remove that lane entry; lanes shift visually (compact array order).
- * Back-fill slots from pool up to `ARENA_CARDS_PER_ROUND` with unique entries where possible.
- */
-function refillLanesAfterAnswer(pool: RankItem[], prevLanes: RankItem[], answeredItem: RankItem): RankItem[] | null {
-  const idx = prevLanes.findIndex((it) => it.id === answeredItem.id);
-  if (idx < 0) return null;
-  const rest = [...prevLanes.slice(0, idx), ...prevLanes.slice(idx + 1)];
-  while (rest.length < ARENA_CARDS_PER_ROUND && pool.length > 0) {
-    const next = pickNextUniqueFromPool(pool, rest);
-    if (!next) break;
-    rest.push(next);
-  }
-  return rest.length > 0 ? rest : null;
-}
-
-function dedupeArenaEntries(entries: ArenaListEntry[]): ArenaListEntry[] {
-  const seenIds = new Set<string>();
-  const seenPortalListObjectHex = new Set<string>();
-  const out: ArenaListEntry[] = [];
-  for (const e of entries) {
-    if (seenIds.has(e.id)) continue;
-    if (e.source === 'portal') {
-      const raw = e.listObjectTermId.trim();
-      if (raw) {
-        const hex = raw.replace(/^0x/i, '').toLowerCase();
-        if (seenPortalListObjectHex.has(hex)) continue;
-        seenPortalListObjectHex.add(hex);
-      }
-    }
-    seenIds.add(e.id);
-    out.push(e);
-  }
-  return out;
-}
-
-/** Raw Elo-style scores start at 0 and can go negative; display with a baseline so numbers read like familiar ratings. */
-const ARENA_RATING_DISPLAY_BASE = 1500;
-
-function fmtArenaScore(raw: number): string {
-  return Math.round(raw + ARENA_RATING_DISPLAY_BASE).toLocaleString('en-US');
-}
-
-function getStreakTier(s: number): { label: string; className: string } {
-  if (s >= 12)
-    return {
-      label: 'Unstoppable',
-      className: 'from-intuition-primary/90 to-intuition-secondary/80 shadow-[0_0_20px_rgba(255,80,57,0.35)]',
-    };
-  if (s >= 7)
-    return { label: 'Blazing', className: 'from-intuition-primary/85 to-intuition-primary/75 shadow-[0_0_16px_rgba(255,80,57,0.28)]' };
-  if (s >= 3) return { label: 'On fire', className: 'from-intuition-primary/80 to-intuition-primary/70 shadow-[0_0_14px_rgba(255,80,57,0.22)]' };
-  if (s >= 1) return { label: 'Heating up', className: 'from-slate-600/70 to-intuition-primary/60 shadow-[0_0_12px_rgba(255,80,57,0.15)]' };
-  return { label: '', className: '' };
-}
-
-/** Arena XP tier (cyan/magenta palette; matches profile). */
-function arenaCombatTier(xp: number): { label: string; chip: string } {
-  if (xp >= 5000)
-    return {
-      label: 'Mythic',
-      chip: 'bg-gradient-to-r from-intuition-primary/45 to-intuition-secondary/40 text-white border-intuition-primary/55 shadow-[0_0_16px_rgba(255,80,57,0.22)]',
-    };
-  if (xp >= 2500)
-    return {
-      label: 'Apex',
-      chip: 'bg-gradient-to-r from-intuition-primary/35 to-intuition-primary/40 text-intuition-primary border-intuition-primary/45 shadow-[0_0_14px_rgba(255,80,57,0.18)]',
-    };
-  if (xp >= 1000)
-    return {
-      label: 'Elite',
-      chip: 'bg-gradient-to-r from-slate-600/55 to-intuition-primary/35 text-slate-50 border-intuition-primary/40 shadow-[0_0_12px_rgba(255,80,57,0.14)]',
-    };
-  if (xp >= 500)
-    return {
-      label: 'Veteran',
-      chip: 'bg-gradient-to-r from-slate-600/50 to-slate-800/55 text-slate-100 border-slate-400/45',
-    };
-  if (xp >= 150)
-    return {
-      label: 'Contender',
-      chip: 'bg-gradient-to-r from-slate-600/50 to-slate-700/50 text-slate-50 border-slate-400/45',
-    };
-  return {
-    label: 'Rookie',
-    chip: 'bg-gradient-to-r from-slate-700/55 to-slate-900/55 text-slate-200 border-slate-500/40',
-  };
-}
-
-function formatRelativeArenaActive(ts: number): string {
-  if (!ts) return '…';
-  const sec = Math.floor((Date.now() - ts) / 1000);
-  if (sec < 45) return 'just now';
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  return `${Math.floor(sec / 86400)}d ago`;
-}
-
-/** First meaningful avatar glyph when label is unclear (avoid leading “0” on 0x… strings). */
-function leaderboardAvatarGlyph(label: string): string {
-  const t = (label || '').trim();
-  if (/^0x/i.test(t)) {
-    const firstHex = t.slice(2).match(/[a-f0-9]/i);
-    return firstHex ? firstHex[0].toUpperCase() : '?';
-  }
-  const m = /[a-zA-Z0-9]/.exec(t);
-  return m ? m[0].toUpperCase() : '?';
-}
-
-function loadPersistedForList(listId: string): Record<string, number> | null {
-  try {
-    const raw = sessionStorage.getItem(`${STORAGE_PREFIX}-scores-${listId}`);
-    if (!raw) return null;
-    const o = JSON.parse(raw);
-    if (o && typeof o === 'object') return o as Record<string, number>;
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
-function savePersistedForList(listId: string, s: Record<string, number>) {
-  try {
-    sessionStorage.setItem(`${STORAGE_PREFIX}-scores-${listId}`, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Drop all cached stance integers for one list so a clear cannot “come back” after refresh. */
-function wipePersistedArenaScoresForList(listId: string | null | undefined) {
-  if (!listId) return;
-  try {
-    sessionStorage.removeItem(`${STORAGE_PREFIX}-scores-${listId}`);
-  } catch {
-    /* ignore */
-  }
-}
-
-function patchArenaPersistedScore(listId: string | null | undefined, itemId: string, delta: number) {
-  if (!listId) return;
-  const persisted = loadPersistedForList(listId) ?? {};
-  const R = persisted[itemId] ?? SCORE_START;
-  savePersistedForList(listId, { ...persisted, [itemId]: R + delta });
-}
 
 /** Vote lane card. Markets-style metrics strip + Yes/No actions. */
 function ArenaLaneCard({

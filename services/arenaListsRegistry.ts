@@ -1,5 +1,5 @@
-import type { RankItem } from '../pages/RankedList';
-import type { ArenaTheme } from '../pages/RankedList';
+import type { RankItem } from './arenaTypes';
+import type { ArenaTheme } from './arenaTypes';
 import { BUILT_ON_INTUITION_PORTAL_LIST_OBJECT_TERM_ID } from '../constants';
 
 const GRAPH_POOL_SIZE = 28;
