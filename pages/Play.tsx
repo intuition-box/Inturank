@@ -15,8 +15,10 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, ChevronLeft, X } from 'lucide-react';
 import DeckCard from '../components/play/DeckCard';
+import { SplitGame, OverUnderGame, EarlyGame, SortGame, type GameResult } from '../components/play/GameCards';
 import {
   loadRun,
+  buildRounds,
   judge,
   stakeTermId,
   queueTotals,
@@ -27,6 +29,7 @@ import {
   type Call,
   type Judged,
   type QueuedStake,
+  type Round,
 } from '../services/playDeck';
 import { depositBatchToVaults, getConnectedAccount, parseProtocolError } from '../services/web3';
 import { LINEAR_CURVE_ID } from '../constants';
@@ -57,6 +60,8 @@ const RunBar: React.FC<{ total: number; done: number }> = ({ total, done }) => (
 
 const Play: React.FC = () => {
   const [cards, setCards] = useState<PlayCard[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
+  const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [result, setResult] = useState<Judged | null>(null);
@@ -80,6 +85,7 @@ const Play: React.FC = () => {
       const run = await loadRun(RUN_SIZE);
       if (!cancelled) {
         setCards(run);
+        setRounds(buildRounds(run));
         setLoading(false);
       }
     })();
@@ -89,8 +95,22 @@ const Play: React.FC = () => {
     };
   }, []);
 
-  const card = cards[index];
-  const finished = !loading && cards.length > 0 && index >= cards.length;
+  const round = rounds[index];
+  const card = round && round.kind !== 'sort' ? round.card : undefined;
+  const finished = !loading && rounds.length > 0 && index >= rounds.length;
+
+  /** Games other than Call it report their own score; fold it into the run the same way. */
+  const onGameDone = useCallback(
+    (r: GameResult) => {
+      setGameResult(r);
+      setPoints((p) => p + r.points);
+      if (r.agreed) setCorrect((c) => c + 1);
+      recordPlayDay(wallet);
+      recordArenaRankingPicks(wallet, 1);
+      recordArenaStreakPicks(wallet, 1);
+    },
+    [wallet],
+  );
   const totals = useMemo(() => queueTotals(queue), [queue]);
 
   const onCall = useCallback(
@@ -133,6 +153,7 @@ const Play: React.FC = () => {
 
   const next = useCallback(() => {
     setResult(null);
+    setGameResult(null);
     setIndex((i) => i + 1);
   }, []);
 
@@ -214,7 +235,7 @@ const Play: React.FC = () => {
         </M.span>
       </div>
       <div className="mb-6 flex">
-        <RunBar total={cards.length} done={index} />
+        <RunBar total={rounds.length} done={index} />
       </div>
 
       <div className="grid flex-1 gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
@@ -222,21 +243,56 @@ const Play: React.FC = () => {
         <div className="relative mx-auto w-full max-w-[420px]">
           <div className="relative min-h-[480px]">
             <AnimatePresence mode="popLayout">
-              {!finished &&
-                cards
+              {!finished && round && round.kind === 'call' && (
+                /* Call it keeps the physical stack — the other games are single cards. */
+                rounds
                   .slice(index, index + 3)
-                  .map((c, i) => (
+                  .map((r, i) => (r.kind === 'sort' ? null : (
                     <DeckCard
-                      key={c.id}
-                      card={c}
+                      key={r.card.id}
+                      card={r.card}
                       depth={i}
                       interactive={i === 0}
                       result={i === 0 ? result : null}
                       onCall={onCall}
                     />
-                  ))
-                  .reverse()}
+                  )))
+                  .reverse()
+              )}
             </AnimatePresence>
+
+            {!finished && round && round.kind !== 'call' && (
+              <div key={index} className="relative">
+                {round.kind === 'split' && <SplitGame card={round.card} onDone={onGameDone} />}
+                {round.kind === 'overunder' && (
+                  <OverUnderGame card={round.card} threshold={round.threshold ?? 1000} onDone={onGameDone} />
+                )}
+                {round.kind === 'early' && (
+                  <EarlyGame
+                    card={round.card}
+                    stake={DEFAULT_STAKE}
+                    onDone={(r, backed) => {
+                      onGameDone(r);
+                      if (backed) {
+                        setQueue((q) => [
+                          ...q,
+                          {
+                            cardId: round.card.id,
+                            label: round.card.label,
+                            call: 'true',
+                            termId: stakeTermId(round.card, 'true'),
+                            trust: DEFAULT_STAKE,
+                          },
+                        ]);
+                      }
+                    }}
+                  />
+                )}
+                {round.kind === 'sort' && (
+                  <SortGame items={round.items} prompt={round.prompt} onDone={onGameDone} />
+                )}
+              </div>
+            )}
 
             {finished && (
               <M.div
@@ -248,7 +304,7 @@ const Play: React.FC = () => {
                 <M.h2 variants={land} className="font-display text-3xl font-black leading-tight tracking-tight text-ink">
                   That&rsquo;s the whole run.
                   <br />
-                  {correct} for {cards.length}.
+                  {correct} for {rounds.length}.
                 </M.h2>
                 <M.p variants={riser()} className="max-w-sm text-sm leading-relaxed text-ink-muted">
                   A fresh {RUN_SIZE} arrives tomorrow. Until then the fastest way to earn is to put
@@ -257,7 +313,7 @@ const Play: React.FC = () => {
                 <M.div variants={riser()} className="grid w-full grid-cols-3 rounded-2xl border border-border bg-surface">
                   {[
                     { v: `+${points}`, l: 'Points' },
-                    { v: `${correct}/${cards.length}`, l: 'Called right' },
+                    { v: `${correct}/${rounds.length}`, l: 'Called right' },
                     { v: String(queue.length), l: 'Queued' },
                   ].map((s, i) => (
                     <div key={s.l} className={`px-3 py-3.5 ${i < 2 ? 'border-r border-border' : ''}`}>
@@ -301,7 +357,42 @@ const Play: React.FC = () => {
           </div>
 
           {/* Actions */}
-          {!finished && (
+          {!finished && round && round.kind !== 'call' && (
+            <div className="mt-5">
+              {gameResult ? (
+                <M.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={spring.card}
+                  className="flex flex-col gap-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <M.span
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={spring.pop}
+                      className="rounded-lg bg-primary-fill px-2.5 py-1 font-display text-xs font-black tabular-nums text-bg"
+                    >
+                      +{gameResult.points}
+                    </M.span>
+                    <span className="min-w-0 flex-1 text-[11px] text-ink-muted">
+                      <span className="font-semibold text-ink">{gameResult.headline}.</span>{' '}
+                      {gameResult.detail}
+                    </span>
+                  </div>
+                  <M.button
+                    whileTap={press}
+                    onClick={next}
+                    className="rounded-xl bg-primary-fill py-3 font-display text-sm font-extrabold text-bg"
+                  >
+                    Next card
+                  </M.button>
+                </M.div>
+              ) : null}
+            </div>
+          )}
+
+          {!finished && round && round.kind === 'call' && (
             <div className="mt-5">
               {!result ? (
                 <div className="grid grid-cols-2 gap-3">

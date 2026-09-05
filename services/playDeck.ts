@@ -26,6 +26,21 @@ export const DEFAULT_STAKE = 25;
 
 export type Call = 'true' | 'nope';
 
+/**
+ * The five games. One palette, told apart by shape and pattern (see the handoff): a card's
+ * kind is chosen from what its data can actually support, so a thin market becomes "get in
+ * early" rather than a percentage question it cannot answer.
+ */
+export type GameKind = 'call' | 'split' | 'overunder' | 'early' | 'sort';
+
+/** Round thresholds to something a person would recognise. */
+function niceThreshold(n: number): number {
+  if (n >= 10000) return Math.round(n / 5000) * 5000;
+  if (n >= 1000) return Math.round(n / 500) * 500;
+  if (n >= 100) return Math.round(n / 50) * 50;
+  return Math.max(10, Math.round(n / 10) * 10);
+}
+
 export interface PlayCard {
   id: string;
   counterTermId?: string;
@@ -39,6 +54,16 @@ export interface PlayCard {
   /** null when too few holders for an average to mean anything. */
   pctYes: number | null;
 }
+
+/** A sort round bundles four cards into one question. */
+export interface SortRound {
+  kind: 'sort';
+  id: string;
+  prompt: string;
+  items: PlayCard[];
+}
+
+export type Round = ({ kind: Exclude<GameKind, 'sort'> } & { card: PlayCard; threshold?: number }) | SortRound;
 
 export interface Judged {
   card: PlayCard;
@@ -147,6 +172,65 @@ export function judge(card: PlayCard, call: Call, correctRunSoFar: number): Judg
     points: POINTS_PER_CALL + (combo ? COMBO_BONUS : 0),
     combo,
   };
+}
+
+/**
+ * Pick a game for a card from what its data supports:
+ *   too few holders          -> get in early (the only honest question for a thin market)
+ *   a real percentage        -> guess the split, or call it
+ *   otherwise                -> over / under on the money
+ */
+export function kindFor(card: PlayCard, i: number): Exclude<GameKind, 'sort'> {
+  if (card.holders < THIN_HOLDER_LIMIT) return 'early';
+  if (card.pctYes === null) return 'overunder';
+  // Alternate so a run has variety rather than eight of the same question.
+  return i % 3 === 1 ? 'split' : i % 3 === 2 ? 'overunder' : 'call';
+}
+
+/**
+ * Build a run of rounds. Four leftover cards become a single sort round at the end, which is
+ * the game the design says pays the most because it takes longest.
+ */
+export function buildRounds(cards: PlayCard[]): Round[] {
+  const rounds: Round[] = cards.map((card, i) => {
+    const kind = kindFor(card, i);
+    return kind === 'overunder'
+      ? { kind, card, threshold: niceThreshold((card.forTrust + card.againstTrust) * 0.8) }
+      : { kind, card };
+  });
+
+  const sortable = cards.filter((c) => c.forTrust + c.againstTrust > 0).slice(0, 4);
+  if (sortable.length === 4) {
+    rounds.push({
+      kind: 'sort',
+      id: `sort-${sortable.map((c) => c.id).join('-').slice(0, 24)}`,
+      prompt: 'Which of these has the most money behind it?',
+      items: sortable,
+    });
+  }
+  return rounds;
+}
+
+/** Score a split guess: closer pays more, within five points pays full. */
+export function judgeSplit(card: PlayCard, guess: number): { actual: number; off: number; points: number } {
+  const actual = card.pctYes ?? 50;
+  const off = Math.abs(actual - guess);
+  const points = off <= 5 ? POINTS_PER_CALL + 10 : off <= 15 ? POINTS_PER_CALL : Math.max(4, POINTS_PER_CALL - Math.round(off / 4));
+  return { actual, off, points };
+}
+
+/** Score an over/under call against the real staked total. */
+export function judgeOverUnder(card: PlayCard, said: 'over' | 'under', threshold: number) {
+  const actual = card.forTrust + card.againstTrust;
+  const agreed = said === 'over' ? actual > threshold : actual <= threshold;
+  return { actual, agreed, points: agreed ? POINTS_PER_CALL : Math.round(POINTS_PER_CALL / 3) };
+}
+
+/** Score a sort: how many landed in the right place. */
+export function judgeSort(items: PlayCard[], order: string[]) {
+  const truth = [...items].sort((a, b) => b.forTrust + b.againstTrust - (a.forTrust + a.againstTrust)).map((c) => c.id);
+  const inPlace = order.filter((id, i) => truth[i] === id).length;
+  return { truth, inPlace, points: 10 * inPlace };
 }
 
 /** Which vault a queued call should deposit into. Fading goes to the counter-vault. */

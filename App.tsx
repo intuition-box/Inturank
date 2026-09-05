@@ -82,6 +82,7 @@ const Verdict         = lazy(() => import('./pages/Verdict'));
 const Me              = lazy(() => import('./pages/Me'));
 const Play            = lazy(() => import('./pages/Play'));
 const Ask             = lazy(() => import('./pages/Ask'));
+const PutItUp         = lazy(() => import('./pages/PutItUp'));
 import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
@@ -187,7 +188,8 @@ const AppRoutes: React.FC = () => {
 
       <Route path="/compare" element={<Navigate to="/climb" replace />} />
       <Route path="/coming-soon" element={<ComingSoon />} />
-      <Route path="/create" element={<CreateSignal />} />
+      <Route path="/create" element={<PutItUp />} />
+      <Route path="/create/legacy" element={<CreateSignal />} />
       <Route path="/send-trust" element={<SendTrust />} />
       <Route path="/hub/trust-tools" element={<DailyTrustHub />} />
       <Route path="/verdict/:id" element={<Verdict />} />
