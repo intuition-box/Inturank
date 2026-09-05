@@ -9,7 +9,7 @@ import {
   getArenaPreviewItems,
 } from '../../services/arenaListsRegistry';
 import type { ArenaDataSourceFootprintKind } from '../../services/arenaListsRegistry';
-import type { RankItem } from '../../pages/RankedList';
+import type { RankItem } from '../../services/arenaTypes';
 import { playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import type { ContestHubSection as ArenaContestHubSection } from '../../services/arenaHubGroups';
 import { pluralizeArenaListCount } from '../../services/arenaHubGroups';

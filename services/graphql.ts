@@ -1766,7 +1766,11 @@ export const getPnlLeaderboardPeriodAccount = async (accountId: string, args: Re
     const res = await fetchGraphQL(q, { args: args || {} }, 2, 22_000);
     const arr = res?.get_pnl_leaderboard_period ?? [];
     if (!Array.isArray(arr) || arr.length === 0) return null;
-    return arr.find((row: any) => String(row.account_id).toLowerCase() === accountId.toLowerCase()) ?? null;
+    const row = arr.find((r: any) => String(r.account_id).toLowerCase() === accountId.toLowerCase());
+    if (!row) return null;
+    // `total` is the leaderboard population, needed to place a rank in a percentile tier band.
+    // The whole board is already fetched here, so this costs nothing extra.
+    return { row, total: arr.length };
   } catch {
     return null;
   }

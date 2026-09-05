@@ -64,6 +64,16 @@ export function initStore(dataDir) {
       granted_by TEXT,
       created_at INTEGER NOT NULL DEFAULT 0
     );
+    -- Web-push subscriptions. One wallet can have several (phone, laptop, work machine),
+    -- keyed by endpoint because that is what the push service treats as the identity.
+    CREATE TABLE IF NOT EXISTS push_subs (
+      endpoint   TEXT PRIMARY KEY,
+      wallet     TEXT NOT NULL,
+      p256dh     TEXT NOT NULL,
+      auth       TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_push_wallet ON push_subs(wallet);
   `);
   maybeImportLegacyJson(dataDir);
   return db;
@@ -234,4 +244,40 @@ export function summary(wallet, season) {
     rank: idx >= 0 ? idx + 1 : null,
     players: board.length,
   };
+}
+
+// ── Web push subscriptions ───────────────────────────────────────────────────
+
+/** Register or refresh a subscription for a wallet. Idempotent per endpoint. */
+export function addPushSub(wallet, sub) {
+  const w = String(wallet || '').toLowerCase();
+  const endpoint = String(sub?.endpoint || '');
+  const p256dh = String(sub?.keys?.p256dh || '');
+  const auth = String(sub?.keys?.auth || '');
+  if (!w || !endpoint || !p256dh || !auth) return { ok: false };
+  db.prepare(
+    `INSERT INTO push_subs (endpoint, wallet, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(endpoint) DO UPDATE SET wallet = excluded.wallet, p256dh = excluded.p256dh, auth = excluded.auth`,
+  ).run(endpoint, w, p256dh, auth, Date.now());
+  return { ok: true };
+}
+
+/** Drop one subscription — on unsubscribe, or when the push service returns 404/410. */
+export function removePushSub(endpoint) {
+  db.prepare('DELETE FROM push_subs WHERE endpoint = ?').run(String(endpoint || ''));
+  return { ok: true };
+}
+
+/** Every device registered to a wallet. */
+export function getPushSubs(wallet) {
+  const w = String(wallet || '').toLowerCase();
+  return db
+    .prepare('SELECT endpoint, p256dh, auth FROM push_subs WHERE wallet = ?')
+    .all(w)
+    .map((r) => ({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }));
+}
+
+/** Registered device count, for the health endpoint. */
+export function countPushSubs() {
+  return db.prepare('SELECT COUNT(*) AS n FROM push_subs').get()?.n ?? 0;
 }

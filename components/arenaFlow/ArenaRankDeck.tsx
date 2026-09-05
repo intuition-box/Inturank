@@ -19,7 +19,7 @@ import {
   Zap,
   Users,
 } from 'lucide-react';
-import type { RankItem } from '../../pages/RankedList';
+import type { RankItem } from '../../services/arenaTypes';
 import { playArenaRankSlide, playArenaUiClick, playArenaUiHover } from '../../services/audio';
 import {
   ARENA_CARD_SURFACE,

@@ -894,7 +894,6 @@ const Portfolio: React.FC = () => {
                       <div
                         key={`m-${pos.id}-${pos.curveId ?? 1}`}
                         className="rounded-2xl border border-slate-800 bg-white/[0.03] p-3 shadow-lg min-w-0"
-                        onMouseEnter={() => setSelectedPosition(pos)}
                       >
                         <Link to={`/markets/${pos.id}`} className="flex gap-3 min-w-0">
                           <div className="h-11 w-11 shrink-0 rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
@@ -993,7 +992,6 @@ const Portfolio: React.FC = () => {
                       <tr
                         key={`${pos.id}-${pos.curveId ?? 1}`}
                         className="hover:bg-white/5 transition-all group cursor-pointer"
-                        onMouseEnter={() => setSelectedPosition(pos)}
                       >
                         <td className="px-2 sm:px-3 md:px-4 xl:px-5 py-4 sm:py-5 md:py-6 min-w-0 overflow-hidden align-top">
                           <Link to={`/markets/${pos.id}`} className="flex items-center gap-2 sm:gap-4 min-w-0">

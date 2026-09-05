@@ -42,6 +42,19 @@ const config: Config = {
         warning:   'rgb(var(--warning) / <alpha-value>)',
         rare:      'rgb(var(--rare) / <alpha-value>)',
         danger:    'rgb(var(--danger) / <alpha-value>)',
+        // Fill vs ink. Same colour on dark; they diverge on light because #00FAFA is
+        // illegible as text on paper. Large areas -> *-fill, text/hairlines -> *-ink.
+        'primary-fill':  'rgb(var(--primary-fill) / <alpha-value>)',
+        'primary-flood': 'rgb(var(--primary-flood) / <alpha-value>)',
+        'primary-ink':   'rgb(var(--primary-ink) / <alpha-value>)',
+        'danger-fill':   'rgb(var(--danger-fill) / <alpha-value>)',
+        'danger-flood':  'rgb(var(--danger-flood) / <alpha-value>)',
+        'danger-ink':    'rgb(var(--danger-ink) / <alpha-value>)',
+        'warning-fill':  'rgb(var(--warning-fill) / <alpha-value>)',
+        'warning-ink':   'rgb(var(--warning-ink) / <alpha-value>)',
+        card:      'rgb(var(--card) / <alpha-value>)',
+        'card-edge': 'rgb(var(--card-edge) / <alpha-value>)',
+        'hairline-soft': 'rgb(var(--hairline-soft) / <alpha-value>)',
         // Legacy alias — 932 components reference `intuition.*`. Wired to CSS
         // variables so dark/light flips without re-tailwinding. Brand accents
         // (primary, secondary, success, warning, purple) stay vibrant in both

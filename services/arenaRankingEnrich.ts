@@ -1,4 +1,5 @@
-import type { ArenaComparePeer, RankItem } from '../pages/RankedList';
+import type { ArenaComparePeer } from './arenaSimilarity';
+import type { RankItem } from './arenaTypes';
 import type { PortalListRankRow } from './arenaSimilarity';
 
 /** Merge list pool metadata (labels, portraits) into on-chain ranking rows. */

@@ -3,48 +3,48 @@
 // Motion grammar: only `transform`, `opacity`, and `box-shadow` are used for
 // animation. No `filter`, no layout animations. See project rules.
 
-// Inturank Cinnabar — warm cream + black canvas + cinnabar tomato brand.
-// Same shape as before so 932 component sites using `intuition.*` flip
-// automatically via the CSS-var bridge in tailwind.config.ts.
+// IntuRank Signal — near-black ground, cyan brand, cinnabar for the other side.
+// Values come from the design handoff (inturank-design/handoff/HANDOFF.md).
+// The alias KEYS below are legacy (932 component sites reference `intuition.*` through the
+// CSS-var bridge in tailwind.config.ts) so only the VALUES change; nothing else has to move.
 export const palette = {
-  // Brand-token aliases kept under their old names so existing components
-  // referencing `palette.cyan` etc. still compile — the VALUES are new.
-  cyan:    '#ff5039',  // CINNABAR — THE signature brand (was violet)
-  pink:    '#dc2626',  // crimson — danger only
-  lime:    '#3b5afe',  // COBALT — accent/secondary signal (was pale violet)
-  green:   '#22c55e',  // lime — success
-  gold:    '#fbbf24',  // marigold — rare/top-rank rewards
-  purple:  '#3b5afe',  // collapses into cobalt accent
-  red:     '#dc2626',  // crimson
+  cyan:    '#00fafa',  // CYAN — the brand, from the logo. Agreement, gains, primary action.
+  pink:    '#ff5039',  // CINNABAR — the other side: disagreement, fades, losses, danger.
+  lime:    '#00fafa',  // collapses into cyan — the palette has no third hue
+  green:   '#00fafa',  // gains read cyan in the designs, never green
+  gold:    '#ffb300',  // AMBER — streak and reward only, rare enough to stay special
+  purple:  '#00fafa',  // collapses into cyan
+  red:     '#ff5039',  // cinnabar
 } as const;
 
 export const darkPalette = {
-  bg:        '#0a0a0a',           // pure black canvas
-  surface:   '#141414',           // raised card
-  surface2:  '#1c1c1c',           // hover / elevated
-  border:    '#262626',           // hairline
-  hairline:  'rgba(255,255,255,0.06)',
-  text:      '#ffffff',
-  textMuted: '#8c8780',           // warm gray secondary
-  textDim:   '#5a554a',
-  primary:   palette.cyan,        // cinnabar #ff5039
-  accent:    palette.lime,        // cobalt #3b5afe
+  bg:        '#07090C',           // ground — near-black, the logo's own field
+  surface:   '#12161C',           // raised card
+  surface2:  '#1A1F26',           // hover / elevated / in-card hairline
+  border:    '#1E242C',           // hairline
+  hairline:  'rgba(242,237,228,0.06)',
+  text:      '#F2EDE4',           // bone — never pure white
+  textMuted: '#97A1AD',
+  textDim:   '#6C7684',           // floor
+  primary:   palette.cyan,
+  accent:    palette.cyan,
   cta:       palette.cyan,
-  success:   palette.green,
+  success:   palette.cyan,        // "the money agrees" floods cyan, not green
   warning:   palette.gold,
-  rare:      palette.gold,        // top-rank uses marigold yellow
+  rare:      palette.gold,
   danger:    palette.red,
 } as const;
 
 // Type scale.
 export const type = {
   fontFamily: {
-    sans:    '"Inter", system-ui, -apple-system, sans-serif',
-    mono:    '"Fira Code", ui-monospace, monospace',
-    /** Unbounded — geometric, slightly weird, distinctively gamy. Used for
-     *  display headings, hero text, stat numerals. Orbitron kept as a fallback
-     *  so anywhere it was hardcoded still renders. */
-    display: '"Unbounded", "Orbitron", "Inter", sans-serif',
+    sans:    '"Hanken Grotesk", system-ui, -apple-system, sans-serif',
+    /** The design has NO monospace. `font-mono` is used at 570 sites, mostly for numbers and
+     *  addresses, so the token points at the display face with tabular figures (see index.css)
+     *  rather than requiring every call site to change. */
+    mono:    '"Archivo", system-ui, sans-serif',
+    /** Archivo 800/900 with negative tracking — display headings, stat numerals, buttons. */
+    display: '"Archivo", "Hanken Grotesk", system-ui, sans-serif',
   },
   size: {
     micro: '11px',

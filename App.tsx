@@ -78,6 +78,9 @@ const CreateSignal    = lazy(() => import('./pages/CreateSignal'));
 const SendTrust       = lazy(() => import('./pages/SendTrust'));
 const SkillPlayground = lazy(() => import('./pages/SkillPlayground'));
 const DailyTrustHub   = lazy(() => import('./pages/DailyTrustHub'));
+const Verdict         = lazy(() => import('./pages/Verdict'));
+const Me              = lazy(() => import('./pages/Me'));
+const Play            = lazy(() => import('./pages/Play'));
 import { ToastContainer } from './components/Toast';
 import EmailNotifyModal from './components/EmailNotifyModal';
 import { RouteTransition } from './components/RouteTransition';
@@ -86,6 +89,8 @@ import ArenaTapOptic from './components/ArenaTapOptic';
 
 const RankedList = lazy(() => import('./pages/RankedList'));
 const ArenaPlaceholder = lazy(() => import('./pages/ArenaPlaceholder'));
+// Isolated hackathon lane — delegated "sign once to play" (MetaMask Smart Accounts / ERC-7710).
+const DelegatedArena = lazy(() => import('./pages/DelegatedArena'));
 
 /** Thin code-split boundary for `/climb` so the main bundle stays smaller when users never open Arena. */
 const ArenaRouteFallback: React.FC = () => (
@@ -178,6 +183,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/create" element={<CreateSignal />} />
       <Route path="/send-trust" element={<SendTrust />} />
       <Route path="/hub/trust-tools" element={<DailyTrustHub />} />
+      <Route path="/verdict/:id" element={<Verdict />} />
+      <Route path="/me" element={<Me />} />
+      <Route path="/me/:address" element={<Me />} />
+      <Route path="/play" element={<Play />} />
       <Route
         path="/climb"
         element={
@@ -190,6 +199,14 @@ const AppRoutes: React.FC = () => {
               <ArenaPlaceholder />
             </Suspense>
           )
+        }
+      />
+      <Route
+        path="/climb/delegated"
+        element={
+          <Suspense fallback={<ArenaRouteFallback />}>
+            <DelegatedArena />
+          </Suspense>
         }
       />
     </Routes>

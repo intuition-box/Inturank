@@ -15,7 +15,8 @@
  */
 import { formatEther } from 'viem';
 import type { ArenaProxyDepositRow, UserArenaRankingClaim } from './graphql';
-import type { RankItem } from '../pages/RankedList';
+import type { RankItem } from './arenaTypes';
+import type { ArenaPlayerRow } from './arenaLeaderboard';
 
 /** One row in a peer's full list ranking (ordered by accumulated TRUST on this list). */
 export type PortalListRankRow = {
@@ -259,3 +260,16 @@ export function aggregateSimilarity(
     contributors: live.length,
   };
 }
+
+/**
+ * A leaderboard peer's REAL alignment with the player's current deck for
+ * this contest. `similarity` carries the agree/disagree breakdown and the
+ * concrete shared subjects (so chips show real items, not placeholders).
+ */
+export type ArenaComparePeer = {
+  player: ArenaPlayerRow;
+  claims: UserArenaRankingClaim[];
+  similarity: ArenaSimilarityResult;
+  /** Full list order for this peer on this contest (TRUST-weighted). */
+  listRanking: PortalListRankRow[];
+};
