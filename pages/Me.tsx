@@ -92,7 +92,9 @@ const Me: React.FC = () => {
       setPoints(row ? inturankLeaderboardTotalXp(row) : 0);
       setRank(row?.rank ?? null);
       setBadges(ranks);
-      setName((meta as any)?.display || (meta as any)?.label || '');
+      // walletDisplayMeta returns { primaryLabel, isNamed } — primaryLabel carries the
+      // resolved .trust or ENS name, and is '' when the wallet has neither.
+      setName(meta?.isNamed ? meta.primaryLabel : '');
       setStreak(getDayStreak(address));
       setWeek(getWeekStrip(address));
       setLoading(false);
