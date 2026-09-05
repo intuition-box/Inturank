@@ -21,7 +21,7 @@ html.lenis { height: auto; }
 
 :root {
   /* INTURANK SIGNAL — near-black ground, cyan brand, cinnabar for the other side.
-     Values from the Claude Design handoff (inturank-design/handoff/HANDOFF.md).
+     Values from the design handoff (inturank-design/handoff/HANDOFF.md).
      Light is provisional: the light theme was never designed, so it is derived from the
      same three hues rather than invented. */
   --bg:         7 9 12;       /* #07090C ground — near-black            */
@@ -73,7 +73,7 @@ html.lenis { height: auto; }
    ============================================================================ */
 
 [data-theme='light'] {
-  /* IntuRank Signal — light. From the Claude Design handoff token table (artboards 7a-7h).
+  /* IntuRank Signal — light. From the design handoff token table (artboards 7a-7h).
      Contrast is measured: ink-4 is the floor for text, cyan-ink clears 4.5:1 on ground
      (4.87) and surface (4.90) but only 4.46 on surface-2 — never put cyan-ink on a chip. */
   --bg:         251 249 244;  /* #FBF9F4 warm paper, so cards can be white   */

@@ -4,7 +4,7 @@
 // animation. No `filter`, no layout animations. See project rules.
 
 // IntuRank Signal — near-black ground, cyan brand, cinnabar for the other side.
-// Values come from the Claude Design handoff (inturank-design/handoff/HANDOFF.md).
+// Values come from the design handoff (inturank-design/handoff/HANDOFF.md).
 // The alias KEYS below are legacy (932 component sites reference `intuition.*` through the
 // CSS-var bridge in tailwind.config.ts) so only the VALUES change; nothing else has to move.
 export const palette = {
